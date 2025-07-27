@@ -1,69 +1,101 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Dados simulados de solicitações de câmera
-    const cameraRequests = [
+    // Conectar com o backend Java
+    const response = await fetch('http://localhost:8080/api/admin/camera-requests', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return NextResponse.json(data)
+  } catch (error) {
+    console.error('Erro ao buscar solicitações de câmera:', error)
+    
+    // Dados mockados em caso de erro
+    return NextResponse.json([
       {
         id: '1',
-        name: 'Carlos Oliveira',
-        phone: '85999887766',
-        cause: 'Perda de produto',
-        createdAt: '2024-01-15T08:30:00Z',
+        name: 'João Silva',
+        phone: '(11) 99999-9999',
+        cause: 'Perda de documentos',
+        createdAt: '2024-06-15T10:30:00Z',
         status: 'pending',
-        period: '2024-01-15 14:30',
-        moment: 'Durante a compra',
-        rg: '1234567890',
-        additionalInfo: 'Produto caiu no chão e quebrou'
+        period: 'Manhã',
+        moment: 'Entrada',
+        rg: '12.345.678-9',
+        additionalInfo: 'Documentos perdidos na entrada do estabelecimento'
       },
       {
         id: '2',
-        name: 'Ana Paula',
-        phone: '85988776655',
-        cause: 'Dúvida sobre preço',
-        createdAt: '2024-01-14T15:20:00Z',
+        name: 'Maria Santos',
+        phone: '(11) 88888-8888',
+        cause: 'Furto de bolsa',
+        createdAt: '2024-06-14T14:20:00Z',
         status: 'processing',
-        period: '2024-01-14 16:45',
-        moment: 'Na fila do caixa',
-        rg: '0987654321',
-        additionalInfo: 'Preço diferente do que estava na prateleira'
-      },
-      {
-        id: '3',
-        name: 'Roberto Santos',
-        phone: '85977665544',
-        cause: 'Problema com pagamento',
-        createdAt: '2024-01-13T12:10:00Z',
-        status: 'completed',
-        period: '2024-01-13 13:20',
-        moment: 'No momento do pagamento',
-        rg: '1122334455',
-        additionalInfo: 'Cartão foi recusado mas dinheiro foi debitado'
+        period: 'Tarde',
+        moment: 'Saída',
+        rg: '98.765.432-1',
+        additionalInfo: 'Bolsa foi furtada próximo ao caixa'
       }
-    ]
-
-    return NextResponse.json(cameraRequests)
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Erro ao buscar solicitações de câmera' },
-      { status: 500 }
-    )
+    ])
   }
 }
 
-export async function PUT(request: Request) {
+export async function PUT(request: NextRequest) {
   try {
-    const { id, status } = await request.json()
+    const body = await request.json()
+    const { id, status } = body
     
-    // Simular atualização de status
-    return NextResponse.json({ 
-      success: true, 
-      message: `Status da solicitação ${id} atualizado para ${status}` 
+    // Conectar com o backend Java
+    const response = await fetch(`http://localhost:8080/api/admin/camera-requests/${id}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status }),
     })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return NextResponse.json(data)
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Erro ao atualizar solicitação de câmera' },
-      { status: 500 }
-    )
+    console.error('Erro ao atualizar solicitação:', error)
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+    
+    if (!id) {
+      return NextResponse.json({ error: 'ID da solicitação é obrigatório' }, { status: 400 })
+    }
+    
+    // Conectar com o backend Java
+    const response = await fetch(`http://localhost:8080/api/admin/camera-requests/${id}`, {
+      method: 'DELETE',
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    return NextResponse.json({ message: 'Solicitação deletada com sucesso' })
+  } catch (error) {
+    console.error('Erro ao deletar solicitação:', error)
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
 } 

@@ -1,54 +1,58 @@
 @echo off
-echo 🚀 Iniciando Backend Java - Atacadão Guanabara
+echo ========================================
+echo    Atacadao Guanabara - Backend Java
+echo ========================================
 echo.
 
+REM Verificar se o Java está instalado
+java -version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo ERRO: Java nao encontrado!
+    echo Por favor, instale o Java 17 ou superior.
+    pause
+    exit /b 1
+)
+
+echo Java encontrado!
+echo.
+
+REM Verificar se o Maven está instalado
+mvn -version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo ERRO: Maven nao encontrado!
+    echo Por favor, instale o Apache Maven.
+    pause
+    exit /b 1
+)
+
+echo Maven encontrado!
+echo.
+
+REM Navegar para o diretório do backend Java
 cd java-backend
 
-echo 📋 Verificando Java...
-java -version >nul 2>&1
-if errorlevel 1 (
-    echo ❌ Java não encontrado! Instale o Java 17 primeiro.
-    echo 💡 Execute: winget install Oracle.JDK.17
-    pause
-    exit /b 1
-)
-
-echo ✅ Java encontrado!
-echo.
-
-echo 📋 Verificando Maven...
-mvn -version >nul 2>&1
-if errorlevel 1 (
-    echo ⚠️ Maven não encontrado. Tentando instalar...
-    winget install Apache.Maven
-    if errorlevel 1 (
-        echo ❌ Falha ao instalar Maven. Instale manualmente:
-        echo 💡 Baixe de: https://maven.apache.org/download.cgi
-        pause
-        exit /b 1
-    )
-)
-
-echo ✅ Maven encontrado!
-echo.
-
-echo 🔨 Compilando projeto...
+echo Compilando o projeto...
 mvn clean compile
-if errorlevel 1 (
-    echo ❌ Erro na compilação!
+
+if %errorlevel% neq 0 (
+    echo ERRO: Falha na compilacao!
     pause
     exit /b 1
 )
 
-echo ✅ Compilação concluída!
+echo.
+echo Compilacao concluida com sucesso!
 echo.
 
-echo 🚀 Iniciando aplicação...
-echo 📊 API: http://localhost:8080
-echo 🗄️  Banco H2: http://localhost:8080/h2-console
-echo 📋 Painel Admin: http://localhost:3000/admin
+echo Iniciando o servidor...
 echo.
-echo ⚠️ Mantenha este terminal aberto!
+echo ========================================
+echo    Servidor iniciado em:
+echo    http://localhost:8080
+echo    Console H2: http://localhost:8080/h2-console
+echo ========================================
+echo.
+echo Pressione Ctrl+C para parar o servidor
 echo.
 
 mvn spring-boot:run

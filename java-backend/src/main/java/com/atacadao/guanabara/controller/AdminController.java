@@ -4,9 +4,18 @@ import com.atacadao.guanabara.model.Order;
 import com.atacadao.guanabara.model.OrderItem;
 import com.atacadao.guanabara.model.Product;
 import com.atacadao.guanabara.model.User;
+import com.atacadao.guanabara.model.CameraRequest;
+import com.atacadao.guanabara.model.Feedback;
+import com.atacadao.guanabara.model.ProductPromotion;
 import com.atacadao.guanabara.repository.OrderRepository;
 import com.atacadao.guanabara.repository.ProductRepository;
 import com.atacadao.guanabara.repository.UserRepository;
+import com.atacadao.guanabara.repository.CameraRequestRepository;
+import com.atacadao.guanabara.repository.FeedbackRepository;
+import com.atacadao.guanabara.repository.ProductPromotionRepository;
+import com.atacadao.guanabara.service.CameraRequestService;
+import com.atacadao.guanabara.service.FeedbackService;
+import com.atacadao.guanabara.service.ProductPromotionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -36,6 +45,12 @@ public class AdminController {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
+    private final CameraRequestRepository cameraRequestRepository;
+    private final FeedbackRepository feedbackRepository;
+    private final ProductPromotionRepository productPromotionRepository;
+    private final CameraRequestService cameraRequestService;
+    private final FeedbackService feedbackService;
+    private final ProductPromotionService productPromotionService;
     
     @GetMapping("/dashboard")
     public ResponseEntity<Map<String, Object>> getDashboard() {
@@ -46,10 +61,14 @@ public class AdminController {
         dashboard.put("totalUsers", userRepository.count());
         dashboard.put("totalProducts", productRepository.count());
         dashboard.put("totalOrders", orderRepository.count());
+        
+        // Estatísticas de solicitações e feedback
+        dashboard.put("pendingCameraRequests", cameraRequestService.getPendingRequestsCount());
+        dashboard.put("pendingFeedback", feedbackService.getPendingFeedbackCount());
             
-            // Receita total (simulada)
-            double totalRevenue = 15000.0;
-            dashboard.put("totalRevenue", totalRevenue);
+        // Receita total (simulada)
+        double totalRevenue = 15000.0;
+        dashboard.put("totalRevenue", totalRevenue);
             
             // Dados para gráficos
             List<Map<String, Object>> monthlyRevenue = Arrays.asList(
@@ -85,6 +104,75 @@ public class AdminController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "Erro ao buscar dados do dashboard: " + e.getMessage()));
+        }
+    }
+    
+    // Endpoints para gerenciar dados do admin
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Object>> getStats() {
+        try {
+            Map<String, Object> stats = new HashMap<>();
+            stats.put("totalUsers", userRepository.count());
+            stats.put("totalProducts", productRepository.count());
+            stats.put("totalOrders", orderRepository.count());
+            stats.put("pendingCameraRequests", cameraRequestService.getPendingRequestsCount());
+            stats.put("pendingFeedback", feedbackService.getPendingFeedbackCount());
+            stats.put("activePromotions", productPromotionService.getActivePromotionsCount());
+            
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Erro ao buscar estatísticas: " + e.getMessage()));
+        }
+    }
+    
+    @GetMapping("/users")
+    public ResponseEntity<List<User>> getUsers() {
+        try {
+            List<User> users = userRepository.findAll();
+            return ResponseEntity.ok(users);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    
+    @GetMapping("/products")
+    public ResponseEntity<List<Product>> getProducts() {
+        try {
+            List<Product> products = productRepository.findAll();
+            return ResponseEntity.ok(products);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    
+    @GetMapping("/camera-requests")
+    public ResponseEntity<List<CameraRequest>> getCameraRequests() {
+        try {
+            List<CameraRequest> requests = cameraRequestService.getAllRequests();
+            return ResponseEntity.ok(requests);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    
+    @GetMapping("/feedback")
+    public ResponseEntity<List<Feedback>> getFeedback() {
+        try {
+            List<Feedback> feedbacks = feedbackService.getAllFeedback();
+            return ResponseEntity.ok(feedbacks);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    
+    @GetMapping("/product-promotions")
+    public ResponseEntity<List<ProductPromotion>> getProductPromotions() {
+        try {
+            List<ProductPromotion> promotions = productPromotionService.getAllPromotions();
+            return ResponseEntity.ok(promotions);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
     

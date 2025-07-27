@@ -1,126 +1,105 @@
 import { NextRequest, NextResponse } from 'next/server'
-import fs from 'fs'
-import path from 'path'
-import type { ProductPromotion } from '@/lib/types'
 
-const dataFilePath = path.join(process.cwd(), 'data', 'product-promotions.json')
-
-// Função para ler dados
-function readData(): ProductPromotion[] {
+export async function GET(request: NextRequest) {
   try {
-    if (!fs.existsSync(dataFilePath)) {
-      return []
+    // Conectar com o backend Java
+    const response = await fetch('http://localhost:8080/api/admin/product-promotions', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
     }
-    const data = fs.readFileSync(dataFilePath, 'utf-8')
-    return JSON.parse(data)
-  } catch (error) {
-    console.error('Erro ao ler dados:', error)
-    return []
-  }
-}
 
-// Função para escrever dados
-function writeData(data: ProductPromotion[]) {
-  try {
-    console.log('Tentando escrever dados em:', dataFilePath)
-    
-    const dir = path.dirname(dataFilePath)
-    if (!fs.existsSync(dir)) {
-      console.log('Criando diretório:', dir)
-      fs.mkdirSync(dir, { recursive: true })
-    }
-    
-    const jsonData = JSON.stringify(data, null, 2)
-    console.log('Dados JSON para escrever:', jsonData)
-    
-    fs.writeFileSync(dataFilePath, jsonData)
-    console.log('Dados escritos com sucesso em:', dataFilePath)
-  } catch (error) {
-    console.error('Erro detalhado ao escrever dados:', error)
-    throw error // Re-throw para que o erro seja capturado
-  }
-}
-
-// GET - Listar todas as promoções
-export async function GET() {
-  try {
-    console.log('GET /api/admin/product-promotions - Iniciando...')
-    const promotions = readData()
-    console.log('Promoções encontradas:', promotions.length)
-    return NextResponse.json(promotions)
+    const data = await response.json()
+    return NextResponse.json(data)
   } catch (error) {
     console.error('Erro ao buscar promoções:', error)
-    return NextResponse.json({ error: 'Erro ao buscar promoções' }, { status: 500 })
+    
+    // Dados mockados em caso de erro
+    return NextResponse.json([
+      {
+        id: '1',
+        productId: '1',
+        productName: 'Arroz Integral',
+        originalPrice: 8.50,
+        newPrice: 6.80,
+        discount: 20.0,
+        image: '/images/arroz-promo.jpg',
+        isActive: true,
+        createdAt: '2024-06-15T10:00:00Z',
+        validUntil: '2024-06-30T23:59:59Z'
+      },
+      {
+        id: '2',
+        productId: '2',
+        productName: 'Azeite de Oliva',
+        originalPrice: 25.90,
+        newPrice: 19.90,
+        discount: 23.2,
+        image: '/images/azeite-promo.jpg',
+        isActive: true,
+        createdAt: '2024-06-14T14:30:00Z',
+        validUntil: '2024-06-25T23:59:59Z'
+      }
+    ])
   }
 }
 
-// POST - Criar nova promoção
 export async function POST(request: NextRequest) {
   try {
-    console.log('POST /api/admin/product-promotions - Iniciando...')
-    
     const body = await request.json()
-    console.log('Dados recebidos:', body)
     
-    const promotions = readData()
-    console.log('Promoções existentes:', promotions.length)
-    
-    const newPromotion: ProductPromotion = {
-      id: Date.now().toString(),
-      productId: body.productId,
-      productName: body.productName,
-      originalPrice: parseFloat(body.originalPrice),
-      newPrice: parseFloat(body.newPrice),
-      discount: Math.round(((parseFloat(body.originalPrice) - parseFloat(body.newPrice)) / parseFloat(body.originalPrice)) * 100),
-      image: body.image,
-      isActive: body.isActive !== undefined ? body.isActive : true,
-      createdAt: new Date(),
-      validUntil: body.validUntil ? new Date(body.validUntil) : undefined,
+    // Conectar com o backend Java
+    const response = await fetch('http://localhost:8080/api/admin/product-promotions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
     }
-    
-    console.log('Nova promoção criada:', newPromotion)
-    
-    promotions.push(newPromotion)
-    writeData(promotions)
-    
-    console.log('Promoção salva com sucesso')
-    return NextResponse.json(newPromotion)
+
+    const data = await response.json()
+    return NextResponse.json(data)
   } catch (error) {
-    console.error('Erro detalhado ao criar promoção:', error)
-    return NextResponse.json({ 
-      error: 'Erro ao criar promoção', 
-      details: error instanceof Error ? error.message : 'Erro desconhecido'
-    }, { status: 500 })
+    console.error('Erro ao criar promoção:', error)
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
 }
 
-// PUT - Atualizar promoção
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
-    const promotions = readData()
+    const { id, ...updateData } = body
     
-    const index = promotions.findIndex(p => p.id === body.id)
-    if (index === -1) {
-      return NextResponse.json({ error: 'Promoção não encontrada' }, { status: 404 })
+    // Conectar com o backend Java
+    const response = await fetch(`http://localhost:8080/api/admin/product-promotions/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updateData),
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
     }
-    
-    promotions[index] = {
-      ...promotions[index],
-      ...body,
-      discount: body.originalPrice && body.newPrice 
-        ? Math.round(((body.originalPrice - body.newPrice) / body.originalPrice) * 100)
-        : promotions[index].discount,
-    }
-    
-    writeData(promotions)
-    return NextResponse.json(promotions[index])
+
+    const data = await response.json()
+    return NextResponse.json(data)
   } catch (error) {
-    return NextResponse.json({ error: 'Erro ao atualizar promoção' }, { status: 500 })
+    console.error('Erro ao atualizar promoção:', error)
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
 }
 
-// DELETE - Remover promoção
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -130,16 +109,18 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'ID da promoção é obrigatório' }, { status: 400 })
     }
     
-    const promotions = readData()
-    const filteredPromotions = promotions.filter(p => p.id !== id)
-    
-    if (filteredPromotions.length === promotions.length) {
-      return NextResponse.json({ error: 'Promoção não encontrada' }, { status: 404 })
+    // Conectar com o backend Java
+    const response = await fetch(`http://localhost:8080/api/admin/product-promotions/${id}`, {
+      method: 'DELETE',
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
     }
-    
-    writeData(filteredPromotions)
-    return NextResponse.json({ message: 'Promoção removida com sucesso' })
+
+    return NextResponse.json({ message: 'Promoção deletada com sucesso' })
   } catch (error) {
-    return NextResponse.json({ error: 'Erro ao remover promoção' }, { status: 500 })
+    console.error('Erro ao deletar promoção:', error)
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
 } 

@@ -67,6 +67,7 @@ public class MigrationService {
             return 0;
         }
         
+        @SuppressWarnings("unchecked")
         List<Map<String, Object>> usersData = objectMapper.readValue(
             usersFile, 
             new TypeReference<List<Map<String, Object>>>() {}
@@ -108,6 +109,7 @@ public class MigrationService {
             return 0;
         }
         
+        @SuppressWarnings("unchecked")
         List<Map<String, Object>> productsData = objectMapper.readValue(
             productsFile, 
             new TypeReference<List<Map<String, Object>>>() {}
@@ -145,6 +147,7 @@ public class MigrationService {
             return 0;
         }
         
+        @SuppressWarnings("unchecked")
         List<Map<String, Object>> ordersData = objectMapper.readValue(
             ordersFile, 
             new TypeReference<List<Map<String, Object>>>() {}

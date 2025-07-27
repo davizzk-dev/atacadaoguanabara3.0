@@ -146,35 +146,7 @@ public class AdminController {
         }
     }
     
-    @GetMapping("/camera-requests")
-    public ResponseEntity<List<CameraRequest>> getCameraRequests() {
-        try {
-            List<CameraRequest> requests = cameraRequestService.getAllRequests();
-            return ResponseEntity.ok(requests);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-    
-    @GetMapping("/feedback")
-    public ResponseEntity<List<Feedback>> getFeedback() {
-        try {
-            List<Feedback> feedbacks = feedbackService.getAllFeedback();
-            return ResponseEntity.ok(feedbacks);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-    
-    @GetMapping("/product-promotions")
-    public ResponseEntity<List<ProductPromotion>> getProductPromotions() {
-        try {
-            List<ProductPromotion> promotions = productPromotionService.getAllPromotions();
-            return ResponseEntity.ok(promotions);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
+
     
     @GetMapping("/system-status")
     public ResponseEntity<Map<String, Object>> getSystemStatus() {

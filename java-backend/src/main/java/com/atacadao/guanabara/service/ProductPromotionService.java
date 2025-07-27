@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.time.LocalDateTime;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @Service
 @RequiredArgsConstructor
@@ -35,7 +36,7 @@ public class ProductPromotionService {
         if (promotion.getOriginalPrice() != null && promotion.getNewPrice() != null) {
             BigDecimal discount = promotion.getOriginalPrice()
                 .subtract(promotion.getNewPrice())
-                .divide(promotion.getOriginalPrice(), 4, BigDecimal.ROUND_HALF_UP)
+                .divide(promotion.getOriginalPrice(), 4, RoundingMode.HALF_UP)
                 .multiply(new BigDecimal("100"));
             promotion.setDiscount(discount);
         }
@@ -57,7 +58,7 @@ public class ProductPromotionService {
             if (promotion.getOriginalPrice() != null && promotion.getNewPrice() != null) {
                 BigDecimal discount = promotion.getOriginalPrice()
                     .subtract(promotion.getNewPrice())
-                    .divide(promotion.getOriginalPrice(), 4, BigDecimal.ROUND_HALF_UP)
+                    .divide(promotion.getOriginalPrice(), 4, RoundingMode.HALF_UP)
                     .multiply(new BigDecimal("100"));
                 promotion.setDiscount(discount);
             }

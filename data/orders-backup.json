@@ -1,0 +1,474 @@
+[
+  {
+    "id": "1753463504303",
+    "userId": "admin",
+    "userName": "Administrador",
+    "userEmail": "admin",
+    "items": [
+      {
+        "productId": "4",
+        "name": "AMENDOIM EM BANDA CASTRO 1KG",
+        "price": 13.99,
+        "quantity": 4
+      }
+    ],
+    "total": 55.96,
+    "status": "pending",
+    "createdAt": "2025-07-25T17:11:44.303Z",
+    "customerInfo": {
+      "name": "Administrador",
+      "email": "admin",
+      "address": "Jardim Guanabara"
+    }
+  },
+  {
+    "id": "1753464963208",
+    "userId": "admin",
+    "userName": "Administrador",
+    "userEmail": "admin",
+    "items": [
+      {
+        "productId": "5",
+        "name": "ARROZ BRANCO NAMORADO 1KG",
+        "price": 5.69,
+        "quantity": 4
+      }
+    ],
+    "total": 22.76,
+    "status": "pending",
+    "createdAt": "2025-07-25T17:36:03.208Z",
+    "customerInfo": {
+      "name": "Administrador",
+      "email": "admin",
+      "address": "Jardim Guanabara"
+    }
+  },
+  {
+    "id": "1753465307523",
+    "userId": "admin",
+    "userName": "Administrador",
+    "userEmail": "admin",
+    "items": [
+      {
+        "productId": "5",
+        "name": "ARROZ BRANCO NAMORADO 1KG",
+        "price": 5.69,
+        "quantity": 2
+      }
+    ],
+    "total": 11.38,
+    "status": "pending",
+    "createdAt": "2025-07-25T17:41:47.523Z",
+    "customerInfo": {
+      "name": "Administrador",
+      "email": "admin",
+      "address": "Jardim Guanabara"
+    }
+  },
+  {
+    "id": "1753465745007",
+    "userId": "admin",
+    "userName": "Administrador",
+    "userEmail": "admin",
+    "items": [
+      {
+        "productId": "3",
+        "name": "ÁGUA MINERAL NATURAGUA 500ML S/ GÁS",
+        "price": 1.49,
+        "quantity": 1
+      }
+    ],
+    "total": 1.49,
+    "status": "pending",
+    "createdAt": "2025-07-25T17:49:05.007Z",
+    "customerInfo": {
+      "name": "Administrador",
+      "email": "admin",
+      "address": "Jardim Guanabara"
+    }
+  },
+  {
+    "id": "1753485321734",
+    "userId": "admin",
+    "userName": "Administrador",
+    "userEmail": "admin@gmail.com",
+    "userPhone": "(11) 11111-1111",
+    "items": [
+      {
+        "productId": "1",
+        "name": "ÁGUA MINERAL NATURAGUA 1,5L",
+        "price": 2.99,
+        "quantity": 1
+      },
+      {
+        "productId": "2",
+        "name": "ÁGUA MINERAL NATURAGUA 500ML C/ GÁS",
+        "price": 1.99,
+        "quantity": 2
+      },
+      {
+        "productId": "4",
+        "name": "AMENDOIM EM BANDA CASTRO 1KG",
+        "price": 13.99,
+        "quantity": 2
+      },
+      {
+        "productId": "9",
+        "name": "ARROZ PARBOILIZADO EMOÇÕES 1KG",
+        "price": 5.99,
+        "quantity": 1
+      }
+    ],
+    "total": 40.940000000000005,
+    "status": "pending",
+    "createdAt": "2025-07-25T23:15:21.734Z",
+    "customerInfo": {
+      "name": "Administrador",
+      "email": "admin@gmail.com",
+      "phone": "(11) 11111-1111",
+      "address": "11111111111"
+    }
+  },
+  {
+    "id": "1753485404493",
+    "userId": "1752975036794",
+    "userName": "Davi Kalebe de Vasconcelos Alexandre",
+    "userEmail": "davikalebe20020602@gmail.com",
+    "userPhone": "85988286178",
+    "items": [
+      {
+        "productId": "3",
+        "name": "ÁGUA MINERAL NATURAGUA 500ML S/ GÁS",
+        "price": 1.49,
+        "quantity": 2
+      }
+    ],
+    "total": 2.98,
+    "status": "pending",
+    "createdAt": "2025-07-25T23:16:44.494Z",
+    "customerInfo": {
+      "name": "Davi Kalebe de Vasconcelos Alexandre",
+      "email": "davikalebe20020602@gmail.com",
+      "phone": "85988286178",
+      "address": "Coronel Luiz David Souza"
+    }
+  },
+  {
+    "id": "1753485967846",
+    "userId": "admin",
+    "userName": "Administrador",
+    "userEmail": "admin",
+    "userPhone": "(85) 98828-6178",
+    "items": [
+      {
+        "productId": "4",
+        "name": "AMENDOIM EM BANDA CASTRO 1KG",
+        "price": 13.99,
+        "quantity": 1
+      },
+      {
+        "productId": "5",
+        "name": "ARROZ BRANCO NAMORADO 1KG",
+        "price": 5.69,
+        "quantity": 4
+      }
+    ],
+    "total": 36.75,
+    "status": "pending",
+    "createdAt": "2025-07-25T23:26:07.846Z",
+    "customerInfo": {
+      "name": "Administrador",
+      "email": "admin",
+      "phone": "(85) 98828-6178",
+      "address": "Jardim Guanabara"
+    }
+  },
+  {
+    "id": "1753488305733",
+    "userId": "guest",
+    "userName": "Valdiza",
+    "userEmail": "valdiza@gmail.com",
+    "userPhone": "(85) 98828-6178",
+    "items": [
+      {
+        "productId": "5",
+        "name": "ARROZ BRANCO NAMORADO 1KG",
+        "price": 5.69,
+        "quantity": 2
+      }
+    ],
+    "total": 11.38,
+    "status": "pending",
+    "createdAt": "2025-07-26T00:05:05.733Z",
+    "customerInfo": {
+      "name": "Valdiza",
+      "email": "valdiza@gmail.com",
+      "phone": "(85) 98828-6178",
+      "address": "Aaa"
+    }
+  },
+  {
+    "id": "1753537266440",
+    "userId": "admin",
+    "userName": "Administrador",
+    "userEmail": "admin@atacadao.com",
+    "userPhone": "(22) 22222-2222",
+    "items": [
+      {
+        "productId": "5",
+        "name": "ARROZ BRANCO NAMORADO 1KG",
+        "price": 5.69,
+        "quantity": 4
+      },
+      {
+        "productId": "3",
+        "name": "ÁGUA MINERAL NATURAGUA 500ML S/ GÁS",
+        "price": 1.49,
+        "quantity": 9
+      },
+      {
+        "productId": "2",
+        "name": "ÁGUA MINERAL NATURAGUA 500ML C/ GÁS",
+        "price": 1.99,
+        "quantity": 9
+      },
+      {
+        "productId": "4",
+        "name": "AMENDOIM EM BANDA CASTRO 1KG",
+        "price": 13.99,
+        "quantity": 1
+      },
+      {
+        "productId": "50",
+        "name": "REFRIGERANTE COCA-COLA 2L",
+        "price": 7.99,
+        "quantity": 18
+      }
+    ],
+    "total": 211.89,
+    "status": "pending",
+    "createdAt": "2025-07-26T13:41:06.441Z",
+    "customerInfo": {
+      "name": "Administrador",
+      "email": "admin@atacadao.com",
+      "phone": "(22) 22222-2222",
+      "address": "2222222222222"
+    }
+  },
+  {
+    "id": "1753546795399",
+    "userId": "guest",
+    "userName": "Beatriz ",
+    "userEmail": "",
+    "userPhone": "(85) 99723-1886",
+    "items": [
+      {
+        "productId": "7",
+        "name": "ARROZ BRANCO POP 1KG",
+        "price": 4.99,
+        "quantity": 2
+      },
+      {
+        "productId": "1",
+        "name": "ÁGUA MINERAL NATURAGUA 1,5L",
+        "price": 2.99,
+        "quantity": 1
+      }
+    ],
+    "total": 12.97,
+    "status": "pending",
+    "createdAt": "2025-07-26T16:19:55.399Z",
+    "customerInfo": {
+      "name": "Beatriz ",
+      "email": "",
+      "phone": "(85) 99723-1886",
+      "address": "Jardim Guanabara"
+    }
+  },
+  {
+    "id": "1753546826872",
+    "userId": "guest",
+    "userName": "Beatriz ",
+    "userEmail": "biavasconcelosx@gmail.com",
+    "userPhone": "(85) 99723-1886",
+    "items": [
+      {
+        "productId": "7",
+        "name": "ARROZ BRANCO POP 1KG",
+        "price": 4.99,
+        "quantity": 2
+      },
+      {
+        "productId": "1",
+        "name": "ÁGUA MINERAL NATURAGUA 1,5L",
+        "price": 2.99,
+        "quantity": 1
+      }
+    ],
+    "total": 12.97,
+    "status": "pending",
+    "createdAt": "2025-07-26T16:20:26.872Z",
+    "customerInfo": {
+      "name": "Beatriz ",
+      "email": "biavasconcelosx@gmail.com",
+      "phone": "(85) 99723-1886",
+      "address": "Jardim Guanabara"
+    }
+  },
+  {
+    "id": "1753546881924",
+    "userId": "guest",
+    "userName": "Michele",
+    "userEmail": "aliancamichele@gmail.com",
+    "userPhone": "(85) 98200-2233",
+    "items": [
+      {
+        "productId": "6",
+        "name": "ARROZ BRANCO PAI JOÃO 1KG",
+        "price": 5.49,
+        "quantity": 1
+      },
+      {
+        "productId": "18",
+        "name": "BARRA DE CHOCOLATE COBERTURA CONFEITEIRO BLEND MAVALERIO 1,01KG",
+        "price": 22.9,
+        "quantity": 1
+      }
+    ],
+    "total": 28.39,
+    "status": "pending",
+    "createdAt": "2025-07-26T16:21:21.924Z",
+    "customerInfo": {
+      "name": "Michele",
+      "email": "aliancamichele@gmail.com",
+      "phone": "(85) 98200-2233",
+      "address": "Cidade Palhano 557 altos"
+    }
+  },
+  {
+    "id": "1753547129189",
+    "userId": "guest",
+    "userName": "Michele",
+    "userEmail": "aliancamichele@gmail.com",
+    "userPhone": "(85) 98200-2233",
+    "items": [
+      {
+        "productId": "1",
+        "name": "ÁGUA MINERAL NATURAGUA 1,5L",
+        "price": 1.99,
+        "quantity": 1
+      },
+      {
+        "productId": "4",
+        "name": "AMENDOIM EM BANDA CASTRO 1KG",
+        "price": 11.99,
+        "quantity": 2
+      }
+    ],
+    "total": 25.97,
+    "status": "pending",
+    "createdAt": "2025-07-26T16:25:29.189Z",
+    "customerInfo": {
+      "name": "Michele",
+      "email": "aliancamichele@gmail.com",
+      "phone": "(85) 98200-2233",
+      "address": "Rua do pantanal 122"
+    }
+  },
+  {
+    "id": "1753548242266",
+    "userId": "admin",
+    "userName": "Administrador",
+    "userEmail": "admin@gmail.com",
+    "userPhone": "(22) 22222-2222",
+    "items": [
+      {
+        "productId": "3",
+        "name": "ÁGUA MINERAL NATURAGUA 500ML S/ GÁS",
+        "price": 1.49,
+        "quantity": 2
+      },
+      {
+        "productId": "4",
+        "name": "AMENDOIM EM BANDA CASTRO 1KG",
+        "price": 13.99,
+        "quantity": 1
+      },
+      {
+        "productId": "5",
+        "name": "ARROZ BRANCO NAMORADO 1KG",
+        "price": 5.69,
+        "quantity": 1
+      },
+      {
+        "productId": "6",
+        "name": "ARROZ BRANCO PAI JOÃO 1KG",
+        "price": 5.49,
+        "quantity": 1
+      }
+    ],
+    "total": 28.15,
+    "status": "pending",
+    "createdAt": "2025-07-26T16:44:02.266Z",
+    "customerInfo": {
+      "name": "Administrador",
+      "email": "admin@gmail.com",
+      "phone": "(22) 22222-2222",
+      "address": "aaaaaaa"
+    }
+  },
+  {
+    "id": "1753553411512",
+    "userId": "guest",
+    "userName": "melissa",
+    "userEmail": "vasconcelossmelissa@gmail.com",
+    "userPhone": "(85) 98974-3184",
+    "items": [
+      {
+        "productId": "15",
+        "name": "BACON MANTA KG",
+        "price": 28.9,
+        "quantity": 2
+      },
+      {
+        "productId": "14",
+        "name": "BACON EM CUBO KG",
+        "price": 29.9,
+        "quantity": 1
+      }
+    ],
+    "total": 87.69999999999999,
+    "status": "pending",
+    "createdAt": "2025-07-26T18:10:11.512Z",
+    "customerInfo": {
+      "name": "melissa",
+      "email": "vasconcelossmelissa@gmail.com",
+      "phone": "(85) 98974-3184",
+      "address": "aaaaaa"
+    }
+  },
+  {
+    "id": "1753553464556",
+    "userId": "guest",
+    "userName": "melissa",
+    "userEmail": "",
+    "userPhone": "(64) 56210-1232",
+    "items": [
+      {
+        "productId": "4",
+        "name": "AMENDOIM EM BANDA CASTRO 1KG",
+        "price": 13.99,
+        "quantity": 1
+      }
+    ],
+    "total": 13.99,
+    "status": "pending",
+    "createdAt": "2025-07-26T18:11:04.556Z",
+    "customerInfo": {
+      "name": "melissa",
+      "email": "",
+      "phone": "(64) 56210-1232",
+      "address": "Jardim Guanabara"
+    }
+  }
+]

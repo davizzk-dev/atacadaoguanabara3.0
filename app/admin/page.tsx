@@ -1838,16 +1838,16 @@ function PromotionForm({
                     <FileText className="w-4 h-4" />
                     Gerar PDF
                   </button>
-                  <button
-                    onClick={() => {
-                      setEditingPromotion(null)
-                      setShowPromotionModal(true)
-                    }}
-                    className="flex items-center space-x-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Nova Promoção</span>
-                  </button>
+                <button
+                  onClick={() => {
+                    setEditingPromotion(null)
+                    setShowPromotionModal(true)
+                  }}
+                  className="flex items-center space-x-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Nova Promoção</span>
+                </button>
                 </div>
               </div>
               

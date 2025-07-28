@@ -49,7 +49,10 @@ import {
   Lock,
   Bell,
   Tag,
-  Loader2
+  Loader2,
+  Upload,
+  Link,
+  Copy
 } from 'lucide-react'
 import Header from '@/components/header'
 import { Footer } from '@/components/footer'
@@ -783,6 +786,13 @@ function PromotionForm({
     }
   }
 
+  const handleImageChange = (imageUrl: string) => {
+    setFormData(prev => ({
+      ...prev,
+      image: imageUrl
+    }))
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -904,6 +914,149 @@ function PromotionForm({
           />
         </div>
       </div>
+      {/* Campo Imagem */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Imagem da Promoção</label>
+        <div className="space-y-4">
+          <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setActiveTab('url')}
+              className={`flex-1 px-3 py-2 text-sm rounded-md transition-colors ${
+                activeTab === 'url' ? 'bg-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Link className="h-4 w-4 inline mr-2" />
+              URL
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('file')}
+              className={`flex-1 px-3 py-2 text-sm rounded-md transition-colors ${
+                activeTab === 'file' ? 'bg-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Upload className="h-4 w-4 inline mr-2" />
+              Arquivo
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('paste')}
+              className={`flex-1 px-3 py-2 text-sm rounded-md transition-colors ${
+                activeTab === 'paste' ? 'bg-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Copy className="h-4 w-4 inline mr-2" />
+              Colar
+            </button>
+          </div>
+
+          {activeTab === 'url' && (
+            <div className="space-y-2">
+              <input
+                type="url"
+                value={formData.image}
+                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                placeholder="https://exemplo.com/imagem.jpg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
+              />
+            </div>
+          )}
+
+          {activeTab === 'file' && (
+            <div className="space-y-2">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                <p className="text-sm text-gray-600 mb-2">
+                  Arraste uma imagem aqui ou clique para selecionar
+                </p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      const reader = new FileReader()
+                      reader.onload = (e) => {
+                        const result = e.target?.result as string
+                        setFormData({ ...formData, image: result })
+                      }
+                      reader.readAsDataURL(file)
+                    }
+                  }}
+                  className="hidden"
+                  id="image-upload"
+                />
+                <label htmlFor="image-upload" className="bg-orange-500 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-orange-600 transition-colors">
+                  Selecionar Arquivo
+                </label>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'paste' && (
+            <div className="space-y-2">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                <Copy className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                <p className="text-sm text-gray-600 mb-2">
+                  Cole uma imagem da área de transferência
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const clipboardItems = await navigator.clipboard.read()
+                      for (const clipboardItem of clipboardItems) {
+                        for (const type of clipboardItem.types) {
+                          if (type.startsWith('image/')) {
+                            const blob = await clipboardItem.getType(type)
+                            const reader = new FileReader()
+                            reader.onload = (e) => {
+                              const result = e.target?.result as string
+                              setFormData({ ...formData, image: result })
+                            }
+                            reader.readAsDataURL(blob)
+                            return
+                          }
+                        }
+                      }
+                      alert('Nenhuma imagem encontrada na área de transferência')
+                    } catch (error) {
+                      console.error('Erro ao colar imagem:', error)
+                      alert('Erro ao colar imagem. Verifique se há uma imagem na área de transferência.')
+                    }
+                  }}
+                  className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+                >
+                  Colar Imagem
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Preview da imagem */}
+          {formData.image && (
+            <div className="relative">
+              <img 
+                src={formData.image} 
+                alt="Preview" 
+                className="w-full h-32 object-cover rounded-lg border"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, image: '' })}
+                className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Campo Data de Validade */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Válido até</label>

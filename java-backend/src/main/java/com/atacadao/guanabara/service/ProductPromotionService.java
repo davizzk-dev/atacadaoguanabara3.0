@@ -32,6 +32,16 @@ public class ProductPromotionService {
     }
     
     public ProductPromotion createPromotion(ProductPromotion promotion) {
+        // Verificar se o produto existe
+        if (promotion.getProduct() != null && promotion.getProduct().getId() != null) {
+            Optional<Product> product = productRepository.findById(promotion.getProduct().getId());
+            if (product.isPresent()) {
+                promotion.setProduct(product.get());
+            } else {
+                throw new RuntimeException("Produto não encontrado com ID: " + promotion.getProduct().getId());
+            }
+        }
+        
         // Calcular desconto automaticamente
         if (promotion.getOriginalPrice() != null && promotion.getNewPrice() != null) {
             BigDecimal discount = promotion.getOriginalPrice()

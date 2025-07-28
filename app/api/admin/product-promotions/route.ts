@@ -53,16 +53,32 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
+    // Preparar dados para o backend Java
+    const promotionData = {
+      product: {
+        id: parseInt(body.productId)
+      },
+      originalPrice: body.originalPrice,
+      newPrice: body.newPrice,
+      image: body.image,
+      isActive: body.isActive,
+      validUntil: body.validUntil ? new Date(body.validUntil).toISOString() : null
+    }
+    
+    console.log('Dados enviados para o backend:', promotionData)
+    
     // Conectar com o backend Java
     const response = await fetch('http://localhost:8080/api/admin/product-promotions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(promotionData),
     })
 
     if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Erro da API Java:', errorText)
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 

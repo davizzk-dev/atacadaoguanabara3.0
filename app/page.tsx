@@ -26,6 +26,7 @@ export default function HomePage() {
   const { addFavorite, removeFavorite, favorites } = useFavoritesStore() // Corrigido
   const { user } = useAuthStore()
   const [isLoading, setIsLoading] = useState(true)
+  const [products, setProducts] = useState(productsData)
   const [featuredProducts, setFeaturedProducts] = useState(productsData.slice(0, 15))
   const [addedProductId, setAddedProductId] = useState<string | null>(null) // Para feedback visual
   const [quantityMap, setQuantityMap] = useState<{ [id: string]: number }>({}) // Para quantidade
@@ -85,31 +86,42 @@ export default function HomePage() {
     return () => clearTimeout(timer)
   }, [])
 
-  // Carregar promoções da API
+  // Carregar produtos e promoções da API
   useEffect(() => {
-    const loadPromotions = async () => {
+    const loadData = async () => {
       try {
+        // Carregar produtos
+        console.log('Carregando produtos da API...')
+        const productsResponse = await fetch('/api/products')
+        if (productsResponse.ok) {
+          const productsData = await productsResponse.json()
+          setProducts(productsData)
+          setFeaturedProducts(productsData.slice(0, 15))
+          console.log('Produtos carregados:', productsData.length)
+        }
+
+        // Carregar promoções
         console.log('Carregando promoções da API...')
-        const response = await fetch('/api/admin/product-promotions')
-        console.log('Status da resposta:', response.status)
+        const promotionsResponse = await fetch('/api/admin/product-promotions')
+        console.log('Status da resposta das promoções:', promotionsResponse.status)
         
-        if (response.ok) {
-          const data = await response.json()
-          setProductPromotions(data)
-          console.log('Promoções carregadas:', data)
-          console.log('Promoções ativas:', data.filter((p: any) => p.isActive).length)
+        if (promotionsResponse.ok) {
+          const promotionsData = await promotionsResponse.json()
+          setProductPromotions(promotionsData)
+          console.log('Promoções carregadas:', promotionsData)
+          console.log('Promoções ativas:', promotionsData.filter((p: any) => p.isActive).length)
         } else {
-          console.error('Erro na resposta da API:', response.status)
+          console.error('Erro na resposta da API de promoções:', promotionsResponse.status)
         }
       } catch (error) {
-        console.error('Erro ao carregar promoções:', error)
+        console.error('Erro ao carregar dados:', error)
       }
     }
 
-    loadPromotions()
+    loadData()
   }, [])
 
-  const filteredProducts = productsData.filter((product) => {
+  const filteredProducts = products.filter((product) => {
     const matchesSearch =
       searchQuery === "" ||
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -119,8 +131,8 @@ export default function HomePage() {
     return matchesSearch
   }).slice(0, 15) // Mostrar apenas 15 produtos na página inicial
 
-  const onSaleProducts = productsData.filter((p) => p.originalPrice > p.price).slice(0, 5)
-  const topRatedProducts = productsData.filter((p) => p.rating >= 4.5).slice(0, 5)
+  const onSaleProducts = products.filter((p) => p.originalPrice > p.price).slice(0, 5)
+  const topRatedProducts = products.filter((p) => p.rating >= 4.5).slice(0, 5)
 
   const handleAddToCart = (product: any) => {
     const quantity = quantityMap[product.id] || 1
@@ -316,9 +328,17 @@ export default function HomePage() {
               {productPromotions
                 .filter(promotion => promotion.isActive)
                 .map((promotion, index) => {
-                  const product = productsData.find(p => p.id === promotion.productId)
-                  console.log('Promoção:', promotion.productId, 'Produto encontrado:', !!product)
-                  if (!product) return null
+                  // Tentar encontrar o produto por ID numérico ou string
+                  const product = products.find(p => 
+                    p.id === promotion.productId || 
+                    p.id === promotion.productId?.toString() ||
+                    parseInt(p.id) === parseInt(promotion.productId)
+                  )
+                  console.log('Promoção:', promotion.productId, 'Produto encontrado:', !!product, 'Nome do produto:', product?.name)
+                  if (!product) {
+                    console.warn('Produto não encontrado para promoção:', promotion)
+                    return null
+                  }
                   
                   return (
                     <div key={promotion.id} className="animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>

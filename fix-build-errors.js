@@ -53,12 +53,47 @@ function addDynamicExport(filePath) {
   }
 }
 
-// Executar correções
-console.log('🔧 Corrigindo páginas para build estático...\n');
+// Função para criar arquivo .env.local se não existir
+function createEnvFile() {
+  const envPath = '.env.local';
+  if (!fs.existsSync(envPath)) {
+    const envContent = `NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-secret-key-here
+NEXT_PUBLIC_API_URL=http://localhost:3000/api
+NEXT_PUBLIC_BACKEND_URL=http://localhost:8080
+NEXT_PUBLIC_BUILD_MODE=production`;
+    
+    fs.writeFileSync(envPath, envContent);
+    console.log('✅ Arquivo .env.local criado');
+  } else {
+    console.log('✅ Arquivo .env.local já existe');
+  }
+}
 
+// Função para limpar cache
+function cleanCache() {
+  const nextDir = '.next';
+  if (fs.existsSync(nextDir)) {
+    fs.rmSync(nextDir, { recursive: true, force: true });
+    console.log('✅ Cache do Next.js limpo');
+  } else {
+    console.log('✅ Nenhum cache para limpar');
+  }
+}
+
+// Executar todas as correções
+console.log('🔧 Iniciando correções para build...\n');
+
+console.log('1. Criando arquivo de ambiente...');
+createEnvFile();
+
+console.log('\n2. Limpando cache...');
+cleanCache();
+
+console.log('\n3. Corrigindo páginas...');
 pagesToFix.forEach(page => {
   addDynamicExport(page);
 });
 
-console.log('\n✅ Correções concluídas!');
+console.log('\n✅ Todas as correções concluídas!');
 console.log('📝 Agora execute: pnpm build'); 

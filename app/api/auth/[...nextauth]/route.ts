@@ -1,12 +1,18 @@
 import NextAuth from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 
+// Verificar se as variáveis de ambiente estão configuradas
+const isGoogleConfigured = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+
 const handler = NextAuth({
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
+    // Só adicionar Google se as credenciais estiverem configuradas
+    ...(isGoogleConfigured ? [
+      GoogleProvider({
+        clientId: process.env.GOOGLE_CLIENT_ID!,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      })
+    ] : []),
   ],
   pages: {
     signIn: '/login',
@@ -15,8 +21,8 @@ const handler = NextAuth({
   },
   callbacks: {
     async signIn({ user, account, profile }) {
-      // Permitir login apenas com Google
-      if (account?.provider === "google") {
+      // Permitir login apenas com Google se configurado
+      if (account?.provider === "google" && isGoogleConfigured) {
         return true
       }
       return false
@@ -40,7 +46,7 @@ const handler = NextAuth({
       return token
     },
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || 'fallback-secret-for-build',
   debug: process.env.NODE_ENV === 'development',
 })
 

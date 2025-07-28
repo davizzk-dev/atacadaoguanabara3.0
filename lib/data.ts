@@ -910,8 +910,6 @@ export const products = [
     tags: ["biscoito", "integral", "snack"],
   },
 
-  
-
 ]
 
 export const categories = [

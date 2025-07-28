@@ -10,5 +10,16 @@
     "isActive": true,
     "createdAt": "2025-07-26T17:54:44.531Z",
     "validUntil": "1111-11-11T00:00:00.000Z"
+  },
+  {
+    "id": "1753713029551",
+    "productId": "18",
+    "productName": "AZEITE DENDE MARIZA 200ML",
+    "originalPrice": 7.49,
+    "newPrice": 1.77,
+    "discount": 76,
+    "image": "/images/products/azeite-dende.jpg",
+    "isActive": false,
+    "createdAt": "2025-07-28T14:30:29.551Z"
   }
 ]

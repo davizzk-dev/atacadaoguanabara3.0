@@ -8,42 +8,7 @@ if (!fs.existsSync(dataDir)) {
 }
 
 // Dados de exemplo para produtos
-const products = [
-  {
-    id: '1',
-    name: 'Banana Prata',
-    price: 4.99,
-    originalPrice: 6.99,
-    image: '/images/products/banana.jpg',
-    category: 'fruits',
-    description: 'Banana prata fresca e saborosa',
-    inStock: true,
-    rating: 4.5,
-    reviews: 128
-  },
-  {
-    id: '2',
-    name: 'Maçã Gala',
-    price: 8.99,
-    image: '/images/products/apple.jpg',
-    category: 'fruits',
-    description: 'Maçã gala doce e crocante',
-    inStock: true,
-    rating: 4.8,
-    reviews: 95
-  },
-  {
-    id: '3',
-    name: 'Alface Crespa',
-    price: 2.99,
-    image: '/images/products/lettuce.jpg',
-    category: 'vegetables',
-    description: 'Alface crespa fresca',
-    inStock: true,
-    rating: 4.2,
-    reviews: 67
-  }
-]
+
 
 // Dados de exemplo para usuários
 const users = [

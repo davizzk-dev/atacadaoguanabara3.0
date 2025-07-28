@@ -248,7 +248,7 @@ export const products = [
     price: 9.99,
     originalPrice: 9.49,
     // Foto do produto: Bandeja de morango fresco
-    image: "https://exemplo.com/imagens/bandeja-de-morango.jpg", // Troque para o link da foto real do produto
+    image: "https://i.ibb.co/yBMJSp0t/bandejademorangofresco.jpg", // Troque para o link da foto real do produto
     category: "Frutas",
     description: "Bandeja de morango fresco",
     stock: 4,
@@ -264,7 +264,7 @@ export const products = [
     price: 15.99,
     originalPrice: 15.49,
     // Foto do produto: Bandeja com 30 ovos brancos
-    image: "https://exemplo.com/imagens/bandeja-de-ovos-brancos-30-unidades.jpg", // Troque para o link da foto real do produto
+    image: "https://i.ibb.co/MwJrmqg/bandejadeovosbrancos.jpg", // Troque para o link da foto real do produto
     category: "Laticínios",
     description: "Bandeja com 30 ovos brancos",
     stock: 10,
@@ -280,7 +280,7 @@ export const products = [
     price: 22.90,
     originalPrice: 22.90,
     // Foto do produto: Barra de chocolate para confeitaria Mavalério 1,01kg
-    image: "https://exemplo.com/imagens/barra-de-chocolate-confeiteiro-blend-mavalerio-1-01kg.jpg", // Troque para o link da foto real do produto
+    image: "https://i.ibb.co/b5f4PzPM/malaveirobarrachocolate.webp", // Troque para o link da foto real do produto
     category: "Chocolates",
     description: "Barra de chocolate para confeitaria 1,01kg",
     stock: 6,
@@ -296,7 +296,7 @@ export const products = [
     price: 23.90,
     originalPrice: 22.99,
     // Foto do produto: Barra de chocolate ao leite para confeitaria Harald 1,01kg
-    image: "https://exemplo.com/imagens/barra-de-chocolate-confeiteiro-ao-leite-harald-1-01kg.jpg", // Troque para o link da foto real do produto
+    image: "https://i.ibb.co/FbWBb4mZ/barradechocolateaoleiteharald.webp", // Troque para o link da foto real do produto
     category: "Chocolates",
     description: "Barra de chocolate ao leite para confeitaria 1,01kg",
     stock: 5,
@@ -312,7 +312,7 @@ export const products = [
     price: 20.99,
     originalPrice: 19.99,
     // Foto do produto: Barra de chocolate blend para confeitaria Harald 1,01kg
-    image: "https://exemplo.com/imagens/barra-de-chocolate-confeiteiro-blend-harald-1-01kg.jpg", // Troque para o link da foto real do produto
+    image: "https://i.ibb.co/FLFp5tB9/barrachocolateharald.webp", // Troque para o link da foto real do produto
     category: "Chocolates",
     description: "Barra de chocolate blend para confeitaria 1,01kg",
     stock: 5,
@@ -328,7 +328,7 @@ export const products = [
     price: 24.99,
     originalPrice: 23.90,
     // Foto do produto: Barra de chocolate branco para confeitaria Harald 1,01kg
-    image: "https://exemplo.com/imagens/barra-de-chocolate-confeiteiro-chocolate-branco-harald-1-010kg.jpg", // Troque para o link da foto real do produto
+    image: "https://i.ibb.co/G4fH6Zz4/BARRADECHOCOLATEBRANCOHARALD.webp", // Troque para o link da foto real do produto
     category: "Chocolates",
     description: "Barra de chocolate branco para confeitaria 1,01kg",
     stock: 5,
@@ -344,7 +344,7 @@ export const products = [
     price: 23.90,
     originalPrice: 22.99,
     // Foto do produto: Barra de chocolate meio amargo para confeitaria Harald 1,01kg
-    image: "https://exemplo.com/imagens/barra-de-chocolate-confeiteiro-meio-amargo-harald-1-01kg.jpg", // Troque para o link da foto real do produto
+    image: "https://i.ibb.co/xqX2rkNZ/BARRADECHOCOLATEMEIOAMARGOHARALD.webp", // Troque para o link da foto real do produto
     category: "Chocolates",
     description: "Barra de chocolate meio amargo para confeitaria 1,01kg",
     stock: 5,
@@ -360,7 +360,7 @@ export const products = [
     price: 29.90,
     originalPrice: 28.90,
     // Foto do produto: Batata especial Bem Brasil 2kg
-    image: "https://exemplo.com/imagens/batata-bem-brasil-mais-batata-2kg.jpg", // Troque para o link da foto real do produto
+    image: "https://i.ibb.co/C3g2fsXH/BATATABEMBRASIL2-KG.jpg", // Troque para o link da foto real do produto
     category: "Hortifruti",
     description: "Batata especial 2kg",
     stock: 7,
@@ -376,7 +376,7 @@ export const products = [
     price: 4.49,
     originalPrice: 3.99,
     // Foto do produto: Batata palha Água na Boca 140g
-    image: "https://exemplo.com/imagens/batata-palha-agua-na-boca-140g.jpg", // Troque para o link da foto real do produto
+    image: "https://i.ibb.co/hJc6Wzy5/BATATAPALHAAGUANABOCA.jpg", // Troque para o link da foto real do produto
     category: "Snacks",
     description: "Batata palha 140g",
     stock: 10,
@@ -392,7 +392,7 @@ export const products = [
     price: 23.90,
     originalPrice: 23.90,
     // Foto do produto: Batata palha Água na Boca 1kg
-    image: "https://exemplo.com/imagens/batata-palha-agua-na-boca-1kg.jpg", // Troque para o link da foto real do produto
+    image: "https://i.ibb.co/hJc6Wzy5/BATATAPALHAAGUANABOCA.jpg", // Troque para o link da foto real do produto
     category: "Snacks",
     description: "Batata palha 1kg",
     stock: 5,
@@ -408,7 +408,7 @@ export const products = [
     price: 9.75,
     originalPrice: 8.99,
     // Foto do produto: Batata palha Água na Boca 400g
-    image: "https://exemplo.com/imagens/batata-palha-agua-na-boca-400g.jpg", // Troque para o link da foto real do produto
+    image: "https://i.ibb.co/hJc6Wzy5/BATATAPALHAAGUANABOCA.jpg", // Troque para o link da foto real do produto
     category: "Snacks",
     description: "Batata palha 400g",
     stock: 10,
@@ -424,7 +424,7 @@ export const products = [
     price: 15.99,
     originalPrice: 14.99,
     // Foto do produto: Batata palha tradicional Feulen 400g
-    image: "https://exemplo.com/imagens/batata-palha-feulen-400g-trad.jpg", // Troque para o link da foto real do produto
+    image: "https://i.ibb.co/1fjTMgdd/batatapalhafeulen500g.jpg", // Troque para o link da foto real do produto
     category: "Snacks",
     description: "Batata palha tradicional 400g",
     stock: 6,
@@ -456,7 +456,7 @@ export const products = [
     price: 39.90,
     originalPrice: 39.90,
     // Foto do produto: Creme de avelã com cacau em bisnaga Bom Princípio 1,01kg
-    image: "https://exemplo.com/imagens/bisnaga-creme-de-avella-com-cacau-1-01-kg-bom-princípio.jpg", // Troque para o link da foto real do produto
+    image: "https://i.ibb.co/0pWDmM31/bisnagacremedeavelacomcacaubompricipio1-01kg.webp", // Troque para o link da foto real do produto
     category: "Chocolates",
     description: "Creme de avelã com cacau em bisnaga 1,01kg",
     stock: 6,
@@ -489,7 +489,7 @@ export const products = [
     price: 8.99,
     originalPrice: 8.49,
     // Foto do produto: Feijão preto Camil 1kg
-    image: "https://exemplo.com/imagens/feijão-preto-camil-1kg.jpg", // Troque para o link da foto real do produto
+    image: "https://i.ibb.co/nNmVhVZ9/feijaopretocamil1kg.jpg", // Troque para o link da foto real do produto
     category: "Grãos",
     description: "Feijão preto tipo 1 1kg",
     stock: 15,
@@ -505,7 +505,7 @@ export const products = [
     price: 7.99,
     originalPrice: 7.49,
     // Foto do produto: Feijão carioca Camil 1kg
-    image: "https://exemplo.com/imagens/feijão-carioca-camil-1kg.jpg", // Troque para o link da foto real do produto
+    image: "https://i.ibb.co/cKCwW65J/feijaocamil1kg.jpg", // Troque para o link da foto real do produto
     category: "Grãos",
     description: "Feijão carioca tipo 1 1kg",
     stock: 20,
@@ -521,7 +521,7 @@ export const products = [
     price: 4.99,
     originalPrice: 4.79,
     // Foto do produto: Açúcar refinado União 1kg
-    image: "https://exemplo.com/imagens/açúcar-refinado-união-1kg.jpg", // Troque para o link da foto real do produto
+    image: "https://i.ibb.co/Mydd3Pqk/a-ucarrefinadouniao.jpeg", // Troque para o link da foto real do produto
     category: "Açúcar e Adoçantes",
     description: "Açúcar refinado 1kg",
     stock: 25,
@@ -537,7 +537,7 @@ export const products = [
     price: 4.49,
     originalPrice: 4.29,
     // Foto do produto: Açúcar cristal União 1kg
-    image: "https://exemplo.com/imagens/açúcar-cristal-união-1kg.jpg", // Troque para o link da foto real do produto
+    image: "https://i.ibb.co/RTymz66W/a-ucarcristaluniao.jpg", // Troque para o link da foto real do produto
     category: "Açúcar e Adoçantes",
     description: "Açúcar cristal 1kg",
     stock: 18,
@@ -553,7 +553,7 @@ export const products = [
     price: 5.99,
     originalPrice: 5.79,
     // Foto do produto: Leite integral Itambé 1L
-    image: "https://exemplo.com/imagens/leite-integral-itambé-1l.jpg", // Troque para o link da foto real do produto
+    image: "https://i.ibb.co/50gjhC0/leiteintegralitamb.png", // Troque para o link da foto real do produto
     category: "Laticínios",
     description: "Leite integral 1 litro",
     stock: 30,
@@ -585,7 +585,7 @@ export const products = [
     price: 3.99,
     originalPrice: 3.79,
     // Foto do produto: Macarrão espaguete Camil 500g
-    image: "https://exemplo.com/imagens/macarrão-espaguete-camil-500g.jpg", // Troque para o link da foto real do produto
+    image: "https://i.ibb.co/272Bk8zD/macarraocamilovosespaguete500g.webp", // Troque para o link da foto real do produto
     category: "Massas",
     description: "Macarrão espaguete 500g",
     stock: 40,
@@ -611,38 +611,7 @@ export const products = [
     unit: "500g",
     tags: ["macarrão", "penne", "massa"],
   },
-  {
-    id: "39",
-    name: "BANANA PRATA KG",
-    price: 6.99,
-    originalPrice: 6.49,
-    // Foto do produto: Banana prata por kg
-    image: "https://exemplo.com/imagens/banana-prata-kg.jpg", // Troque para o link da foto real do produto
-    category: "Frutas e Verduras",
-    description: "Banana prata por kg",
-    stock: 8,
-    rating: 4.7,
-    reviews: 45,
-    brand: "Frutas Frescas",
-    unit: "kg",
-    tags: ["banana", "prata", "fruta"],
-  },
-  {
-    id: "40",
-    name: "MAÇÃ FUJI KG",
-    price: 9.99,
-    originalPrice: 9.49,
-    // Foto do produto: Maçã fuji por kg
-    image: "https://exemplo.com/imagens/maçã-fuji-kg.jpg", // Troque para o link da foto real do produto
-    category: "Frutas e Verduras",
-    description: "Maçã fuji por kg",
-    stock: 6,
-    rating: 4.8,
-    reviews: 67,
-    brand: "Frutas Frescas",
-    unit: "kg",
-    tags: ["maçã", "fuji", "fruta"],
-  },
+  
   {
     id: "41",
     name: "FRANGO INTEIRO KG",
@@ -809,7 +778,7 @@ export const products = [
     name: "ARROZ TIO JOÃO 5KG",
     price: 18.0,
     originalPrice: 22.0,
-    image: "https://images.unsplash.com/photo-1607252650355-f7fd0460ccdb?auto=format&fit=crop&w=400&q=80",
+    image: "https://i.ibb.co/99jMZbbF/arroztiojoao5kg.jpg",
     category: "Grãos",
     description: "Arroz branco tipo 1 5kg",
     stock: 60,

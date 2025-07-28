@@ -18,7 +18,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data)
   } catch (error) {
     console.error('Erro ao buscar produtos:', error)
-    
     // Dados mockados em caso de erro
     return NextResponse.json([
       {

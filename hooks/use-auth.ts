@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSessionWrapper } from '@/hooks/use-session-wrapper'
 import { useAuthStore } from '@/lib/store'
 
 export function useAuth() {
-  const { data: session, status } = useSession()
+  const { data: session, status } = useSessionWrapper()
   const { user, setUser, logout: storeLogout } = useAuthStore()
 
   useEffect(() => {

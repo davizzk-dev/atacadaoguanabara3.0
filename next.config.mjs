@@ -11,7 +11,7 @@ const nextConfig = {
     unoptimized: true, // Para build estático
   },
   // Configuração para build estático
-  output: 'export',
+  // output: 'export', // Comentado temporariamente
   trailingSlash: true,
   skipTrailingSlashRedirect: true,
   // Desabilitar otimizações que causam problemas no build estático

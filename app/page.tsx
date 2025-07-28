@@ -101,9 +101,10 @@ export default function HomePage() {
           console.log('Produtos carregados:', productsData.length)
         } else {
           console.error('Erro ao carregar produtos:', productsResponse.status)
-          // Não usar dados locais como fallback - manter vazio
-          setProducts([])
-          setFeaturedProducts([])
+          // Usar dados locais como fallback
+          console.log('Usando produtos estáticos como fallback')
+          setProducts(productsData)
+          setFeaturedProducts(productsData.slice(0, 15))
         }
 
         // Carregar promoções
@@ -124,9 +125,10 @@ export default function HomePage() {
         }
       } catch (error) {
         console.error('Erro ao carregar dados:', error)
-        // Não usar dados locais como fallback - manter vazio
-        setProducts([])
-        setFeaturedProducts([])
+        // Usar dados locais como fallback
+        console.log('Erro geral - usando produtos estáticos como fallback')
+        setProducts(productsData)
+        setFeaturedProducts(productsData.slice(0, 15))
         setProductPromotions([])
       }
     }

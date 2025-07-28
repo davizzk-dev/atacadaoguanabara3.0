@@ -2860,16 +2860,16 @@ function PromotionForm({
             
             <div className="flex-1 overflow-y-auto p-6 modal-scroll relative scroll-smooth bg-gray-50">
               <div className="bg-white rounded-lg p-6 shadow-sm">
-                <PromotionForm
-                  promotion={editingPromotion}
-                  products={products}
-                  onSave={savePromotion}
-                  onCancel={() => {
-                    setShowPromotionModal(false)
-                    setEditingPromotion(null)
-                  }}
-                  isLoading={isUpdating}
-                />
+              <PromotionForm
+                promotion={editingPromotion}
+                products={products}
+                onSave={savePromotion}
+                onCancel={() => {
+                  setShowPromotionModal(false)
+                  setEditingPromotion(null)
+                }}
+                isLoading={isUpdating}
+              />
               </div>
               
               {/* Indicador de scroll */}

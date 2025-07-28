@@ -1459,17 +1459,17 @@ function PromotionForm({
                   onClick={async () => {
                     try {
                       addNotification('info', 'Gerando PDF mensal...');
-                      const res = await fetch('/api/proxy/java/admin/report/monthly');
-                      if (res.ok) {
-                        const blob = await res.blob();
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `relatorio-mensal.pdf`;
-                        a.click();
-                        window.URL.revokeObjectURL(url);
+                    const res = await fetch('/api/proxy/java/admin/report/monthly');
+                    if (res.ok) {
+                      const blob = await res.blob();
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `relatorio-mensal.pdf`;
+                      a.click();
+                      window.URL.revokeObjectURL(url);
                         addNotification('success', 'PDF mensal gerado com sucesso!');
-                      } else {
+                    } else {
                         addNotification('error', 'Erro ao gerar PDF mensal');
                       }
                     } catch (error) {

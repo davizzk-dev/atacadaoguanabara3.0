@@ -60,6 +60,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useRouter } from 'next/navigation'
 import { ChartContainer } from '@/components/ui/chart'
 import { Button } from '@/components/ui/button'
+import { generateSalesReportPDF, generateProductsPDF, generatePromotionsPDF, generateOrdersPDF, generateCustomersPDF } from '@/lib/utils'
 
 interface DashboardStats {
   totalUsers: number
@@ -1420,8 +1421,8 @@ function PromotionForm({
                 </div>
               </div>
 
-              {/* Botão de geração de PDF mensal */}
-              <div className="flex justify-end mb-4">
+              {/* Botões de geração de PDF */}
+              <div className="flex justify-end mb-4 gap-2">
                 <button
                   className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors flex items-center gap-2"
                   onClick={async () => {
@@ -1439,7 +1440,22 @@ function PromotionForm({
                     }
                   }}
                 >
-                  <Eye className="w-5 h-5" /> Gerar PDF Mensal
+                  <Eye className="w-5 h-5" /> PDF Mensal
+                </button>
+                <button
+                  className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors flex items-center gap-2"
+                  onClick={() => {
+                    const doc = generateSalesReportPDF({
+                      totalOrders: stats.totalOrders,
+                      totalRevenue: stats.totalRevenue,
+                      totalUsers: stats.totalUsers,
+                      totalProducts: stats.totalProducts,
+                      promotions: productPromotions.filter(p => p.isActive)
+                    });
+                    doc.save('relatorio-vendas.pdf');
+                  }}
+                >
+                  <FileText className="w-5 h-5" /> Relatório de Vendas
                 </button>
               </div>
 
@@ -1811,16 +1827,28 @@ function PromotionForm({
             <div>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Promoções de Produtos</h2>
-                <button
-                  onClick={() => {
-                    setEditingPromotion(null)
-                    setShowPromotionModal(true)
-                  }}
-                  className="flex items-center space-x-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Nova Promoção</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const doc = generatePromotionsPDF(productPromotions);
+                      doc.save('relatorio-promocoes.pdf');
+                    }}
+                    className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Gerar PDF
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingPromotion(null)
+                      setShowPromotionModal(true)
+                    }}
+                    className="flex items-center space-x-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Nova Promoção</span>
+                  </button>
+                </div>
               </div>
               
               {productPromotions.length === 0 ? (
@@ -1947,6 +1975,16 @@ function PromotionForm({
                     <Download className="w-4 h-4" />
                     Exportar CSV
                   </button>
+                  <button
+                    onClick={() => {
+                      const doc = generateProductsPDF(filteredProducts);
+                      doc.save('catalogo-produtos.pdf');
+                    }}
+                    className="flex items-center gap-2 bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Gerar PDF
+                  </button>
                 </div>
               </div>
               
@@ -2039,6 +2077,16 @@ function PromotionForm({
                   >
                     <Download className="w-4 h-4" />
                     Exportar CSV
+                  </button>
+                  <button
+                    onClick={() => {
+                      const doc = generateOrdersPDF(filteredOrders);
+                      doc.save('relatorio-pedidos.pdf');
+                    }}
+                    className="flex items-center gap-2 bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Gerar PDF
                   </button>
                 </div>
               </div>
@@ -2142,6 +2190,16 @@ function PromotionForm({
                   >
                     <Download className="w-4 h-4" />
                     Exportar CSV
+                  </button>
+                  <button
+                    onClick={() => {
+                      const doc = generateCustomersPDF(filteredUsers);
+                      doc.save('relatorio-clientes.pdf');
+                    }}
+                    className="flex items-center gap-2 bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Gerar PDF
                   </button>
                 </div>
               </div>

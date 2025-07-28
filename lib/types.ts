@@ -23,6 +23,25 @@ export interface CartItem {
   quantity: number
 }
 
+export interface Address {
+  street: string
+  number: string
+  complement?: string
+  neighborhood: string
+  city: string
+  state: string
+  zipCode: string
+  reference?: string
+}
+
+export interface ShippingCalculation {
+  distance: number // em km
+  duration: number // em minutos
+  cost: number // em reais
+  estimatedDelivery: string // tempo estimado
+  available: boolean
+}
+
 export interface Order {
   id: string
   items: CartItem[]
@@ -31,16 +50,15 @@ export interface Order {
     name: string
     email: string
     phone: string
-    address: string
-    city: string
-    zipCode: string
-    complement?: string
+    address: Address
   }
   status: "pending" | "confirmed" | "preparing" | "delivering" | "delivered" | "cancelled"
   createdAt: Date
   estimatedDelivery?: Date
   paymentMethod?: string
   notes?: string
+  shippingCost?: number
+  shippingDistance?: number
 }
 
 export interface User {
@@ -48,6 +66,7 @@ export interface User {
   email: string
   name: string
   phone: string
+  address: Address
   role: "user" | "admin"
   createdAt?: string
   updatedAt?: string

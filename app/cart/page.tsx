@@ -2,10 +2,12 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Trash2, Minus, Plus, MapPin, Phone, User, AlertCircle } from 'lucide-react'
+import { Trash2, Minus, Plus, MapPin, Phone, User, AlertCircle, Truck, Calculator } from 'lucide-react'
 import Header from '@/components/header'
 import { Footer } from '@/components/footer'
 import { useCartStore, useAuthStore, useOrderStore } from '@/lib/store'
+import { shippingService } from '@/lib/shipping'
+import type { Address, ShippingCalculation } from '@/lib/types'
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, getTotal, clearCart } = useCartStore()
@@ -14,6 +16,8 @@ export default function CartPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [debugInfo, setDebugInfo] = useState<string | null>(null)
+  const [shippingCalculation, setShippingCalculation] = useState<ShippingCalculation | null>(null)
+  const [isCalculatingShipping, setIsCalculatingShipping] = useState(false)
   const router = useRouter()
   const errorRef = useRef<HTMLDivElement>(null)
 
@@ -47,6 +51,49 @@ export default function CartPage() {
       return `${numbers.slice(0, 5)}-${numbers.slice(5)}`
     }
     return value.slice(0, 9)
+  }
+
+  // Calcular frete
+  const calculateShipping = async (address: Address) => {
+    setIsCalculatingShipping(true)
+    try {
+      const calculation = await shippingService.calculateShipping(address, getTotal())
+      setShippingCalculation(calculation)
+      return calculation
+    } catch (error) {
+      console.error('Erro ao calcular frete:', error)
+      setError('Erro ao calcular frete. Tente novamente.')
+      return null
+    } finally {
+      setIsCalculatingShipping(false)
+    }
+  }
+
+  // Buscar endereço por CEP
+  const handleZipCodeBlur = async (zipCode: string) => {
+    const cleanZipCode = zipCode.replace(/\D/g, '')
+    if (cleanZipCode.length === 8) {
+      try {
+                 const addressData = await (shippingService.constructor as any).getAddressByZipCode(cleanZipCode)
+        if (addressData) {
+          // Preencher campos automaticamente
+          const form = document.querySelector('form') as HTMLFormElement
+          if (form) {
+            const streetInput = form.querySelector('[name="street"]') as HTMLInputElement
+            const neighborhoodInput = form.querySelector('[name="neighborhood"]') as HTMLInputElement
+            const cityInput = form.querySelector('[name="city"]') as HTMLInputElement
+            const stateInput = form.querySelector('[name="state"]') as HTMLSelectElement
+
+            if (streetInput) streetInput.value = addressData.street || ''
+            if (neighborhoodInput) neighborhoodInput.value = addressData.neighborhood || ''
+            if (cityInput) cityInput.value = addressData.city || ''
+            if (stateInput) stateInput.value = addressData.state || ''
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao buscar CEP:', error)
+      }
+    }
   }
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,72 +141,93 @@ export default function CartPage() {
       const customerName = formData.get('name') as string || user?.name || ''
       const customerPhone = formData.get('phone') as string || user?.phone || ''
       const customerEmail = formData.get('email') as string || user?.email || ''
-      const customerAddress = formData.get('address') as string || 'Jardim Guanabara'
+
+      // Obter dados de endereço
+      const street = formData.get('street') as string || ''
+      const number = formData.get('number') as string || ''
+      const complement = formData.get('complement') as string || ''
+      const neighborhood = formData.get('neighborhood') as string || ''
+      const city = formData.get('city') as string || ''
+      const state = formData.get('state') as string || ''
+      const zipCode = formData.get('zipCode') as string || ''
 
       // Validar dados obrigatórios
       if (!customerName.trim()) {
-        setError('Por favor, preencha seu nome completo.')
-        setIsLoading(false)
+        setError('Nome é obrigatório.')
         return
       }
 
       if (!customerPhone.trim()) {
-        setError('Por favor, preencha seu número de telefone.')
-        setIsLoading(false)
+        setError('Telefone é obrigatório.')
         return
       }
 
-      // Validar formato do telefone (pelo menos 10 dígitos)
-      const phoneNumbers = customerPhone.replace(/\D/g, '')
-      if (phoneNumbers.length < 10) {
-        setError('Por favor, preencha um telefone válido com pelo menos 10 dígitos.')
-        setIsLoading(false)
+      if (!customerEmail.trim()) {
+        setError('Email é obrigatório.')
         return
       }
 
-      // Validar que ambos os campos estão preenchidos
-      if (!customerName.trim() || !customerPhone.trim()) {
-        setError('Por favor, preencha seu nome completo e número de telefone.')
-        setIsLoading(false)
+      // Validar endereço
+      if (!street || !number || !neighborhood || !city || !state || !zipCode) {
+        setError('Todos os campos de endereço são obrigatórios.')
         return
       }
 
-      // Salvar pedido no sistema
-      const orderData = {
+      // Criar objeto de endereço
+      const address: Address = {
+        street,
+        number,
+        complement: complement || undefined,
+        neighborhood,
+        city,
+        state,
+        zipCode,
+        reference: formData.get('reference') as string || undefined
+      }
+
+      // Calcular frete se ainda não foi calculado
+      let shipping = shippingCalculation
+      if (!shipping) {
+        shipping = await calculateShipping(address)
+        if (!shipping) {
+          return
+        }
+      }
+
+      // Verificar se o frete está disponível
+      if (!shipping.available) {
+        setError('Desculpe, não entregamos neste endereço.')
+        return
+      }
+
+      const totalWithShipping = getTotal() + shipping.cost
+
+      // Criar pedido
+      const order = {
         id: Date.now().toString(),
-        userId: user?.id || `guest_${customerEmail || customerPhone.replace(/\D/g, '')}`,
-        userName: customerName,
-        userEmail: customerEmail,
-        userPhone: customerPhone,
-        items: items.map(item => ({
-          productId: item.product.id,
-          name: item.product.name,
-          price: item.product.price,
-          quantity: item.quantity
-        })),
-        total: getTotal(),
-        status: 'pending',
-        createdAt: new Date().toISOString(),
+        items,
+        total: totalWithShipping,
         customerInfo: {
           name: customerName,
           email: customerEmail,
           phone: customerPhone,
-          address: customerAddress
-        }
+          address
+        },
+        status: 'pending' as const,
+        createdAt: new Date(),
+        estimatedDelivery: new Date(Date.now() + shipping.duration * 60 * 1000),
+        shippingCost: shipping.cost,
+        shippingDistance: shipping.distance
       }
 
-      console.log('Dados do pedido:', orderData)
-
-      // Salvar pedido via API
+      // Salvar pedido na API
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(orderData),
+        body: JSON.stringify(order)
       })
-
-      console.log('Resposta da API:', response.status)
 
       if (response.ok) {
         const savedOrder = await response.json()
@@ -173,21 +241,27 @@ export default function CartPage() {
           `${item.product.name} - Qtd: ${item.quantity} - R$ ${(item.product.price * item.quantity).toFixed(2)}`
         ).join('\n')
 
-        const total = getTotal()
         const message = `🛒 *PEDIDO - ATACADÃO GUANABARA*
 
 *Cliente:* ${customerName}
 *Telefone:* ${customerPhone}
+*Email:* ${customerEmail}
+
+*Endereço de entrega:*
+${street}, ${number}${complement ? ` - ${complement}` : ''}
+${neighborhood}, ${city} - ${state}
+CEP: ${zipCode}
 
 *Itens:*
 ${orderItems}
 
-*Total: R$ ${total.toFixed(2)}*
+*Subtotal: R$ ${getTotal().toFixed(2)}*
+*Frete: R$ ${shipping.cost.toFixed(2)}*
+*Total: R$ ${totalWithShipping.toFixed(2)}*
 
-Entregamos somente no Jardim Guanabara.
-
-*Endereço de entrega:*
-${customerAddress}
+*Informações de entrega:*
+Distância: ${shipping.distance.toFixed(1)} km
+Tempo estimado: ${shipping.estimatedDelivery}
 
 Obrigado pela preferência! 🧡`
 
@@ -270,7 +344,10 @@ Obrigado pela preferência! 🧡`
               <aside className="flex flex-col gap-10 w-full max-w-md mx-auto">
                 {/* Aviso de entrega */}
                 <div className="bg-orange-50 border-l-4 border-orange-400 text-orange-700 font-bold rounded-xl px-4 py-3 mb-2 text-center shadow animate-pulse">
-                  Entregamos somente no bairro Jardim Guanabara.
+                  <div className="flex items-center justify-center gap-2">
+                    <Truck className="w-5 h-5" />
+                    <span>Calcule o frete para seu endereço</span>
+                  </div>
                 </div>
 
 
@@ -292,10 +369,88 @@ Obrigado pela preferência! 🧡`
               )}
 
               <FormCart user={user} />
+              
+              {/* Cálculo de Frete */}
+              <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Cálculo de Frete</h3>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const form = document.querySelector('form') as HTMLFormElement
+                      if (form) {
+                        const formData = new FormData(form)
+                        const address: Address = {
+                          street: formData.get('street') as string,
+                          number: formData.get('number') as string,
+                          complement: formData.get('complement') as string || undefined,
+                          neighborhood: formData.get('neighborhood') as string,
+                          city: formData.get('city') as string,
+                          state: formData.get('state') as string,
+                          zipCode: formData.get('zipCode') as string,
+                          reference: formData.get('reference') as string || undefined
+                        }
+                        
+                        if (address.street && address.number && address.neighborhood && address.city && address.state && address.zipCode) {
+                          await calculateShipping(address)
+                        } else {
+                          setError('Preencha todos os campos de endereço para calcular o frete')
+                        }
+                      }
+                    }}
+                    disabled={isCalculatingShipping}
+                    className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Calculator className="w-4 h-4" />
+                    {isCalculatingShipping ? 'Calculando...' : 'Calcular Frete'}
+                  </button>
+                </div>
+                
+                {shippingCalculation && (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Distância:</span>
+                      <span className="font-semibold">{shippingCalculation.distance.toFixed(1)} km</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Tempo estimado:</span>
+                      <span className="font-semibold">{shippingCalculation.estimatedDelivery}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Custo do frete:</span>
+                      <span className={`font-semibold ${shippingCalculation.cost === 0 ? 'text-green-600' : 'text-orange-600'}`}>
+                        {shippingCalculation.cost === 0 ? 'GRÁTIS' : `R$ ${shippingCalculation.cost.toFixed(2)}`}
+                      </span>
+                    </div>
+                    {!shippingCalculation.available && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <p className="text-red-700 text-sm">Desculpe, não entregamos neste endereço.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
               {/* Total */}
               <div className="flex flex-col md:flex-row justify-between items-center border-t pt-8 gap-6 md:gap-0">
-                <span className="text-2xl font-bold text-blue-900 tracking-wide">Total</span>
+                <span className="text-2xl font-bold text-blue-900 tracking-wide">Subtotal</span>
                 <span className="text-4xl font-extrabold text-[#FF6600] drop-shadow">R$ {getTotal().toFixed(2)}</span>
+              </div>
+              
+              {shippingCalculation && (
+                <div className="flex flex-col md:flex-row justify-between items-center border-t pt-4 gap-6 md:gap-0">
+                  <span className="text-lg font-semibold text-gray-700">Frete</span>
+                  <span className={`text-2xl font-bold ${shippingCalculation.cost === 0 ? 'text-green-600' : 'text-gray-700'}`}>
+                    {shippingCalculation.cost === 0 ? 'GRÁTIS' : `R$ ${shippingCalculation.cost.toFixed(2)}`}
+                  </span>
+                </div>
+              )}
+              
+              <div className="flex flex-col md:flex-row justify-between items-center border-t pt-4 gap-6 md:gap-0">
+                <span className="text-2xl font-bold text-blue-900 tracking-wide">Total</span>
+                <span className="text-4xl font-extrabold text-[#FF6600] drop-shadow">
+                  R$ {(getTotal() + (shippingCalculation?.cost || 0)).toFixed(2)}
+                </span>
               </div>
               {/* Botão WhatsApp */}
               <button
@@ -343,9 +498,16 @@ Obrigado pela preferência! 🧡`
 // Formulário com máscaras e validação
 function FormCart({ user }: { user: any }) {
   const [phone, setPhone] = useState(user?.phone || '')
-  const [cep, setCep] = useState('')
+  const [zipCode, setZipCode] = useState('')
   const [email, setEmail] = useState(user?.email || '')
   const [name, setName] = useState(user?.name || '')
+  const [street, setStreet] = useState('')
+  const [number, setNumber] = useState('')
+  const [complement, setComplement] = useState('')
+  const [neighborhood, setNeighborhood] = useState('')
+  const [city, setCity] = useState('')
+  const [state, setState] = useState('')
+  const [reference, setReference] = useState('')
   
   // Máscara telefone
   function formatPhone(value: string) {
@@ -355,15 +517,36 @@ function FormCart({ user }: { user: any }) {
     if (numbers.length <= 11) return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`
     return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`
   }
+  
   // Máscara CEP
-  function formatCep(value: string) {
+  function formatZipCode(value: string) {
     const numbers = value.replace(/\D/g, '')
     if (numbers.length <= 5) return numbers
     return `${numbers.slice(0, 5)}-${numbers.slice(5, 8)}`
   }
+  
   // Validação email
   function isValidEmail(value: string) {
     return value.includes('@')
+  }
+  
+  // Buscar endereço por CEP
+  const handleZipCodeBlur = async () => {
+    const cleanZipCode = zipCode.replace(/\D/g, '')
+    if (cleanZipCode.length === 8) {
+      try {
+        const response = await fetch(`/api/shipping/zipcode/${cleanZipCode}`)
+        if (response.ok) {
+          const addressData = await response.json()
+          setStreet(addressData.street || '')
+          setNeighborhood(addressData.neighborhood || '')
+          setCity(addressData.city || '')
+          setState(addressData.state || '')
+        }
+      } catch (error) {
+        console.error('Erro ao buscar CEP:', error)
+      }
+    }
   }
   
   return (
@@ -409,32 +592,126 @@ function FormCart({ user }: { user: any }) {
           )}
         </div>
         <div className="flex flex-col gap-2 md:col-span-2">
-          <label className="font-semibold text-blue-900 text-sm">Endereço</label>
+          <label className="font-semibold text-blue-900 text-sm">CEP *</label>
+          <input
+            type="text"
+            name="zipCode"
+            className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base"
+            placeholder="00000-000"
+            value={zipCode}
+            onChange={e => setZipCode(formatZipCode(e.target.value))}
+            onBlur={handleZipCodeBlur}
+            maxLength={9}
+            required
+          />
+        </div>
+        <div className="flex flex-col gap-2 md:col-span-2">
+          <label className="font-semibold text-blue-900 text-sm">Rua/Avenida *</label>
           <input 
             type="text" 
-            name="address"
+            name="street"
+            value={street}
+            onChange={e => setStreet(e.target.value)}
             className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base" 
-            placeholder="Rua, número" 
+            placeholder="Nome da rua" 
+            required
           />
         </div>
         <div className="flex flex-col gap-2">
-          <label className="font-semibold text-blue-900 text-sm">CEP</label>
+          <label className="font-semibold text-blue-900 text-sm">Número *</label>
           <input
             type="text"
+            name="number"
+            value={number}
+            onChange={e => setNumber(e.target.value)}
             className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base"
-            placeholder="60347-255"
-            value={cep}
-            onChange={e => setCep(formatCep(e.target.value))}
-            maxLength={9}
+            placeholder="123"
+            required
           />
         </div>
         <div className="flex flex-col gap-2">
-          <label className="font-semibold text-blue-900 text-sm">Bairro</label>
+          <label className="font-semibold text-blue-900 text-sm">Complemento</label>
           <input
             type="text"
-            className="rounded-lg border border-gray-300 px-4 py-3 bg-gray-100 text-gray-500 cursor-not-allowed focus:ring-0 focus:border-gray-300 transition text-base"
-            value="Jardim Guanabara"
-            readOnly
+            name="complement"
+            value={complement}
+            onChange={e => setComplement(e.target.value)}
+            className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base"
+            placeholder="Apto, bloco, etc."
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label className="font-semibold text-blue-900 text-sm">Bairro *</label>
+          <input
+            type="text"
+            name="neighborhood"
+            value={neighborhood}
+            onChange={e => setNeighborhood(e.target.value)}
+            className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base"
+            placeholder="Nome do bairro"
+            required
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label className="font-semibold text-blue-900 text-sm">Cidade *</label>
+          <input
+            type="text"
+            name="city"
+            value={city}
+            onChange={e => setCity(e.target.value)}
+            className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base"
+            placeholder="Fortaleza"
+            required
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label className="font-semibold text-blue-900 text-sm">Estado *</label>
+          <select
+            name="state"
+            value={state}
+            onChange={e => setState(e.target.value)}
+            className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base"
+            required
+          >
+            <option value="">Selecione o estado</option>
+            <option value="AC">Acre</option>
+            <option value="AL">Alagoas</option>
+            <option value="AP">Amapá</option>
+            <option value="AM">Amazonas</option>
+            <option value="BA">Bahia</option>
+            <option value="CE">Ceará</option>
+            <option value="DF">Distrito Federal</option>
+            <option value="ES">Espírito Santo</option>
+            <option value="GO">Goiás</option>
+            <option value="MA">Maranhão</option>
+            <option value="MT">Mato Grosso</option>
+            <option value="MS">Mato Grosso do Sul</option>
+            <option value="MG">Minas Gerais</option>
+            <option value="PA">Pará</option>
+            <option value="PB">Paraíba</option>
+            <option value="PR">Paraná</option>
+            <option value="PE">Pernambuco</option>
+            <option value="PI">Piauí</option>
+            <option value="RJ">Rio de Janeiro</option>
+            <option value="RN">Rio Grande do Norte</option>
+            <option value="RS">Rio Grande do Sul</option>
+            <option value="RO">Rondônia</option>
+            <option value="RR">Roraima</option>
+            <option value="SC">Santa Catarina</option>
+            <option value="SP">São Paulo</option>
+            <option value="SE">Sergipe</option>
+            <option value="TO">Tocantins</option>
+          </select>
+        </div>
+        <div className="flex flex-col gap-2 md:col-span-2">
+          <label className="font-semibold text-blue-900 text-sm">Ponto de Referência</label>
+          <input
+            type="text"
+            name="reference"
+            value={reference}
+            onChange={e => setReference(e.target.value)}
+            className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base"
+            placeholder="Próximo ao mercado, farmácia, etc."
           />
         </div>
       </div>

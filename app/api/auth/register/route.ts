@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
+import type { Address } from '@/lib/types'
 
 const dataPath = join(process.cwd(), 'data', 'users.json')
 
@@ -21,11 +22,16 @@ export async function POST(request: NextRequest) {
   try {
     ensureDataFile()
     const body = await request.json()
-    const { name, email, phone, password } = body
+    const { name, email, phone, password, address } = body
 
-    // Validações
+    // Validações básicas
     if (!name || !email || !phone || !password) {
       return NextResponse.json({ error: 'Todos os campos são obrigatórios' }, { status: 400 })
+    }
+
+    // Validações de endereço
+    if (!address || !address.street || !address.number || !address.neighborhood || !address.city || !address.state || !address.zipCode) {
+      return NextResponse.json({ error: 'Todos os campos de endereço são obrigatórios' }, { status: 400 })
     }
 
     // Validar formato do email
@@ -45,6 +51,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Senha deve ter pelo menos 6 caracteres' }, { status: 400 })
     }
 
+    // Validar CEP (8 dígitos)
+    const zipCodeRegex = /^\d{8}$/
+    if (!zipCodeRegex.test(address.zipCode.replace(/\D/g, ''))) {
+      return NextResponse.json({ error: 'CEP inválido' }, { status: 400 })
+    }
+
     const data = readFileSync(dataPath, 'utf-8')
     const users = JSON.parse(data)
 
@@ -61,6 +73,16 @@ export async function POST(request: NextRequest) {
       email,
       phone: phone.replace(/\D/g, ''), // Remover caracteres não numéricos
       password: password, // Em produção, deve ser criptografada
+      address: {
+        street: address.street,
+        number: address.number,
+        complement: address.complement || '',
+        neighborhood: address.neighborhood,
+        city: address.city,
+        state: address.state,
+        zipCode: address.zipCode,
+        reference: address.reference || ''
+      },
       role: 'user',
       createdAt: new Date().toISOString(),
       orders: 0

@@ -1,3 +1,5 @@
+import type { Session } from "next-auth"
+
 export interface Product {
   id: string
   name: string
@@ -66,7 +68,7 @@ export interface User {
   email: string
   name: string
   phone: string
-  address: Address
+  address?: Address
   role: "user" | "admin"
   createdAt?: string
   updatedAt?: string
@@ -107,4 +109,31 @@ export interface Review {
   rating: number
   comment: string
   createdAt: Date
+}
+
+// Extensões para NextAuth
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string
+      name?: string | null
+      email?: string | null
+      image?: string | null
+      role: string
+    }
+  }
+  
+  interface User {
+    id: string
+    name?: string | null
+    email?: string | null
+    image?: string | null
+    role?: string
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    role?: string
+  }
 }

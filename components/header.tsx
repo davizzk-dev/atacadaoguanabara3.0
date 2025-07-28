@@ -3,13 +3,14 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Menu, X, ShoppingCart, Heart, User, Home, Package, MessageSquare, Camera, FileText, HelpCircle, Settings, LogOut, Info } from 'lucide-react'
-import { useCartStore, useFavoritesStore, useAuthStore } from '@/lib/store'
+import { useCartStore, useFavoritesStore } from '@/lib/store'
+import { useAuth } from '@/hooks/use-auth'
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { getItemCount } = useCartStore()
   const { favorites } = useFavoritesStore()
-  const { user, logout } = useAuthStore()
+  const { user, logout } = useAuth()
   
   const cartItemCount = getItemCount()
   const favoritesCount = favorites.length

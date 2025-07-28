@@ -2,6 +2,7 @@
 
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
+import { signOut } from 'next-auth/react'
 import type { CartItem, Product, User, Order } from "./types"
 
 interface CartStore {
@@ -105,7 +106,10 @@ export const useAuthStore = create<AuthStore>()(
     (set, get) => ({
       user: null,
       setUser: (user) => set({ user }),
-      logout: () => set({ user: null }),
+      logout: () => {
+        set({ user: null })
+        signOut({ callbackUrl: '/' })
+      },
       register: async (userData) => {
         try {
           const response = await fetch('/api/auth/register', {

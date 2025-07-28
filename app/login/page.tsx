@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Mail, Lock, Eye, EyeOff, ArrowLeft, AlertCircle, Shield } from 'lucide-react'
+import { signIn, useSession } from 'next-auth/react'
 import Header from '@/components/header'
 import { Footer } from '@/components/footer'
 import { useAuthStore } from '@/lib/store'
@@ -19,6 +20,7 @@ function LoginContent() {
   const { login } = useAuthStore()
   const [animateRegister, setAnimateRegister] = useState(false)
   const [isAdminMode, setIsAdminMode] = useState(false)
+  const { data: session, status } = useSession()
 
   // Detectar se veio da página inicial (modo admin)
   useEffect(() => {
@@ -27,6 +29,13 @@ function LoginContent() {
       setIsAdminMode(true)
     }
   }, [searchParams])
+
+  // Redirecionar se já estiver logado
+  useEffect(() => {
+    if (status === 'authenticated' && session) {
+      router.push('/')
+    }
+  }, [status, session, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -59,10 +68,31 @@ function LoginContent() {
     setIsLoading(false)
   }
 
-  const handleSocialLogin = (provider: string) => {
-    // Simular login social
-    console.log(`Login com ${provider}`)
-    // Aqui você implementaria a integração real com Google, Facebook, Apple
+  const handleSocialLogin = async (provider: string) => {
+    try {
+      setIsLoading(true)
+      setError('')
+      
+      if (provider === 'Google') {
+        const result = await signIn('google', { 
+          callbackUrl: '/',
+          redirect: false 
+        })
+        
+        if (result?.error) {
+          setError('Erro ao fazer login com Google. Tente novamente.')
+        } else if (result?.ok) {
+          router.push('/')
+        }
+      } else {
+        setError('Login social não implementado ainda.')
+      }
+    } catch (error) {
+      console.error('Erro no login social:', error)
+      setError('Erro ao fazer login social. Tente novamente.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -107,7 +137,8 @@ function LoginContent() {
           <div className="space-y-3 mb-8">
             <button
               onClick={() => handleSocialLogin('Google')}
-              className="w-full flex items-center justify-center space-x-3 bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+              disabled={isLoading}
+              className="w-full flex items-center justify-center space-x-3 bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -115,7 +146,7 @@ function LoginContent() {
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
-              <span>Continuar com Google</span>
+              <span>{isLoading ? 'Entrando...' : 'Continuar com Google'}</span>
             </button>
             
             <button

@@ -660,9 +660,8 @@
     "unit": "kg",
     "brand": "Rekepizza",
     "stock": 20
-  }
-
-    {
+  },
+  {
       "id": 61,
       "name": "ARROZ TIO JOÃO 5KG",
       "priceAtacado": 18.0,
@@ -672,8 +671,8 @@
       "estoque": 60,
       "marca": "Tio João",
       "categoria": "Grãos"
-    },
-    {
+   },
+   {
       "id": 62,
       "name": "FEIJÃO CARIOCA KICALDO 1KG",
       "priceAtacado": 6.8,
@@ -683,7 +682,7 @@
       "estoque": 80,
       "marca": "Kicaldo",
       "categoria": "Grãos"
-    },
+  },
     {
       "id": 63,
       "name": "MACARRÃO RENATA ESPAGUETE 500G",
@@ -763,7 +762,7 @@
     },
     {
       "id": 70,
-      "name": "PAPEL HIGIÊNICO NEVE 12 UNIDADES",
+  "name": "PAPEL HIGIÊNICO NEVE 12 UNIDADES",
       "priceAtacado": 14.5,
       "priceVarejo": 17.0,
       "image": "https://images.unsplash.com/photo-1616251518267-cc0b59ed7b79?auto=format&fit=crop&w=400&q=80",

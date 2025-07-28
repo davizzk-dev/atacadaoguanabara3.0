@@ -12,8 +12,8 @@ echo 2. Executando correcoes automaticas...
 node fix-build-errors.js
 
 echo.
-echo 3. Fazendo build...
-call pnpm build
+echo 3. Testando build...
+node test-build.js
 
 echo.
 echo ========================================

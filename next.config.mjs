@@ -8,13 +8,13 @@ const nextConfig = {
   },
   images: {
     domains: ['i.ibb.co', 'images.unsplash.com'],
-    unoptimized: true, // Para build estático
+    unoptimized: false, // Removido para build estático
   },
-  // Configuração para build estático
-  output: 'standalone', // Usar standalone em vez de export
+  // Configuração para build
+  output: 'standalone', // Habilitado para build normal
   trailingSlash: true,
   skipTrailingSlashRedirect: true,
-  // Desabilitar otimizações que causam problemas no build estático
+  // Configurações experimentais
   experimental: {
     esmExternals: 'loose',
   },

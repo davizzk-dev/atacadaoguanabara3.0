@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { shippingService } from '@/lib/shipping'
+import { ShippingService } from '@/lib/shipping'
 
 export async function GET(
   request: NextRequest,
@@ -19,7 +19,7 @@ export async function GET(
     }
 
     // Buscar endereço
-    const addressData = await shippingService.constructor.getAddressByZipCode(zipCodeNumbers)
+    const addressData = await ShippingService.getAddressByZipCode(zipCodeNumbers)
 
     if (!addressData) {
       return NextResponse.json({ error: 'CEP não encontrado' }, { status: 404 })

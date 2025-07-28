@@ -805,15 +805,15 @@ export const products = [
   },
   
    {
-      "id": 61,
-      "name": "ARROZ TIO JOÃO 5KG",
-      "priceAtacado": 18.0,
-      "priceVarejo": 22.0,
-      "image": "https://images.unsplash.com/photo-1607252650355-f7fd0460ccdb?auto=format&fit=crop&w=400&q=80",
-      "avaliacao": 4.8,
-      "estoque": 60,
-      "marca": "Tio João",
-      "categoria": "Grãos"
+      id: 61,
+      name: "ARROZ TIO JOÃO 5KG",
+      priceAtacado: 18.0,
+      priceVarejo: 22.0,
+      image: "https://images.unsplash.com/photo-1607252650355-f7fd0460ccdb?auto=format&fit=crop&w=400&q=80",
+      avaliacao: 4.8,
+      estoque: 60,
+      marca: "Tio João",
+      categoria: "Grãos"
     },
     {
       "id": 62,

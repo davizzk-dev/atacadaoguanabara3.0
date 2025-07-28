@@ -32,14 +32,23 @@ public class ProductPromotionService {
     }
     
     public ProductPromotion createPromotion(ProductPromotion promotion) {
+        System.out.println("Service: Recebendo promoção - " + promotion);
+        
         // Verificar se o produto existe
         if (promotion.getProduct() != null && promotion.getProduct().getId() != null) {
+            System.out.println("Service: Procurando produto com ID: " + promotion.getProduct().getId());
             Optional<Product> product = productRepository.findById(promotion.getProduct().getId());
             if (product.isPresent()) {
-                promotion.setProduct(product.get());
+                Product foundProduct = product.get();
+                System.out.println("Service: Produto encontrado - " + foundProduct.getName());
+                promotion.setProduct(foundProduct);
             } else {
+                System.err.println("Service: Produto não encontrado com ID: " + promotion.getProduct().getId());
                 throw new RuntimeException("Produto não encontrado com ID: " + promotion.getProduct().getId());
             }
+        } else {
+            System.err.println("Service: Produto é null ou ID é null");
+            throw new RuntimeException("Produto é obrigatório para criar uma promoção");
         }
         
         // Calcular desconto automaticamente
@@ -49,8 +58,12 @@ public class ProductPromotionService {
                 .divide(promotion.getOriginalPrice(), 4, RoundingMode.HALF_UP)
                 .multiply(new BigDecimal("100"));
             promotion.setDiscount(discount);
+            System.out.println("Service: Desconto calculado: " + discount + "%");
         }
-        return promotionRepository.save(promotion);
+        
+        ProductPromotion savedPromotion = promotionRepository.save(promotion);
+        System.out.println("Service: Promoção salva com sucesso - " + savedPromotion);
+        return savedPromotion;
     }
     
     public ProductPromotion updatePromotion(Long id, ProductPromotion updatedPromotion) {

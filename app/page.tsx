@@ -95,9 +95,15 @@ export default function HomePage() {
         const productsResponse = await fetch('/api/products')
         if (productsResponse.ok) {
           const productsData = await productsResponse.json()
+          console.log('Produtos carregados do backend:', productsData)
           setProducts(productsData)
           setFeaturedProducts(productsData.slice(0, 15))
           console.log('Produtos carregados:', productsData.length)
+        } else {
+          console.error('Erro ao carregar produtos:', productsResponse.status)
+          // Usar dados locais como fallback
+          setProducts(productsData)
+          setFeaturedProducts(productsData.slice(0, 15))
         }
 
         // Carregar promoções
@@ -107,14 +113,21 @@ export default function HomePage() {
         
         if (promotionsResponse.ok) {
           const promotionsData = await promotionsResponse.json()
+          console.log('Promoções carregadas do backend:', promotionsData)
           setProductPromotions(promotionsData)
           console.log('Promoções carregadas:', promotionsData)
           console.log('Promoções ativas:', promotionsData.filter((p: any) => p.isActive).length)
         } else {
           console.error('Erro na resposta da API de promoções:', promotionsResponse.status)
+          // Usar dados locais como fallback
+          setProductPromotions([])
         }
       } catch (error) {
         console.error('Erro ao carregar dados:', error)
+        // Usar dados locais como fallback
+        setProducts(productsData)
+        setFeaturedProducts(productsData.slice(0, 15))
+        setProductPromotions([])
       }
     }
 
@@ -329,12 +342,12 @@ export default function HomePage() {
                 .filter(promotion => promotion.isActive)
                 .map((promotion, index) => {
                   // Tentar encontrar o produto por ID numérico ou string
-                  const product = products.find(p => 
-                    p.id === promotion.productId || 
-                    p.id === promotion.productId?.toString() ||
-                    parseInt(p.id) === parseInt(promotion.productId)
-                  )
-                  console.log('Promoção:', promotion.productId, 'Produto encontrado:', !!product, 'Nome do produto:', product?.name)
+                  const product = products.find(p => {
+                    const productId = typeof p.id === 'string' ? parseInt(p.id) : p.id
+                    const promotionProductId = typeof promotion.productId === 'string' ? parseInt(promotion.productId) : promotion.productId
+                    return productId === promotionProductId
+                  })
+                  console.log('Promoção ID:', promotion.productId, 'Produto encontrado:', !!product, 'Nome do produto:', product?.name, 'ID do produto:', product?.id)
                   if (!product) {
                     console.warn('Produto não encontrado para promoção:', promotion)
                     return null

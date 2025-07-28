@@ -50,9 +50,13 @@ public class ProductPromotionController {
     @PostMapping
     public ResponseEntity<ProductPromotion> createPromotion(@RequestBody ProductPromotion promotion) {
         try {
+            System.out.println("Recebendo promoção: " + promotion);
             ProductPromotion createdPromotion = promotionService.createPromotion(promotion);
+            System.out.println("Promoção criada com sucesso: " + createdPromotion);
             return ResponseEntity.ok(createdPromotion);
         } catch (Exception e) {
+            System.err.println("Erro ao criar promoção: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.internalServerError().build();
         }
     }

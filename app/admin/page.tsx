@@ -827,9 +827,12 @@ function PromotionForm({
     
     const promotionData = {
       ...(promotion && { id: promotion.id }),
-      ...formData,
+      productId: formData.productId,
+      productName: formData.productName,
       originalPrice: originalPrice,
       newPrice: newPrice,
+      image: formData.image || '',
+      isActive: formData.isActive,
       validUntil: formData.validUntil ? new Date(formData.validUntil) : undefined
     }
     

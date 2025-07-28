@@ -53,15 +53,17 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
+    console.log('Dados recebidos do frontend:', body)
+    
     // Preparar dados para o backend Java
     const promotionData = {
       product: {
         id: parseInt(body.productId)
       },
-      originalPrice: body.originalPrice,
-      newPrice: body.newPrice,
-      image: body.image,
-      isActive: body.isActive,
+      originalPrice: parseFloat(body.originalPrice),
+      newPrice: parseFloat(body.newPrice),
+      image: body.image || null,
+      isActive: body.isActive !== undefined ? body.isActive : true,
       validUntil: body.validUntil ? new Date(body.validUntil).toISOString() : null
     }
     
@@ -79,14 +81,15 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text()
       console.error('Erro da API Java:', errorText)
-      throw new Error(`HTTP error! status: ${response.status}`)
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`)
     }
 
     const data = await response.json()
+    console.log('Resposta do backend:', data)
     return NextResponse.json(data)
   } catch (error) {
     console.error('Erro ao criar promoção:', error)
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro interno do servidor: ' + error.message }, { status: 500 })
   }
 }
 

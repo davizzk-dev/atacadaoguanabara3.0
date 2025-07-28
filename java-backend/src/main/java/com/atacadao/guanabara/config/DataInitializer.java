@@ -57,16 +57,14 @@ public class DataInitializer implements CommandLineRunner {
     
     private void createProducts() {
         if (productRepository.count() == 0) {
-            // Produtos de exemplo
+            // Produtos de exemplo - usando os mesmos do frontend
             Product[] products = {
-                createProduct("Arroz Integral", "Arroz integral orgânico 1kg", new BigDecimal("8.90"), "Grãos", "Orgânico", "/images/arroz.jpg", 50),
-                createProduct("Feijão Preto", "Feijão preto tipo 1 1kg", new BigDecimal("6.50"), "Grãos", "Fazenda", "/images/feijao.jpg", 100),
-                createProduct("Óleo de Soja", "Óleo de soja refinado 900ml", new BigDecimal("7.80"), "Óleos", "Liza", "/images/oleo.jpg", 75),
-                createProduct("Macarrão Espaguete", "Macarrão espaguete 500g", new BigDecimal("3.90"), "Massas", "Adria", "/images/macarrao.jpg", 120),
-                createProduct("Leite Integral", "Leite integral 1L", new BigDecimal("4.50"), "Laticínios", "Itambé", "/images/leite.jpg", 60),
-                createProduct("Pão de Forma", "Pão de forma integral 500g", new BigDecimal("5.20"), "Pães", "Pullman", "/images/pao.jpg", 40),
-                createProduct("Banana Prata", "Banana prata kg", new BigDecimal("3.90"), "Frutas", "Orgânico", "/images/banana.jpg", 80),
-                createProduct("Tomate", "Tomate kg", new BigDecimal("4.80"), "Verduras", "Hidropônico", "/images/tomate.jpg", 90)
+                createProduct("ÁGUA MINERAL NATURAGUA 1,5L", "Água mineral natural 1,5 litros", new BigDecimal("2.99"), "Bebidas", "Naturagua", "https://i.ibb.co/N65dsgfh/aguanaturagua1-5l.jpg", 6),
+                createProduct("ÁGUA MINERAL NATURAGUA 500ML C/ GÁS", "Água mineral com C/GÁS 500ml", new BigDecimal("1.99"), "Bebidas", "Naturagua", "https://i.ibb.co/p6WM3mnK/aguacomg-s.jpg", 12),
+                createProduct("ÁGUA MINERAL NATURAGUA 500ML S/ GÁS", "Água mineral sem gás 500ml", new BigDecimal("1.49"), "Bebidas", "Naturagua", "https://i.ibb.co/4gVp5kbz/aguasemg-s.jpg", 12),
+                createProduct("AMENDOIM EM BANDA CASTRO 1KG", "Amendoim em banda tradicional 1kg", new BigDecimal("13.99"), "Snacks", "Castro", "https://i.ibb.co/PZ9HLZrg/amendoimembanda.jpg", 4),
+                createProduct("ARROZ BRANCO NAMORADO 1KG", "Arroz branco tipo 1 1kg", new BigDecimal("5.69"), "Grãos", "Namorado", "https://i.ibb.co/V0rGtJcP/arroznamorado.jpg", 10),
+                createProduct("ARROZ BRANCO PAI JOÃO 1KG", "Arroz branco tipo 1 1kg", new BigDecimal("5.49"), "Grãos", "Pai João", "https://i.ibb.co/gbzsG1wc/arrozbrancopaijo-o.jpg", 10)
             };
             
             for (Product product : products) {

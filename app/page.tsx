@@ -26,8 +26,8 @@ export default function HomePage() {
   const { addFavorite, removeFavorite, favorites } = useFavoritesStore() // Corrigido
   const { user } = useAuthStore()
   const [isLoading, setIsLoading] = useState(true)
-  const [products, setProducts] = useState(productsData)
-  const [featuredProducts, setFeaturedProducts] = useState(productsData.slice(0, 15))
+  const [products, setProducts] = useState<any[]>([])
+  const [featuredProducts, setFeaturedProducts] = useState<any[]>([])
   const [addedProductId, setAddedProductId] = useState<string | null>(null) // Para feedback visual
   const [quantityMap, setQuantityMap] = useState<{ [id: string]: number }>({}) // Para quantidade
   const [modalProduct, setModalProduct] = useState<any | null>(null) // Para modal do olhinho
@@ -101,9 +101,9 @@ export default function HomePage() {
           console.log('Produtos carregados:', productsData.length)
         } else {
           console.error('Erro ao carregar produtos:', productsResponse.status)
-          // Usar dados locais como fallback
-          setProducts(productsData)
-          setFeaturedProducts(productsData.slice(0, 15))
+          // Não usar dados locais como fallback - manter vazio
+          setProducts([])
+          setFeaturedProducts([])
         }
 
         // Carregar promoções
@@ -124,9 +124,9 @@ export default function HomePage() {
         }
       } catch (error) {
         console.error('Erro ao carregar dados:', error)
-        // Usar dados locais como fallback
-        setProducts(productsData)
-        setFeaturedProducts(productsData.slice(0, 15))
+        // Não usar dados locais como fallback - manter vazio
+        setProducts([])
+        setFeaturedProducts([])
         setProductPromotions([])
       }
     }

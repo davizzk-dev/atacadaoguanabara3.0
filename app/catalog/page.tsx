@@ -161,7 +161,7 @@ export default function CatalogPage() {
           {/* Filtros Avançados */}
           {showFilters && (
             <div className="mt-6 p-6 bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl border border-orange-200 slide-in-down">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Filtro de Categoria */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Categoria</label>
@@ -203,17 +203,17 @@ export default function CatalogPage() {
                 </div>
 
                 {/* Tags de Categoria Rápida */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Categorias Rápidas</label>
-                  <div className="flex flex-wrap gap-2">
+                <div className="lg:col-span-3">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">Categorias Rápidas</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                     {categories.filter(cat => cat !== 'all').map((category) => (
                       <button
                         key={category}
                         onClick={() => setSelectedCategory(category)}
-                        className={`px-3 py-1 rounded-full text-sm transition-all ${
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-center ${
                           selectedCategory === category
-                            ? 'bg-orange-500 text-white shadow-md'
-                            : 'bg-gray-100 text-gray-700 hover:bg-orange-100 hover:text-orange-700'
+                            ? 'bg-orange-500 text-white shadow-md transform scale-105'
+                            : 'bg-white text-gray-700 hover:bg-orange-100 hover:text-orange-700 border border-gray-200 hover:border-orange-300'
                         }`}
                       >
                         {category}

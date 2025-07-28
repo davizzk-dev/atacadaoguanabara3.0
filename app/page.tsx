@@ -291,6 +291,7 @@ export default function HomePage() {
                     <div className="text-lg font-bold mb-1">ATACADÃO GUANABARA</div>
                     <div className="text-xs text-white/80">📍 R. Antônio Arruda, 1170</div>
                     <div className="text-xs text-white/80">Vila Velha - Fortaleza/CE</div>
+                    <div className="text-xs text-white/80 mt-1">Desde 2020 - Seu parceiro de confiança</div>
                   </div>
                 </div>
               </div>
@@ -335,7 +336,7 @@ export default function HomePage() {
                 Ofertas Imperdíveis
               </h2>
               <p className="text-gray-600 text-lg">
-                Aproveite nossos produtos com desconto especial
+                Produtos selecionados com desconto especial para empreendedores e clientes
               </p>
             </div>
 
@@ -343,17 +344,15 @@ export default function HomePage() {
               {productPromotions
                 .filter(promotion => promotion.isActive)
                 .map((promotion, index) => {
-                  // Tentar encontrar o produto por ID numérico ou string
-                  const product = products.find(p => {
-                    // Converter IDs para números para comparação
+                  // Tentar encontrar o produto por ID - comparar como strings primeiro
+                  let product = products.find(p => p.id.toString() === promotion.productId.toString())
+                  
+                  // Se não encontrar, tentar como números
+                  if (!product) {
                     const productId = typeof p.id === 'string' ? parseInt(p.id) : p.id
                     const promotionProductId = typeof promotion.productId === 'string' ? parseInt(promotion.productId) : promotion.productId
-                    
-                    // Log para debug
-                    console.log(`Comparando: produto ID ${productId} (${typeof p.id}) vs promoção ID ${promotionProductId} (${typeof promotion.productId})`)
-                    
-                    return productId === promotionProductId
-                  })
+                    product = products.find(p => productId === promotionProductId)
+                  }
                   
                   console.log('Promoção ID:', promotion.productId, 'Produto encontrado:', !!product, 'Nome do produto:', product?.name, 'ID do produto:', product?.id)
                   

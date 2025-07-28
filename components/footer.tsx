@@ -24,8 +24,7 @@ export function Footer() {
               </div>
             </div>
             <p className="text-gray-300 leading-relaxed">
-              Há mais de 4 anos oferecendo os melhores produtos com qualidade e preços justos para todas as famílias. Sua
-              satisfação é nossa prioridade!
+              Desde 2020, somos o parceiro de confiança para pequenos e médios empreendedores dos ramos de pizzarias, pastelarias, sushis, confeitarias, docerias e açaiterias, além de clientes individuais que buscam produtos de qualidade com economia.
             </p>
 
             {/* Redes Sociais */}

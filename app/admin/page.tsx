@@ -1445,17 +1445,57 @@ function PromotionForm({
                 <button
                   className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors flex items-center gap-2"
                   onClick={async () => {
-                    const doc = await generateSalesReportPDF({
-                      totalOrders: stats.totalOrders,
-                      totalRevenue: stats.totalRevenue,
-                      totalUsers: stats.totalUsers,
-                      totalProducts: stats.totalProducts,
-                      promotions: productPromotions.filter(p => p.isActive)
-                    });
-                    doc.save('relatorio-vendas.pdf');
+                    try {
+                      addNotification('info', 'Gerando relatório de vendas...');
+                      const doc = await generateSalesReportPDF({
+                        totalOrders: stats.totalOrders,
+                        totalRevenue: stats.totalRevenue,
+                        totalUsers: stats.totalUsers,
+                        totalProducts: stats.totalProducts,
+                        promotions: productPromotions.filter(p => p.isActive)
+                      });
+                      doc.save('relatorio-vendas.pdf');
+                      addNotification('success', 'Relatório de vendas gerado com sucesso!');
+                    } catch (error) {
+                      console.error('Erro ao gerar PDF:', error);
+                      addNotification('error', 'Erro ao gerar relatório de vendas');
+                    }
                   }}
                 >
                   <FileText className="w-5 h-5" /> Relatório de Vendas
+                </button>
+                <button
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors flex items-center gap-2"
+                  onClick={async () => {
+                    try {
+                      addNotification('info', 'Gerando relatório completo do sistema...');
+                      // Gerar múltiplos PDFs
+                      const salesDoc = await generateSalesReportPDF({
+                        totalOrders: stats.totalOrders,
+                        totalRevenue: stats.totalRevenue,
+                        totalUsers: stats.totalUsers,
+                        totalProducts: stats.totalProducts,
+                        promotions: productPromotions.filter(p => p.isActive)
+                      });
+                      salesDoc.save('relatorio-completo-vendas.pdf');
+                      
+                      const productsDoc = await generateProductsPDF(filteredProducts);
+                      productsDoc.save('relatorio-completo-produtos.pdf');
+                      
+                      const ordersDoc = await generateOrdersPDF(filteredOrders);
+                      ordersDoc.save('relatorio-completo-pedidos.pdf');
+                      
+                      const customersDoc = await generateCustomersPDF(filteredUsers);
+                      customersDoc.save('relatorio-completo-clientes.pdf');
+                      
+                      addNotification('success', 'Relatórios completos gerados com sucesso!');
+                    } catch (error) {
+                      console.error('Erro ao gerar PDFs:', error);
+                      addNotification('error', 'Erro ao gerar relatórios completos');
+                    }
+                  }}
+                >
+                  <BarChart3 className="w-5 h-5" /> Relatório Completo
                 </button>
               </div>
 
@@ -1830,8 +1870,15 @@ function PromotionForm({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={async () => {
-                      const doc = await generatePromotionsPDF(productPromotions);
-                      doc.save('relatorio-promocoes.pdf');
+                      try {
+                        addNotification('info', 'Gerando PDF de promoções...');
+                        const doc = await generatePromotionsPDF(productPromotions);
+                        doc.save('relatorio-promocoes.pdf');
+                        addNotification('success', 'PDF de promoções gerado com sucesso!');
+                      } catch (error) {
+                        console.error('Erro ao gerar PDF:', error);
+                        addNotification('error', 'Erro ao gerar PDF de promoções');
+                      }
                     }}
                     className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
                   >
@@ -1977,8 +2024,15 @@ function PromotionForm({
                   </button>
                   <button
                     onClick={async () => {
-                      const doc = await generateProductsPDF(filteredProducts);
-                      doc.save('catalogo-produtos.pdf');
+                      try {
+                        addNotification('info', 'Gerando PDF de produtos...');
+                        const doc = await generateProductsPDF(filteredProducts);
+                        doc.save('catalogo-produtos.pdf');
+                        addNotification('success', 'PDF de produtos gerado com sucesso!');
+                      } catch (error) {
+                        console.error('Erro ao gerar PDF:', error);
+                        addNotification('error', 'Erro ao gerar PDF de produtos');
+                      }
                     }}
                     className="flex items-center gap-2 bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm"
                   >
@@ -2080,8 +2134,15 @@ function PromotionForm({
                   </button>
                   <button
                     onClick={async () => {
-                      const doc = await generateOrdersPDF(filteredOrders);
-                      doc.save('relatorio-pedidos.pdf');
+                      try {
+                        addNotification('info', 'Gerando PDF de pedidos...');
+                        const doc = await generateOrdersPDF(filteredOrders);
+                        doc.save('relatorio-pedidos.pdf');
+                        addNotification('success', 'PDF de pedidos gerado com sucesso!');
+                      } catch (error) {
+                        console.error('Erro ao gerar PDF:', error);
+                        addNotification('error', 'Erro ao gerar PDF de pedidos');
+                      }
                     }}
                     className="flex items-center gap-2 bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm"
                   >
@@ -2193,8 +2254,15 @@ function PromotionForm({
                   </button>
                   <button
                     onClick={async () => {
-                      const doc = await generateCustomersPDF(filteredUsers);
-                      doc.save('relatorio-clientes.pdf');
+                      try {
+                        addNotification('info', 'Gerando PDF de clientes...');
+                        const doc = await generateCustomersPDF(filteredUsers);
+                        doc.save('relatorio-clientes.pdf');
+                        addNotification('success', 'PDF de clientes gerado com sucesso!');
+                      } catch (error) {
+                        console.error('Erro ao gerar PDF:', error);
+                        addNotification('error', 'Erro ao gerar PDF de clientes');
+                      }
                     }}
                     className="flex items-center gap-2 bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm"
                   >

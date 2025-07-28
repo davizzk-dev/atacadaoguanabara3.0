@@ -4,10 +4,12 @@
   "private": true,
   "scripts": {
     "build": "next build",
+    "build:static": "next build && next export",
     "dev": "next dev",
     "lint": "next lint",
     "start": "NODE_ENV=production node server.js",
-    "server": "node server.js"
+    "server": "node server.js",
+    "setup": "setup-other-pc.bat"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

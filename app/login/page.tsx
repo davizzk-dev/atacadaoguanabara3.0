@@ -4,7 +4,8 @@ import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Mail, Lock, Eye, EyeOff, ArrowLeft, AlertCircle, Shield } from 'lucide-react'
-import { signIn, useSession } from 'next-auth/react'
+import { signIn } from 'next-auth/react'
+import { useSessionWrapper } from '@/hooks/use-session-wrapper'
 import Header from '@/components/header'
 import { Footer } from '@/components/footer'
 import { useAuthStore } from '@/lib/store'
@@ -20,7 +21,7 @@ function LoginContent() {
   const { login } = useAuthStore()
   const [animateRegister, setAnimateRegister] = useState(false)
   const [isAdminMode, setIsAdminMode] = useState(false)
-  const { data: session, status } = useSession()
+  const { data: session, status } = useSessionWrapper()
 
   // Detectar se veio da página inicial (modo admin)
   useEffect(() => {

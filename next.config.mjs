@@ -7,7 +7,16 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    domains: ['i.ibb.co'],
+    domains: ['i.ibb.co', 'images.unsplash.com'],
+    unoptimized: true, // Para build estático
+  },
+  // Configuração para build estático
+  output: 'export',
+  trailingSlash: true,
+  skipTrailingSlashRedirect: true,
+  // Desabilitar otimizações que causam problemas no build estático
+  experimental: {
+    esmExternals: 'loose',
   },
   webpack: (config, { isServer }) => {
     // Resolver problemas com módulos que não funcionam no servidor
@@ -28,9 +37,6 @@ const nextConfig = {
     }
     
     return config
-  },
-  experimental: {
-    esmExternals: 'loose',
   },
 }
 

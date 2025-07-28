@@ -773,10 +773,10 @@ function PromotionForm({
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
 
   const handleProductChange = (productId: string) => {
-    const product = products.find(p => p.id === productId)
+    const product = products.find((p: Product) => p.id === productId)
     if (product) {
       setSelectedProduct(product)
-      setFormData(prev => ({
+      setFormData((prev: any) => ({
         ...prev,
         productId: product.id,
         productName: product.name,
@@ -787,7 +787,7 @@ function PromotionForm({
   }
 
   const handleImageChange = (imageUrl: string) => {
-    setFormData(prev => ({
+    setFormData((prev: any) => ({
       ...prev,
       image: imageUrl
     }))
@@ -919,7 +919,9 @@ function PromotionForm({
       </div>
       {/* Campo Imagem */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Imagem da Promoção</label>
+        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+          Imagem da Promoção <span className="text-gray-500 text-xs">(opcional)</span>
+        </label>
         <div className="space-y-4">
           <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
             <button
@@ -963,12 +965,13 @@ function PromotionForm({
                 placeholder="https://exemplo.com/imagem.jpg"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
               />
+              <p className="text-xs text-gray-500">Cole aqui o link direto da imagem</p>
             </div>
           )}
 
           {activeTab === 'file' && (
             <div className="space-y-2">
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-orange-400 transition-colors">
                 <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
                 <p className="text-sm text-gray-600 mb-2">
                   Arraste uma imagem aqui ou clique para selecionar
@@ -979,6 +982,10 @@ function PromotionForm({
                   onChange={(e) => {
                     const file = e.target.files?.[0]
                     if (file) {
+                      if (file.size > 5 * 1024 * 1024) { // 5MB
+                        alert('Arquivo muito grande. Use uma imagem menor que 5MB.')
+                        return
+                      }
                       const reader = new FileReader()
                       reader.onload = (e) => {
                         const result = e.target?.result as string
@@ -993,13 +1000,14 @@ function PromotionForm({
                 <label htmlFor="image-upload" className="bg-orange-500 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-orange-600 transition-colors">
                   Selecionar Arquivo
                 </label>
+                <p className="text-xs text-gray-500 mt-2">Máximo 5MB</p>
               </div>
             </div>
           )}
 
           {activeTab === 'paste' && (
             <div className="space-y-2">
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-orange-400 transition-colors">
                 <Copy className="h-8 w-8 mx-auto text-gray-400 mb-2" />
                 <p className="text-sm text-gray-600 mb-2">
                   Cole uma imagem da área de transferência
@@ -1033,28 +1041,35 @@ function PromotionForm({
                 >
                   Colar Imagem
                 </button>
+                <p className="text-xs text-gray-500 mt-2">Ctrl+V para colar</p>
               </div>
             </div>
           )}
 
           {/* Preview da imagem */}
           {formData.image && (
-            <div className="relative">
-              <img 
-                src={formData.image} 
-                alt="Preview" 
-                className="w-full h-32 object-cover rounded-lg border"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none'
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, image: '' })}
-                className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
+            <div className="relative bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Preview da Imagem</span>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, image: '' })}
+                  className="text-red-500 hover:text-red-700 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="relative">
+                <img 
+                  src={formData.image} 
+                  alt="Preview" 
+                  className="w-full h-40 object-contain rounded-lg border bg-white"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none'
+                    alert('Erro ao carregar imagem. Verifique se o link está correto.')
+                  }}
+                />
+              </div>
             </div>
           )}
         </div>
@@ -2832,31 +2847,34 @@ function PromotionForm({
       {/* Modal de Promoção */}
       {showPromotionModal && (
         <Dialog open={showPromotionModal} onOpenChange={setShowPromotionModal}>
-          <DialogContent className="max-w-2xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden flex flex-col">
-            <DialogHeader className="flex-shrink-0">
-              <DialogTitle>
+          <DialogContent className="max-w-3xl max-h-[95vh] overflow-hidden flex flex-col bg-white rounded-xl shadow-2xl">
+            <DialogHeader className="flex-shrink-0 bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-t-xl border-b">
+              <DialogTitle className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                <Tag className="w-6 h-6 text-orange-500" />
                 {editingPromotion ? 'Editar Promoção' : 'Nova Promoção'}
               </DialogTitle>
-              <DialogDescription>
-                Configure os detalhes da promoção do produto
+              <DialogDescription className="text-gray-600 mt-2">
+                Configure os detalhes da promoção do produto. Preencha os campos obrigatórios marcados com <span className="text-orange-500">*</span>
               </DialogDescription>
             </DialogHeader>
             
-            <div className="flex-1 overflow-y-auto pr-2 modal-scroll relative scroll-smooth">
-              <PromotionForm
-                promotion={editingPromotion}
-                products={products}
-                onSave={savePromotion}
-                onCancel={() => {
-                  setShowPromotionModal(false)
-                  setEditingPromotion(null)
-                }}
-                isLoading={isUpdating}
-              />
+            <div className="flex-1 overflow-y-auto p-6 modal-scroll relative scroll-smooth bg-gray-50">
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <PromotionForm
+                  promotion={editingPromotion}
+                  products={products}
+                  onSave={savePromotion}
+                  onCancel={() => {
+                    setShowPromotionModal(false)
+                    setEditingPromotion(null)
+                  }}
+                  isLoading={isUpdating}
+                />
+              </div>
               
               {/* Indicador de scroll */}
-              <div className="absolute bottom-2 right-2 bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full opacity-75 pointer-events-none">
-                ↕️ Scroll
+              <div className="absolute bottom-4 right-4 bg-orange-100 text-orange-600 text-xs px-3 py-2 rounded-full opacity-90 pointer-events-none shadow-sm">
+                ↕️ Scroll para ver mais campos
               </div>
             </div>
           </DialogContent>

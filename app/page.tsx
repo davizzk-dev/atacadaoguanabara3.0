@@ -343,13 +343,21 @@ export default function HomePage() {
                 .map((promotion, index) => {
                   // Tentar encontrar o produto por ID numérico ou string
                   const product = products.find(p => {
+                    // Converter IDs para números para comparação
                     const productId = typeof p.id === 'string' ? parseInt(p.id) : p.id
                     const promotionProductId = typeof promotion.productId === 'string' ? parseInt(promotion.productId) : promotion.productId
+                    
+                    // Log para debug
+                    console.log(`Comparando: produto ID ${productId} (${typeof p.id}) vs promoção ID ${promotionProductId} (${typeof promotion.productId})`)
+                    
                     return productId === promotionProductId
                   })
+                  
                   console.log('Promoção ID:', promotion.productId, 'Produto encontrado:', !!product, 'Nome do produto:', product?.name, 'ID do produto:', product?.id)
+                  
                   if (!product) {
                     console.warn('Produto não encontrado para promoção:', promotion)
+                    console.log('Produtos disponíveis:', products.map(p => ({ id: p.id, name: p.name })))
                     return null
                   }
                   

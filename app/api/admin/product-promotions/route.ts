@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       },
       originalPrice: parseFloat(body.originalPrice),
       newPrice: parseFloat(body.newPrice),
-      image: body.image || null,
+      image: body.image && body.image.length > 0 ? body.image : null,
       isActive: body.isActive !== undefined ? body.isActive : true,
       validUntil: body.validUntil ? new Date(body.validUntil).toISOString() : null
     }
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(data)
   } catch (error) {
     console.error('Erro ao criar promoção:', error)
-    return NextResponse.json({ error: 'Erro interno do servidor: ' + error.message }, { status: 500 })
+    return NextResponse.json({ error: 'Erro interno do servidor: ' + (error as Error).message }, { status: 500 })
   }
 }
 

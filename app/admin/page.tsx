@@ -1427,17 +1427,24 @@ function PromotionForm({
                 <button
                   className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors flex items-center gap-2"
                   onClick={async () => {
-                    const res = await fetch('/api/proxy/java/admin/report/monthly');
-                    if (res.ok) {
-                      const blob = await res.blob();
-                      const url = window.URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `relatorio-mensal.pdf`;
-                      a.click();
-                      window.URL.revokeObjectURL(url);
-                    } else {
-                      alert('Erro ao gerar PDF.');
+                    try {
+                      addNotification('info', 'Gerando PDF mensal...');
+                      const res = await fetch('/api/proxy/java/admin/report/monthly');
+                      if (res.ok) {
+                        const blob = await res.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `relatorio-mensal.pdf`;
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        addNotification('success', 'PDF mensal gerado com sucesso!');
+                      } else {
+                        addNotification('error', 'Erro ao gerar PDF mensal');
+                      }
+                    } catch (error) {
+                      console.error('Erro ao gerar PDF mensal:', error);
+                      addNotification('error', 'Erro ao gerar PDF mensal');
                     }
                   }}
                 >
@@ -1453,7 +1460,8 @@ function PromotionForm({
                         totalRevenue: stats.totalRevenue,
                         totalUsers: stats.totalUsers,
                         totalProducts: stats.totalProducts,
-                        promotions: productPromotions.filter(p => p.isActive)
+                        promotions: productPromotions.filter(p => p.isActive),
+                        orders: filteredOrders // Adicionando dados dos pedidos
                       });
                       doc.save('relatorio-vendas.pdf');
                       addNotification('success', 'Relatório de vendas gerado com sucesso!');
@@ -1476,7 +1484,8 @@ function PromotionForm({
                         totalRevenue: stats.totalRevenue,
                         totalUsers: stats.totalUsers,
                         totalProducts: stats.totalProducts,
-                        promotions: productPromotions.filter(p => p.isActive)
+                        promotions: productPromotions.filter(p => p.isActive),
+                        orders: filteredOrders // Adicionando dados dos pedidos
                       });
                       salesDoc.save('relatorio-completo-vendas.pdf');
                       
@@ -2361,7 +2370,8 @@ function PromotionForm({
                           totalRevenue: stats?.totalRevenue || 0,
                           totalUsers: stats?.totalUsers || 0,
                           totalProducts: stats?.totalProducts || 0,
-                          promotions: productPromotions.filter(p => p.isActive)
+                          promotions: productPromotions.filter(p => p.isActive),
+                          orders: filteredOrders // Adicionando dados dos pedidos
                         });
                         doc.save('relatorio-vendas.pdf');
                         addNotification('success', 'Relatório de vendas gerado com sucesso!');
@@ -2463,7 +2473,8 @@ function PromotionForm({
                           totalRevenue: stats?.totalRevenue || 0,
                           totalUsers: stats?.totalUsers || 0,
                           totalProducts: stats?.totalProducts || 0,
-                          promotions: productPromotions.filter(p => p.isActive)
+                          promotions: productPromotions.filter(p => p.isActive),
+                          orders: filteredOrders // Adicionando dados dos pedidos
                         });
                         salesDoc.save('relatorio-completo-vendas.pdf');
                         
@@ -3356,344 +3367,7 @@ function PromotionForm({
       )}
 
       {/* Seção de Exportação PDF Completa */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <FileText className="w-5 h-5 mr-2 text-blue-600" />
-          Exportação de Relatórios PDF
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <button
-            onClick={() => window.open('/api/proxy/java/admin/report/complete', '_blank')}
-            className="flex flex-col items-center justify-center p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
-          >
-            <FileText className="h-8 w-8 mb-2" />
-            <span className="font-semibold">Relatório Completo</span>
-            <span className="text-xs opacity-90">Todos os dados</span>
-          </button>
-          
-          <button
-            onClick={() => window.open('/api/proxy/java/admin/report/products', '_blank')}
-            className="flex flex-col items-center justify-center p-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-md hover:shadow-lg"
-          >
-            <Package className="h-8 w-8 mb-2" />
-            <span className="font-semibold">Relatório Produtos</span>
-            <span className="text-xs opacity-90">Estoque e preços</span>
-          </button>
-          
-          <button
-            onClick={() => window.open('/api/proxy/java/admin/report/orders', '_blank')}
-            className="flex flex-col items-center justify-center p-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
-          >
-            <ShoppingCart className="h-8 w-8 mb-2" />
-            <span className="font-semibold">Relatório Pedidos</span>
-            <span className="text-xs opacity-90">Vendas e status</span>
-          </button>
-          
-          <button
-            onClick={() => window.open('/api/proxy/java/admin/report/analytics', '_blank')}
-            className="flex flex-col items-center justify-center p-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-md hover:shadow-lg"
-          >
-            <BarChart3 className="h-8 w-8 mb-2" />
-            <span className="font-semibold">Relatório Analytics</span>
-            <span className="text-xs opacity-90">Métricas e tendências</span>
-          </button>
-        </div>
-      </div>
 
-      {/* Dashboard em Tempo Real */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <Activity className="w-5 h-5 mr-2 text-green-600" />
-          Dashboard em Tempo Real
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg border border-blue-200">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="font-semibold text-blue-900">Vendas Hoje</h4>
-              <TrendingUp className="w-5 h-5 text-blue-600" />
-            </div>
-            <div className="text-3xl font-bold text-blue-800 mb-2">R$ 2.450,00</div>
-            <div className="flex items-center text-sm text-blue-600">
-              <ArrowUp className="w-4 h-4 mr-1" />
-              +12% vs ontem
-            </div>
-          </div>
-          
-          <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border border-green-200">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="font-semibold text-green-900">Novos Clientes</h4>
-              <Users className="w-5 h-5 text-green-600" />
-            </div>
-            <div className="text-3xl font-bold text-green-800 mb-2">8</div>
-            <div className="flex items-center text-sm text-green-600">
-              <ArrowUp className="w-4 h-4 mr-1" />
-              +3 esta semana
-            </div>
-          </div>
-          
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg border border-purple-200">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="font-semibold text-purple-900">Taxa de Conversão</h4>
-              <Target className="w-5 h-5 text-purple-600" />
-            </div>
-            <div className="text-3xl font-bold text-purple-800 mb-2">3.2%</div>
-            <div className="flex items-center text-sm text-purple-600">
-              <ArrowUp className="w-4 h-4 mr-1" />
-              +0.5% vs mês passado
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Sistema de Alertas Inteligente */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <Bell className="w-5 h-5 mr-2 text-orange-600" />
-          Alertas Inteligentes
-        </h3>
-        <div className="space-y-3">
-          <div className="flex items-center p-4 bg-red-50 border border-red-200 rounded-lg">
-            <AlertTriangle className="w-5 h-5 text-red-600 mr-3" />
-            <div className="flex-1">
-              <p className="font-medium text-red-900">Estoque Baixo</p>
-              <p className="text-sm text-red-700">5 produtos com estoque abaixo do mínimo</p>
-            </div>
-            <button className="text-red-600 hover:text-red-800">
-              <Eye className="w-4 h-4" />
-            </button>
-          </div>
-          
-          <div className="flex items-center p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <Clock className="w-5 h-5 text-yellow-600 mr-3" />
-            <div className="flex-1">
-              <p className="font-medium text-yellow-900">Promoções Expirando</p>
-              <p className="text-sm text-yellow-700">3 promoções expiram nas próximas 24h</p>
-            </div>
-            <button className="text-yellow-600 hover:text-yellow-800">
-              <Eye className="w-4 h-4" />
-            </button>
-          </div>
-          
-          <div className="flex items-center p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <MessageSquare className="w-5 h-5 text-blue-600 mr-3" />
-            <div className="flex-1">
-              <p className="font-medium text-blue-900">Novos Feedbacks</p>
-              <p className="text-sm text-blue-700">2 novos feedbacks aguardando revisão</p>
-            </div>
-            <button className="text-blue-600 hover:text-blue-800">
-              <Eye className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Métricas Avançadas */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <BarChart3 className="w-5 h-5 mr-2 text-indigo-600" />
-          Métricas Avançadas
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <div className="text-2xl font-bold text-indigo-600 mb-1">98.5%</div>
-            <div className="text-sm text-gray-600">Satisfação do Cliente</div>
-            <div className="text-xs text-green-600 mt-1">+2.1% vs mês passado</div>
-          </div>
-          
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <div className="text-2xl font-bold text-green-600 mb-1">15min</div>
-            <div className="text-sm text-gray-600">Tempo Médio de Entrega</div>
-            <div className="text-xs text-green-600 mt-1">-3min vs mês passado</div>
-          </div>
-          
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <div className="text-2xl font-bold text-purple-600 mb-1">2.3x</div>
-            <div className="text-sm text-gray-600">Taxa de Retorno</div>
-            <div className="text-xs text-green-600 mt-1">+0.2x vs mês passado</div>
-          </div>
-          
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <div className="text-2xl font-bold text-orange-600 mb-1">85%</div>
-            <div className="text-sm text-gray-600">Taxa de Conversão Mobile</div>
-            <div className="text-xs text-green-600 mt-1">+5% vs mês passado</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Sistema de Tarefas Rápidas */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <CheckSquare className="w-5 h-5 mr-2 text-green-600" />
-          Tarefas Rápidas
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="p-4 border border-gray-200 rounded-lg hover:border-green-300 transition-colors">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="font-medium text-gray-900">Revisar Feedbacks</h4>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                2 novos
-              </span>
-            </div>
-            <p className="text-sm text-gray-600 mb-3">2 feedbacks aguardando revisão</p>
-            <button className="text-sm text-green-600 hover:text-green-800 font-medium">
-              Ver detalhes →
-            </button>
-          </div>
-          
-          <div className="p-4 border border-gray-200 rounded-lg hover:border-green-300 transition-colors">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="font-medium text-gray-900">Atualizar Estoque</h4>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                5 baixo
-              </span>
-            </div>
-            <p className="text-sm text-gray-600 mb-3">5 produtos com estoque baixo</p>
-            <button className="text-sm text-green-600 hover:text-green-800 font-medium">
-              Gerenciar estoque →
-            </button>
-          </div>
-          
-          <div className="p-4 border border-gray-200 rounded-lg hover:border-green-300 transition-colors">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="font-medium text-gray-900">Criar Promoção</h4>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                3 expiram
-              </span>
-            </div>
-            <p className="text-sm text-gray-600 mb-3">3 promoções expiram em 24h</p>
-            <button className="text-sm text-green-600 hover:text-green-800 font-medium">
-              Criar promoção →
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Configurações Rápidas */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <Settings className="w-5 h-5 mr-2 text-gray-600" />
-          Configurações Rápidas
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg mr-3">
-              <Bell className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="font-medium text-gray-900">Notificações</p>
-              <p className="text-sm text-gray-600">Configurar alertas</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center justify-center w-10 h-10 bg-green-100 rounded-lg mr-3">
-              <Lock className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="font-medium text-gray-900">Segurança</p>
-              <p className="text-sm text-gray-600">Configurar acesso</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-lg mr-3">
-              <Palette className="w-5 h-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="font-medium text-gray-900">Aparência</p>
-              <p className="text-sm text-gray-600">Personalizar tema</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center justify-center w-10 h-10 bg-orange-100 rounded-lg mr-3">
-              <Download className="w-5 h-5 text-orange-600" />
-            </div>
-            <div>
-              <p className="font-medium text-gray-900">Backup</p>
-              <p className="text-sm text-gray-600">Exportar dados</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Histórico de Atividades */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <History className="w-5 h-5 mr-2 text-indigo-600" />
-          Histórico de Atividades
-        </h3>
-        <div className="space-y-4">
-          <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-            <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">Nova promoção criada</p>
-              <p className="text-xs text-gray-600">Promoção "Desconto 20%" foi criada</p>
-              <p className="text-xs text-gray-400 mt-1">há 5 minutos</p>
-            </div>
-          </div>
-          
-          <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-            <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">Estoque atualizado</p>
-              <p className="text-xs text-gray-600">Produto "Arroz Integral" teve estoque atualizado</p>
-              <p className="text-xs text-gray-400 mt-1">há 15 minutos</p>
-            </div>
-          </div>
-          
-          <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-            <div className="w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">Relatório gerado</p>
-              <p className="text-xs text-gray-600">Relatório mensal foi exportado em PDF</p>
-              <p className="text-xs text-gray-400 mt-1">há 1 hora</p>
-            </div>
-          </div>
-          
-          <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-            <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">Feedback respondido</p>
-              <p className="text-xs text-gray-600">Feedback do cliente João Silva foi respondido</p>
-              <p className="text-xs text-gray-400 mt-1">há 2 horas</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Funcionalidades de Produtividade */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <Zap className="w-5 h-5 mr-2 text-yellow-600" />
-          Funcionalidades de Produtividade
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <button className="flex items-center p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200">
-            <Calendar className="w-6 h-6 mr-3" />
-            <div className="text-left">
-              <p className="font-semibold">Agendar Tarefas</p>
-              <p className="text-xs opacity-90">Programar atividades</p>
-            </div>
-          </button>
-          
-          <button className="flex items-center p-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200">
-            <Users className="w-6 h-6 mr-3" />
-            <div className="text-left">
-              <p className="font-semibold">Gerenciar Equipe</p>
-              <p className="text-xs opacity-90">Permissões e acesso</p>
-            </div>
-          </button>
-          
-          <button className="flex items-center p-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-200">
-            <BarChart3 className="w-6 h-6 mr-3" />
-            <div className="text-left">
-              <p className="font-semibold">Relatórios Avançados</p>
-              <p className="text-xs opacity-90">Análises detalhadas</p>
-            </div>
-          </button>
-        </div>
-      </div>
 
 
     </div>

@@ -14,6 +14,7 @@ export async function generateSalesReportPDF(data: {
   totalUsers: number
   totalProducts: number
   promotions: any[]
+  orders?: any[] // Adicionando orders para detalhes
 }) {
   try {
     const { default: jsPDF } = await import('jspdf')
@@ -29,7 +30,7 @@ export async function generateSalesReportPDF(data: {
     doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 20, 35)
     doc.text(`Hora: ${new Date().toLocaleTimeString('pt-BR')}`, 20, 45)
     
-    // Estatísticas
+    // Estatísticas Gerais
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(14)
     doc.text('Estatísticas Gerais:', 20, 65)
@@ -42,22 +43,82 @@ export async function generateSalesReportPDF(data: {
     doc.text(`Total de Produtos: ${data.totalProducts}`, 20, 110)
     doc.text(`Promoções Ativas: ${data.promotions.length}`, 20, 120)
     
-    // Promoções
-    if (data.promotions.length > 0) {
+    // Detalhes dos Pedidos (se disponível)
+    if (data.orders && data.orders.length > 0) {
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(14)
-      doc.text('Promoções Ativas:', 20, 140)
+      doc.text('Detalhes dos Pedidos:', 20, 140)
       
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(10)
       let y = 155
-      data.promotions.slice(0, 10).forEach((promo, index) => {
+      let page = 1
+      
+      data.orders.forEach((order, index) => {
+        if (y > 250) {
+          doc.addPage()
+          y = 20
+          page++
+        }
+        
+        // Informações do cliente
+        doc.setFont('helvetica', 'bold')
+        doc.text(`Pedido ${index + 1}: ${order.userName || 'Cliente não identificado'}`, 20, y)
+        y += 6
+        
+        doc.setFont('helvetica', 'normal')
+        doc.text(`ID do Cliente: ${order.userId || 'N/A'}`, 25, y)
+        y += 5
+        doc.text(`Email: ${order.userEmail || 'N/A'}`, 25, y)
+        y += 5
+        doc.text(`Telefone: ${order.userPhone || 'N/A'}`, 25, y)
+        y += 5
+        doc.text(`Data: ${order.createdAt ? new Date(order.createdAt).toLocaleDateString('pt-BR') : 'N/A'}`, 25, y)
+        y += 5
+        doc.text(`Status: ${order.status || 'N/A'}`, 25, y)
+        y += 5
+        
+        // Itens do pedido
+        if (order.items && order.items.length > 0) {
+          doc.setFont('helvetica', 'bold')
+          doc.text('Itens Comprados:', 25, y)
+          y += 6
+          
+          doc.setFont('helvetica', 'normal')
+          order.items.forEach((item: any) => {
+            doc.text(`• ${item.name} - Qtd: ${item.quantity} - R$ ${(item.price * item.quantity).toFixed(2)}`, 30, y)
+            y += 4
+          })
+          y += 2
+        }
+        
+        doc.setFont('helvetica', 'bold')
+        doc.text(`Total do Pedido: R$ ${(order.total || 0).toFixed(2)}`, 25, y)
+        y += 8
+      })
+    }
+    
+    // Promoções (se houver)
+    if (data.promotions.length > 0) {
+      if (y > 200) {
+        doc.addPage()
+        y = 20
+      }
+      
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(14)
+      doc.text('Promoções Ativas:', 20, y)
+      y += 10
+      
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10)
+      data.promotions.slice(0, 5).forEach((promo, index) => {
         if (y > 250) {
           doc.addPage()
           y = 20
         }
         doc.text(`${index + 1}. ${promo.productName} - ${promo.discount}% OFF`, 20, y)
-        y += 8
+        y += 6
       })
     }
     
@@ -226,6 +287,12 @@ export async function generateOrdersPDF(orders: any[]) {
       y += 6
       
       doc.setFont('helvetica', 'normal')
+      doc.text(`ID do Cliente: ${order.userId || 'N/A'}`, 25, y)
+      y += 5
+      doc.text(`Email: ${order.userEmail || 'N/A'}`, 25, y)
+      y += 5
+      doc.text(`Telefone: ${order.userPhone || 'N/A'}`, 25, y)
+      y += 5
       doc.text(`Data: ${order.createdAt ? new Date(order.createdAt).toLocaleDateString('pt-BR') : 'N/A'}`, 25, y)
       y += 5
       doc.text(`Total: R$ ${(order.total || 0).toFixed(2)}`, 25, y)

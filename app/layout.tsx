@@ -24,7 +24,9 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={inter.className}>
-        {children}
+        <Providers>
+          {children}
+        </Providers>
         <CookieBanner />
       </body>
     </html>

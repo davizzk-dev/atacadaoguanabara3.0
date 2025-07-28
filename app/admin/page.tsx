@@ -360,18 +360,21 @@ export default function AdminPage() {
   const updateCameraRequestStatus = async (id: string, status: CameraRequest['status']) => {
     setIsUpdating(true)
     try {
-      const response = await fetch('/api/admin/camera-requests', {
+      const response = await fetch(`/api/admin/camera-requests/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status })
+        body: JSON.stringify({ status })
       })
 
       if (response.ok) {
-        // Recarregar todas as solicitações para garantir atualização correta
+        addNotification('success', `Status da solicitação atualizado para ${status}`)
         loadData()
+      } else {
+        addNotification('error', 'Erro ao atualizar status da solicitação')
       }
     } catch (error) {
       console.error('Erro ao atualizar solicitação:', error)
+      addNotification('error', 'Erro ao atualizar status da solicitação')
     } finally {
       setIsUpdating(false)
     }
@@ -380,17 +383,20 @@ export default function AdminPage() {
   const updateFeedbackStatus = async (id: string, status: Feedback['status']) => {
     setIsUpdating(true)
     try {
-      const response = await fetch('/api/admin/feedback', {
+      const response = await fetch(`/api/admin/feedback/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status })
+        body: JSON.stringify({ status })
       })
       if (response.ok) {
-        // Recarregar todos os feedbacks para garantir o mapeamento correto
+        addNotification('success', `Status do feedback atualizado para ${status}`)
         loadData()
+      } else {
+        addNotification('error', 'Erro ao atualizar status do feedback')
       }
     } catch (error) {
       console.error('Erro ao atualizar feedback:', error)
+      addNotification('error', 'Erro ao atualizar status do feedback')
     } finally {
       setIsUpdating(false)
     }
@@ -3166,110 +3172,7 @@ function PromotionForm({
         </div>
       </div>
 
-      {/* Seção de Cotação */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 flex items-center">
-              <TrendingUp className="w-5 h-5 mr-2" /> Cotação de Produtos
-            </h3>
-            <p className="text-gray-600 text-sm">Acompanhe as variações de preços dos principais produtos</p>
-          </div>
-          <button
-            onClick={fetchQuotationData}
-            disabled={quotationLoading}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          >
-            {quotationLoading ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <RefreshCw className="w-4 h-4 mr-2" />
-            )}
-            Atualizar Cotação
-          </button>
-        </div>
 
-        {quotationData ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Gráfico de Variação de Preços */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-4">Variação de Preços</h4>
-              <div className="space-y-3">
-                {quotationData.products?.slice(0, 5).map((product: any, index: number) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
-                    <div className="flex items-center">
-                      <div className={`w-3 h-3 rounded-full mr-3 ${
-                        product.trend === 'up' ? 'bg-green-500' : 'bg-red-500'
-                      }`} />
-                      <div>
-                        <p className="font-medium text-gray-900">{product.product}</p>
-                        <p className="text-sm text-gray-600">{product.supplier}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-gray-900">
-                        R$ {product.currentPrice.toFixed(2)}
-                      </p>
-                      <p className={`text-sm ${
-                        product.change > 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {product.change > 0 ? '+' : ''}{product.change.toFixed(2)}%
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Tabela de Cotação Completa */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-4">Cotação Completa</h4>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-2">Produto</th>
-                      <th className="text-right py-2">Preço Atual</th>
-                      <th className="text-right py-2">Variação</th>
-                      <th className="text-right py-2">Tendência</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {quotationData.products?.map((product: any, index: number) => (
-                      <tr key={index} className="border-b border-gray-100">
-                        <td className="py-2">{product.product}</td>
-                        <td className="text-right py-2">
-                          R$ {product.currentPrice.toFixed(2)}
-                        </td>
-                        <td className={`text-right py-2 ${
-                          product.change > 0 ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {product.change > 0 ? '+' : ''}{product.change.toFixed(2)}%
-                        </td>
-                        <td className="text-right py-2">
-                          {product.trend === 'up' ? (
-                            <ArrowUp className="w-4 h-4 text-green-600 inline" />
-                          ) : (
-                            <ArrowDown className="w-4 h-4 text-red-600 inline" />
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-4 text-xs text-gray-500">
-                Última atualização: {quotationData.lastUpdate}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <Loader2 className="w-8 h-8 text-gray-400 mx-auto mb-2 animate-spin" />
-            <p className="text-gray-500">Carregando dados de cotação...</p>
-          </div>
-        )}
-      </div>
     </div>
   )
 }

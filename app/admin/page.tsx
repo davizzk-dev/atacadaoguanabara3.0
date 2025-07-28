@@ -1444,8 +1444,8 @@ function PromotionForm({
                 </button>
                 <button
                   className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors flex items-center gap-2"
-                  onClick={() => {
-                    const doc = generateSalesReportPDF({
+                  onClick={async () => {
+                    const doc = await generateSalesReportPDF({
                       totalOrders: stats.totalOrders,
                       totalRevenue: stats.totalRevenue,
                       totalUsers: stats.totalUsers,
@@ -1829,8 +1829,8 @@ function PromotionForm({
                 <h2 className="text-2xl font-bold text-gray-900">Promoções de Produtos</h2>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => {
-                      const doc = generatePromotionsPDF(productPromotions);
+                    onClick={async () => {
+                      const doc = await generatePromotionsPDF(productPromotions);
                       doc.save('relatorio-promocoes.pdf');
                     }}
                     className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
@@ -1976,8 +1976,8 @@ function PromotionForm({
                     Exportar CSV
                   </button>
                   <button
-                    onClick={() => {
-                      const doc = generateProductsPDF(filteredProducts);
+                    onClick={async () => {
+                      const doc = await generateProductsPDF(filteredProducts);
                       doc.save('catalogo-produtos.pdf');
                     }}
                     className="flex items-center gap-2 bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm"
@@ -2079,8 +2079,8 @@ function PromotionForm({
                     Exportar CSV
                   </button>
                   <button
-                    onClick={() => {
-                      const doc = generateOrdersPDF(filteredOrders);
+                    onClick={async () => {
+                      const doc = await generateOrdersPDF(filteredOrders);
                       doc.save('relatorio-pedidos.pdf');
                     }}
                     className="flex items-center gap-2 bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm"
@@ -2192,8 +2192,8 @@ function PromotionForm({
                     Exportar CSV
                   </button>
                   <button
-                    onClick={() => {
-                      const doc = generateCustomersPDF(filteredUsers);
+                    onClick={async () => {
+                      const doc = await generateCustomersPDF(filteredUsers);
                       doc.save('relatorio-clientes.pdf');
                     }}
                     className="flex items-center gap-2 bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm"

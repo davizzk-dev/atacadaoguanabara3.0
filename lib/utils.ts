@@ -1,13 +1,13 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import jsPDF from 'jspdf'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
 // Função para gerar PDF de relatório de vendas
-export function generateSalesReportPDF(data: any) {
+export async function generateSalesReportPDF(data: any) {
+  const { default: jsPDF } = await import('jspdf')
   const doc = new jsPDF()
   
   // Título
@@ -55,7 +55,8 @@ export function generateSalesReportPDF(data: any) {
 }
 
 // Função para gerar PDF de produtos
-export function generateProductsPDF(products: any[]) {
+export async function generateProductsPDF(products: any[]) {
+  const { default: jsPDF } = await import('jspdf')
   const doc = new jsPDF()
   
   // Título
@@ -77,10 +78,10 @@ export function generateProductsPDF(products: any[]) {
     }
     
     doc.setFontSize(12)
-    doc.setFont(undefined, 'bold')
+    doc.setFont('helvetica', 'bold')
     doc.text(`${index + 1}. ${product.name}`, 20, yPosition)
     
-    doc.setFont(undefined, 'normal')
+    doc.setFont('helvetica', 'normal')
     doc.setFontSize(10)
     doc.text(`Categoria: ${product.category}`, 25, yPosition + 8)
     doc.text(`Preço: R$ ${product.price.toFixed(2)}`, 25, yPosition + 16)
@@ -98,7 +99,8 @@ export function generateProductsPDF(products: any[]) {
 }
 
 // Função para gerar PDF de promoções
-export function generatePromotionsPDF(promotions: any[]) {
+export async function generatePromotionsPDF(promotions: any[]) {
+  const { default: jsPDF } = await import('jspdf')
   const doc = new jsPDF()
   
   // Título
@@ -118,10 +120,10 @@ export function generatePromotionsPDF(promotions: any[]) {
     }
     
     doc.setFontSize(12)
-    doc.setFont(undefined, 'bold')
+    doc.setFont('helvetica', 'bold')
     doc.text(`${index + 1}. ${promotion.productName}`, 20, yPosition)
     
-    doc.setFont(undefined, 'normal')
+    doc.setFont('helvetica', 'normal')
     doc.setFontSize(10)
     doc.text(`Preço Original: R$ ${promotion.originalPrice.toFixed(2)}`, 25, yPosition + 8)
     doc.text(`Preço Promocional: R$ ${promotion.newPrice.toFixed(2)}`, 25, yPosition + 16)
@@ -143,7 +145,8 @@ export function generatePromotionsPDF(promotions: any[]) {
 }
 
 // Função para gerar PDF de pedidos
-export function generateOrdersPDF(orders: any[]) {
+export async function generateOrdersPDF(orders: any[]) {
+  const { default: jsPDF } = await import('jspdf')
   const doc = new jsPDF()
   
   // Título
@@ -164,10 +167,10 @@ export function generateOrdersPDF(orders: any[]) {
     }
     
     doc.setFontSize(12)
-    doc.setFont(undefined, 'bold')
+    doc.setFont('helvetica', 'bold')
     doc.text(`Pedido #${order.id}`, 20, yPosition)
     
-    doc.setFont(undefined, 'normal')
+    doc.setFont('helvetica', 'normal')
     doc.setFontSize(10)
     doc.text(`Cliente: ${order.userName}`, 25, yPosition + 8)
     doc.text(`Telefone: ${order.userPhone}`, 25, yPosition + 16)
@@ -182,7 +185,7 @@ export function generateOrdersPDF(orders: any[]) {
   
   // Resumo
   doc.setFontSize(14)
-  doc.setFont(undefined, 'bold')
+  doc.setFont('helvetica', 'bold')
   doc.text(`Total de Pedidos: ${orders.length}`, 20, yPosition + 10)
   doc.text(`Receita Total: R$ ${totalRevenue.toFixed(2)}`, 20, yPosition + 20)
   
@@ -194,7 +197,8 @@ export function generateOrdersPDF(orders: any[]) {
 }
 
 // Função para gerar PDF de clientes
-export function generateCustomersPDF(customers: any[]) {
+export async function generateCustomersPDF(customers: any[]) {
+  const { default: jsPDF } = await import('jspdf')
   const doc = new jsPDF()
   
   // Título
@@ -214,10 +218,10 @@ export function generateCustomersPDF(customers: any[]) {
     }
     
     doc.setFontSize(12)
-    doc.setFont(undefined, 'bold')
+    doc.setFont('helvetica', 'bold')
     doc.text(`${index + 1}. ${customer.name}`, 20, yPosition)
     
-    doc.setFont(undefined, 'normal')
+    doc.setFont('helvetica', 'normal')
     doc.setFontSize(10)
     doc.text(`Email: ${customer.email}`, 25, yPosition + 8)
     doc.text(`Telefone: ${customer.phone}`, 25, yPosition + 16)

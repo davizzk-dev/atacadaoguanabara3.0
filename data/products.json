@@ -661,4 +661,116 @@
     "brand": "Rekepizza",
     "stock": 20
   }
+
+    {
+      "id": 61,
+      "name": "ARROZ TIO JOÃO 5KG",
+      "priceAtacado": 18.0,
+      "priceVarejo": 22.0,
+      "image": "https://images.unsplash.com/photo-1607252650355-f7fd0460ccdb?auto=format&fit=crop&w=400&q=80",
+      "avaliacao": 4.8,
+      "estoque": 60,
+      "marca": "Tio João",
+      "categoria": "Grãos"
+    },
+    {
+      "id": 62,
+      "name": "FEIJÃO CARIOCA KICALDO 1KG",
+      "priceAtacado": 6.8,
+      "priceVarejo": 8.5,
+      "image": "https://images.unsplash.com/photo-1601315378994-fffb4c5044fa?auto=format&fit=crop&w=400&q=80",
+      "avaliacao": 4.5,
+      "estoque": 80,
+      "marca": "Kicaldo",
+      "categoria": "Grãos"
+    },
+    {
+      "id": 63,
+      "name": "MACARRÃO RENATA ESPAGUETE 500G",
+      "priceAtacado": 2.7,
+      "priceVarejo": 3.5,
+      "image": "https://images.unsplash.com/photo-1586528117849-bd2b76e5d353?auto=format&fit=crop&w=400&q=80",
+      "avaliacao": 4.6,
+      "estoque": 95,
+      "marca": "Renata",
+      "categoria": "Massas"
+    },
+    {
+      "id": 64,
+      "name": "CAFÉ PILÃO TRADICIONAL 500G",
+      "priceAtacado": 8.2,
+      "priceVarejo": 10.0,
+      "image": "https://images.unsplash.com/photo-1551218372-95a4e5d1e4a1?auto=format&fit=crop&w=400&q=80",
+      "avaliacao": 4.9,
+      "estoque": 70,
+      "marca": "Pilão",
+      "categoria": "Bebidas"
+    },
+    {
+      "id": 65,
+      "name": "AÇÚCAR CRISTAL CARAVELAS 1KG",
+      "priceAtacado": 2.1,
+      "priceVarejo": 2.8,
+      "image": "https://images.unsplash.com/photo-1622737132334-c38dc78e5445?auto=format&fit=crop&w=400&q=80",
+      "avaliacao": 4.4,
+      "estoque": 105,
+      "marca": "Caravelas",
+      "categoria": "Açúcares"
+    },
+    {
+      "id": 66,
+      "name": "ÓLEO DE SOJA LIZA 900ML",
+      "priceAtacado": 5.0,
+      "priceVarejo": 6.2,
+      "image": "https://images.unsplash.com/photo-1609424162173-fb3c5ec31a5a?auto=format&fit=crop&w=400&q=80",
+      "avaliacao": 4.7,
+      "estoque": 130,
+      "marca": "Liza",
+      "categoria": "Óleos"
+    },
+    {
+      "id": 67,
+      "name": "MAIONESE HELLMANN'S 500G",
+      "priceAtacado": 5.5,
+      "priceVarejo": 6.9,
+      "image": "https://images.unsplash.com/photo-1659191289270-56c36bcb7e24?auto=format&fit=crop&w=400&q=80",
+      "avaliacao": 4.8,
+      "estoque": 85,
+      "marca": "Hellmann's",
+      "categoria": "Condimentos"
+    },
+    {
+      "id": 68,
+      "name": "REFRIGERANTE COCA-COLA 2L",
+      "priceAtacado": 7.2,
+      "priceVarejo": 9.0,
+      "image": "https://images.unsplash.com/photo-1603386329225-868f9b1c13b1?auto=format&fit=crop&w=400&q=80",
+      "avaliacao": 4.9,
+      "estoque": 150,
+      "marca": "Coca-Cola",
+      "categoria": "Bebidas"
+    },
+    {
+      "id": 69,
+      "name": "BISCOITO NESFIT INTEGRAL 170G",
+      "priceAtacado": 3.9,
+      "priceVarejo": 4.9,
+      "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+      "avaliacao": 4.6,
+      "estoque": 60,
+      "marca": "Nestlé",
+      "categoria": "Snacks"
+    },
+    {
+      "id": 70,
+      "name": "PAPEL HIGIÊNICO NEVE 12 UNIDADES",
+      "priceAtacado": 14.5,
+      "priceVarejo": 17.0,
+      "image": "https://images.unsplash.com/photo-1616251518267-cc0b59ed7b79?auto=format&fit=crop&w=400&q=80",
+      "avaliacao": 4.8,
+      "estoque": 100,
+      "marca": "Neve",
+      "categoria": "Higiene"
+    }
+    
 ]

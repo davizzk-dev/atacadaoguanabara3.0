@@ -773,7 +773,7 @@ export const products = [
     tags: ["refrigerante", "cola", "bebida"],
   },
   
-<<<<<<< HEAD
+
   {
     id: "61",
     name: "ARROZ TIO JOÃO 5KG",
@@ -909,9 +909,7 @@ export const products = [
     unit: "170g",
     tags: ["biscoito", "integral", "snack"],
   },
-=======
-  
->>>>>>> 8850feb40c7e28535eff7af62aad16b798564f10
+
 ]
 
 export const categories = [

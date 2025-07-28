@@ -71,7 +71,7 @@ interface DashboardStats {
   pendingFeedback: number
   productsByCategory: Record<string, number>
   ordersByStatus: Record<string, number>
-  monthlyRevenue: Array<{ month: string; revenue: number }>
+  monthlyRevenue: Array<{ month: string; revenue: number; orders: number }>
   productCategories: Array<{ name: string; value: number }>
   orderStatus: Array<{ name: string; value: number }>
 }
@@ -164,7 +164,37 @@ export default function AdminPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard')
-  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [stats, setStats] = useState<DashboardStats>({
+    totalUsers: 0,
+    totalProducts: 0,
+    totalOrders: 0,
+    totalRevenue: 0,
+    pendingCameraRequests: 0,
+    pendingFeedback: 0,
+    productsByCategory: {},
+    ordersByStatus: {},
+    monthlyRevenue: [
+      { month: 'Jan', revenue: 15000, orders: 45 },
+      { month: 'Fev', revenue: 18000, orders: 52 },
+      { month: 'Mar', revenue: 22000, orders: 68 },
+      { month: 'Abr', revenue: 19000, orders: 55 },
+      { month: 'Mai', revenue: 25000, orders: 75 },
+      { month: 'Jun', revenue: 28000, orders: 82 }
+    ],
+    productCategories: [
+      { name: 'Grãos', value: 25 },
+      { name: 'Bebidas', value: 20 },
+      { name: 'Laticínios', value: 15 },
+      { name: 'Limpeza', value: 12 },
+      { name: 'Outros', value: 28 }
+    ],
+    orderStatus: [
+      { name: 'Entregue', value: 45 },
+      { name: 'Em Preparo', value: 15 },
+      { name: 'Pendente', value: 8 },
+      { name: 'Cancelado', value: 2 }
+    ]
+  })
   const [cameraRequests, setCameraRequests] = useState<CameraRequest[]>([])
   const [feedback, setFeedback] = useState<Feedback[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -1525,7 +1555,7 @@ function PromotionForm({
               </div>
 
               {/* Gráfico de Faturamento Mensal */}
-              {stats?.monthlyRevenue && stats.monthlyRevenue.length > 0 && (
+              {stats.monthlyRevenue && stats.monthlyRevenue.length > 0 && (
                 <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
                   <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
                     <TrendingUp className="w-5 h-5 mr-2" /> Faturamento Mensal
@@ -1551,7 +1581,7 @@ function PromotionForm({
               )}
 
               {/* Gráfico de Pedidos Mensais */}
-              {stats?.monthlyRevenue && stats.monthlyRevenue.length > 0 && (
+              {stats.monthlyRevenue && stats.monthlyRevenue.length > 0 && (
                 <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
                   <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
                     <TrendingUp className="w-5 h-5 mr-2" /> Evolução de Pedidos Mensais
@@ -1578,7 +1608,7 @@ function PromotionForm({
               )}
 
               {/* Gráfico de Status dos Pedidos */}
-              {stats?.orderStatus && stats.orderStatus.length > 0 && (
+              {stats.orderStatus && stats.orderStatus.length > 0 && (
                 <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
                   <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
                     <PieChart className="w-5 h-5 mr-2" /> Status dos Pedidos
@@ -1615,7 +1645,7 @@ function PromotionForm({
               )}
 
               {/* Gráfico de Categorias de Produtos */}
-              {stats?.productCategories && stats.productCategories.length > 0 && (
+              {stats.productCategories && stats.productCategories.length > 0 && (
                 <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
                   <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
                     <PieChart className="w-5 h-5 mr-2" /> Distribuição por Categoria

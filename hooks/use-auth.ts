@@ -5,7 +5,19 @@ import { useSession } from 'next-auth/react'
 import { useAuthStore } from '@/lib/store'
 
 export function useAuth() {
-  const { data: session, status } = useSession()
+  let session: any = null
+  let status: any = 'unauthenticated'
+  
+  try {
+    const sessionData = useSession()
+    session = sessionData?.data || null
+    status = sessionData?.status || 'unauthenticated'
+  } catch (error) {
+    // Fallback para build estático
+    session = null
+    status = 'unauthenticated'
+  }
+
   const { user, setUser, logout: storeLogout } = useAuthStore()
 
   useEffect(() => {

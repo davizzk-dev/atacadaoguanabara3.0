@@ -5,6 +5,62 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+// Função para tratar erros de conexão de forma mais elegante
+export function handleConnectionError(error: any, context: string = 'API') {
+  // Verificar se é um erro de conexão recusada
+  if (error?.code === 'ECONNREFUSED' || 
+      error?.message?.includes('fetch failed') ||
+      error?.message?.includes('ECONNREFUSED')) {
+    
+    // Durante o build, não logar esses erros para não poluir o console
+    if (process.env.NODE_ENV === 'production' && typeof window === 'undefined') {
+      return {
+        error: 'Sistema temporariamente indisponível',
+        isConnectionError: true
+      }
+    }
+    
+    console.warn(`⚠️ ${context}: Sistema Java não está rodando (isso é normal se o backend não estiver ativo)`)
+    return {
+      error: 'Sistema temporariamente indisponível',
+      isConnectionError: true
+    }
+  }
+  
+  // Para outros tipos de erro, logar normalmente
+  console.error(`❌ ${context}:`, error)
+  return {
+    error: 'Erro interno do servidor',
+    isConnectionError: false
+  }
+}
+
+// Função para verificar se estamos em modo de build
+export function isBuildMode() {
+  return process.env.NODE_ENV === 'production' && typeof window === 'undefined'
+}
+
+// Função para fazer fetch com tratamento de erro melhorado
+export async function safeFetch(url: string, options?: RequestInit) {
+  try {
+    // Durante o build, retornar dados mockados para evitar erros
+    if (isBuildMode()) {
+      console.log(`🔧 Build mode: Mockando resposta para ${url}`)
+      return {
+        ok: true,
+        json: async () => ({}),
+        status: 200
+      } as Response
+    }
+    
+    const response = await fetch(url, options)
+    return response
+  } catch (error) {
+    const errorInfo = handleConnectionError(error, `Fetch para ${url}`)
+    throw new Error(errorInfo.error)
+  }
+}
+
 // Funções utilitárias para geração de PDFs
 // Versão simplificada e robusta
 
@@ -252,7 +308,7 @@ export async function generatePromotionsPDF(promotions: any[]) {
   }
 }
 
-export async function generateOrdersPDF(orders: any[]) {
+export async function generateOrdersPDF(orders: any[], period?: string) {
   try {
     let jsPDF
     try {
@@ -273,45 +329,84 @@ export async function generateOrdersPDF(orders: any[]) {
     doc.setFontSize(14)
     doc.text('Relatório de Pedidos', 105, 30, { align: 'center' })
     
+    // Período
+    if (period) {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(12)
+      doc.text(`Período: ${period}`, 105, 40, { align: 'center' })
+    }
+    
     // Informações
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(12)
-    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 20, 50)
-    doc.text(`Total de Pedidos: ${orders.length}`, 20, 60)
+    const startY = period ? 55 : 50
+    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 20, startY)
+    doc.text(`Total de Pedidos: ${orders.length}`, 20, startY + 10)
     
-    // Resumo
+    // Resumo detalhado
     const totalRevenue = orders.reduce((sum, order) => sum + (order.total || 0), 0)
-    doc.text(`Receita Total: R$ ${totalRevenue.toFixed(2)}`, 20, 70)
+    const ticketMedio = orders.length > 0 ? totalRevenue / orders.length : 0
     
-    // Lista de pedidos
+    doc.text(`Receita Total: R$ ${totalRevenue.toFixed(2)}`, 20, startY + 20)
+    doc.text(`Ticket Médio: R$ ${ticketMedio.toFixed(2)}`, 20, startY + 30)
+    
+    // Status breakdown
+    const statusCounts = {
+      pending: orders.filter(o => o.status === 'pending').length,
+      confirmed: orders.filter(o => o.status === 'confirmed').length,
+      preparing: orders.filter(o => o.status === 'preparing').length,
+      delivering: orders.filter(o => o.status === 'delivering').length,
+      delivered: orders.filter(o => o.status === 'delivered').length,
+      cancelled: orders.filter(o => o.status === 'cancelled').length
+    }
+    
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(14)
-    doc.text('PEDIDOS:', 20, 90)
+    doc.setFontSize(12)
+    doc.text('Status dos Pedidos:', 20, startY + 45)
     
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(10)
-    let y = 105
+    doc.text(`Pendentes: ${statusCounts.pending}`, 30, startY + 55)
+    doc.text(`Confirmados: ${statusCounts.confirmed}`, 30, startY + 65)
+    doc.text(`Preparando: ${statusCounts.preparing}`, 30, startY + 75)
+    doc.text(`Em Rota: ${statusCounts.delivering}`, 30, startY + 85)
+    doc.text(`Entregues: ${statusCounts.delivered}`, 30, startY + 95)
+    doc.text(`Cancelados: ${statusCounts.cancelled}`, 30, startY + 105)
     
-    orders.forEach((order, index) => {
+    // Lista de pedidos
+    const listStartY = startY + 120
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(14)
+    doc.text('DETALHES DOS PEDIDOS:', 20, listStartY)
+    
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    let y = listStartY + 10
+    
+    orders.slice(0, 15).forEach((order, index) => {
       if (y > 250) {
         doc.addPage()
         y = 20
       }
       
+      const customerName = order.userName || order.customerInfo?.name || 'Cliente não identificado'
+      
       doc.setFont('helvetica', 'bold')
-      doc.text(`Pedido ${index + 1}: ${order.userName || 'Cliente não identificado'}`, 20, y)
+      doc.text(`Pedido ${index + 1}: ${customerName}`, 20, y)
       y += 6
       
       doc.setFont('helvetica', 'normal')
-      doc.text(`ID: ${order.userId || 'N/A'} | Email: ${order.userEmail || 'N/A'}`, 20, y)
+      doc.text(`ID: ${order.id || 'N/A'}`, 20, y)
       y += 5
-      doc.text(`Telefone: ${order.userPhone || 'N/A'}`, 20, y)
+      doc.text(`Email: ${order.userEmail || order.customerInfo?.email || 'N/A'}`, 20, y)
+      y += 5
+      doc.text(`Telefone: ${order.userPhone || order.customerInfo?.phone || 'N/A'}`, 20, y)
       y += 5
       doc.text(`Data: ${order.createdAt ? new Date(order.createdAt).toLocaleDateString('pt-BR') : 'N/A'}`, 20, y)
       y += 5
       doc.text(`Total: R$ ${(order.total || 0).toFixed(2)}`, 20, y)
       y += 5
-      doc.text(`Status: ${order.status || 'N/A'}`, 20, y)
+      doc.text(`Status: ${getStatusText(order.status)}`, 20, y)
       y += 8
     })
     
@@ -325,6 +420,18 @@ export async function generateOrdersPDF(orders: any[]) {
     console.error('Erro ao gerar PDF de pedidos:', error)
     throw new Error('Falha ao gerar relatório de pedidos')
   }
+}
+
+function getStatusText(status: string): string {
+  const statusMap: Record<string, string> = {
+    pending: 'Pendente',
+    confirmed: 'Confirmado',
+    preparing: 'Preparando',
+    delivering: 'Em Rota',
+    delivered: 'Entregue',
+    cancelled: 'Cancelado'
+  }
+  return statusMap[status] || status
 }
 
 export async function generateCustomersPDF(customers: any[]) {

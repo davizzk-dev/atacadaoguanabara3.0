@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Mail, Lock, Eye, EyeOff, ArrowLeft, AlertCircle, Shield } from 'lucide-react'
-import { signIn } from 'next-auth/react'
+import { signIn, getSession } from 'next-auth/react'
 import { useSessionWrapper } from '@/hooks/use-session-wrapper'
 import Header from '@/components/header'
 import { Footer } from '@/components/footer'
@@ -83,6 +83,30 @@ function LoginContent() {
         if (result?.error) {
           setError('Erro ao fazer login com Google. Tente novamente.')
         } else if (result?.ok) {
+          // Salvar dados do usuário Google no JSON
+          try {
+            const session = await getSession()
+            if (session?.user) {
+              const response = await fetch('/api/auth/google-login', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  name: session.user.name,
+                  email: session.user.email,
+                  image: session.user.image
+                })
+              })
+              
+              if (response.ok) {
+                console.log('Usuário Google salvo no JSON')
+              }
+            }
+          } catch (error) {
+            console.error('Erro ao salvar usuário Google:', error)
+          }
+          
           router.push('/')
         }
       } else {

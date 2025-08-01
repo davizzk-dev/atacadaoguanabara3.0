@@ -1,129 +1,218 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { saveProductToFile, updateProductInFile, deleteProductFromFile, getAllProductsFromFile, products as defaultProducts, syncProductsToFile } from '@/lib/data'
 
-export async function GET(request: NextRequest) {
+// Função wrapper para capturar erros
+const handleApiError = (error: any, operation: string) => {
+  console.error(`❌ Erro em ${operation}:`, error)
+  
+  // Se for um erro de sistema de arquivos, retornar erro específico
+  if (error.code === 'ENOENT') {
+    return NextResponse.json({
+      error: 'Arquivo de produtos não encontrado',
+      details: 'O sistema não conseguiu acessar o arquivo de produtos',
+      success: false
+    }, { status: 500 })
+  }
+  
+  if (error.code === 'EACCES') {
+    return NextResponse.json({
+      error: 'Permissão negada para acessar arquivo de produtos',
+      details: 'O sistema não tem permissão para ler/escrever o arquivo',
+      success: false
+    }, { status: 500 })
+  }
+  
+  return NextResponse.json({
+    error: `Erro interno do servidor em ${operation}`,
+    details: error instanceof Error ? error.message : 'Erro desconhecido',
+    success: false
+  }, { status: 500 })
+}
+
+export async function GET() {
   try {
-    // Conectar com o backend Java
-    const response = await fetch('http://localhost:8080/api/admin/products', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return NextResponse.json(data)
-  } catch (error) {
-    console.error('Erro ao buscar produtos:', error)
+    console.log('🔍 Buscando produtos...')
+    let products = await getAllProductsFromFile()
     
-    // Dados mockados em caso de erro
-    return NextResponse.json([
-      {
-        id: '1',
-        name: 'Arroz Integral',
-        price: 8.50,
-        category: 'Grãos',
-        description: 'Arroz integral de alta qualidade',
-        inStock: true,
-        image: '/images/arroz-integral.jpg'
-      },
-      {
-        id: '2',
-        name: 'Azeite de Oliva',
-        price: 25.90,
-        category: 'Óleos',
-        description: 'Azeite extra virgem',
-        inStock: true,
-        image: '/images/azeite.jpg'
-      },
-      {
-        id: '3',
-        name: 'Macarrão Espaguete',
-        price: 4.20,
-        category: 'Massas',
-        description: 'Macarrão espaguete tradicional',
-        inStock: true,
-        image: '/images/macarrao.jpg'
+    // Se não há produtos no arquivo, usar os produtos padrão do data.ts
+    if (!products || products.length === 0) {
+      console.log('📦 Nenhum produto encontrado no arquivo, usando produtos padrão')
+      products = defaultProducts.map(product => ({
+        ...product,
+        inStock: product.stock > 0,
+        rating: product.rating || 0,
+        reviews: product.reviews || 0
+      }))
+      
+      // Sincronizar produtos padrão para o arquivo
+      try {
+        await syncProductsToFile()
+      } catch (syncError) {
+        console.error('⚠️ Erro ao sincronizar produtos, mas continuando...', syncError)
       }
-    ])
+    }
+    
+    console.log(`✅ ${products.length} produtos carregados com sucesso`)
+    return NextResponse.json(products)
+  } catch (error) {
+    return handleApiError(error, 'buscar produtos')
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    console.log('📝 Recebendo requisição para criar produto...')
     
-    // Conectar com o backend Java
-    const response = await fetch('http://localhost:8080/api/admin/products', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+    // Verificar se o corpo da requisição está vazio
+    const contentType = request.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      return NextResponse.json({
+        error: 'Content-Type deve ser application/json',
+        success: false
+      }, { status: 400 })
     }
-
-    const data = await response.json()
-    return NextResponse.json(data)
+    
+    let productData
+    try {
+      productData = await request.json()
+    } catch (parseError) {
+      console.error('❌ Erro ao fazer parse do JSON:', parseError)
+      return NextResponse.json({
+        error: 'Dados JSON inválidos',
+        details: 'O corpo da requisição deve ser um JSON válido',
+        success: false
+      }, { status: 400 })
+    }
+    
+    console.log('📦 Dados do produto recebidos:', productData)
+    
+    // Validar dados obrigatórios
+    if (!productData.name || !productData.price || !productData.category) {
+      console.log('❌ Dados obrigatórios faltando:', { 
+        name: !!productData.name, 
+        price: !!productData.price, 
+        category: !!productData.category 
+      })
+      return NextResponse.json({
+        error: 'Nome, preço e categoria são obrigatórios',
+        success: false
+      }, { status: 400 })
+    }
+    
+    console.log('💾 Salvando produto no arquivo...')
+    const result = await saveProductToFile(productData)
+    console.log('📊 Resultado do salvamento:', result)
+    
+    if (result.success) {
+      console.log('✅ Produto criado com sucesso')
+      return NextResponse.json({
+        message: result.message,
+        product: productData,
+        success: true
+      })
+    } else {
+      console.log('❌ Erro ao salvar produto:', result.message)
+      return NextResponse.json({
+        error: result.message,
+        success: false
+      }, { status: 400 })
+    }
   } catch (error) {
-    console.error('Erro ao criar produto:', error)
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
+    return handleApiError(error, 'criar produto')
   }
 }
 
 export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { id, ...updateData } = body
+    console.log('🔄 Recebendo requisição para atualizar produto...')
     
-    // Conectar com o backend Java
-    const response = await fetch(`http://localhost:8080/api/admin/products/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updateData),
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+    // Verificar se o corpo da requisição está vazio
+    const contentType = request.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      return NextResponse.json({
+        error: 'Content-Type deve ser application/json',
+        success: false
+      }, { status: 400 })
     }
-
-    const data = await response.json()
-    return NextResponse.json(data)
+    
+    let productData
+    try {
+      productData = await request.json()
+    } catch (parseError) {
+      console.error('❌ Erro ao fazer parse do JSON:', parseError)
+      return NextResponse.json({
+        error: 'Dados JSON inválidos',
+        details: 'O corpo da requisição deve ser um JSON válido',
+        success: false
+      }, { status: 400 })
+    }
+    
+    console.log('📦 Dados do produto para atualização:', productData)
+    
+    if (!productData.id) {
+      console.log('❌ ID do produto não fornecido')
+      return NextResponse.json({
+        error: 'ID do produto é obrigatório',
+        success: false
+      }, { status: 400 })
+    }
+    
+    console.log('💾 Atualizando produto no arquivo...')
+    const result = await updateProductInFile(productData.id, productData)
+    console.log('📊 Resultado da atualização:', result)
+    
+    if (result.success) {
+      console.log('✅ Produto atualizado com sucesso')
+      return NextResponse.json({
+        message: result.message,
+        product: productData,
+        success: true
+      })
+    } else {
+      console.log('❌ Erro ao atualizar produto:', result.message)
+      return NextResponse.json({
+        error: result.message,
+        success: false
+      }, { status: 404 })
+    }
   } catch (error) {
-    console.error('Erro ao atualizar produto:', error)
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
+    return handleApiError(error, 'atualizar produto')
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
+    console.log('🗑️ Recebendo requisição para deletar produto...')
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
+    console.log('🆔 ID do produto para deletar:', id)
     
     if (!id) {
-      return NextResponse.json({ error: 'ID do produto é obrigatório' }, { status: 400 })
+      console.log('❌ ID do produto não fornecido')
+      return NextResponse.json({
+        error: 'ID do produto é obrigatório',
+        success: false
+      }, { status: 400 })
     }
     
-    // Conectar com o backend Java
-    const response = await fetch(`http://localhost:8080/api/admin/products/${id}`, {
-      method: 'DELETE',
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+    console.log('💾 Deletando produto do arquivo...')
+    const result = await deleteProductFromFile(id)
+    console.log('📊 Resultado da exclusão:', result)
+    
+    if (result.success) {
+      console.log('✅ Produto deletado com sucesso')
+      return NextResponse.json({
+        message: result.message,
+        success: true
+      })
+    } else {
+      console.log('❌ Erro ao deletar produto:', result.message)
+      return NextResponse.json({
+        error: result.message,
+        success: false
+      }, { status: 404 })
     }
-
-    return NextResponse.json({ message: 'Produto deletado com sucesso' })
   } catch (error) {
-    console.error('Erro ao deletar produto:', error)
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
+    return handleApiError(error, 'deletar produto')
   }
 } 

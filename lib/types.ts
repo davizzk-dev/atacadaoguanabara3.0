@@ -9,8 +9,7 @@ export interface Product {
   category: string
   description: string
   stock: number
-  rating: number
-  reviews: number
+  // Sistema de avaliações removido
   isOnSale?: boolean
   discount?: number
   isFavorite?: boolean
@@ -101,15 +100,7 @@ export interface ProductPromotion {
   validUntil?: Date
 }
 
-export interface Review {
-  id: string
-  productId: string
-  userId: string
-  userName: string
-  rating: number
-  comment: string
-  createdAt: Date
-}
+
 
 // Extensões para NextAuth
 declare module "next-auth" {

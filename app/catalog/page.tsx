@@ -1,238 +1,269 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Filter, X, Grid3X3, List, SlidersHorizontal, Sparkles, Target, Zap } from 'lucide-react'
+import { X, Sparkles, Target, Zap } from 'lucide-react'
 import Header from '@/components/header'
 import { Footer } from '@/components/footer'
 import { ProductCard } from '@/components/product-card'
 import { Product } from '@/lib/types'
-import { products as productsData } from '@/lib/data'
+import { products as productsData, categories } from '@/lib/data'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
+import PromotionalBanner from '@/components/promotional-banner'
+import { CategoryCarousel } from '@/components/category-carousel'
+import { useAuthStore } from '@/lib/store'
+import Link from 'next/link'
+
 export default function CatalogPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("all")
-  const [products] = useState<Product[]>(productsData)
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-  const [showFilters, setShowFilters] = useState(false)
-  const [priceRange, setPriceRange] = useState([0, 100])
-  const [sortBy, setSortBy] = useState('name')
+  const [selectedCategory, setSelectedCategory] = useState("Todos")
+  const [products, setProducts] = useState<Product[]>(productsData)
+  const [promotions, setPromotions] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const categories = ["all", ...Array.from(new Set(products.map((p: Product) => p.category)))]
+  // Função para aplicar promoções aos produtos
+  const applyPromotionsToProducts = (products: Product[], promotions: any[]) => {
+    console.log('🔍 Aplicando promoções aos produtos...')
+    console.log('📦 Total de produtos:', products.length)
+    console.log('🎯 Promoções ativas:', promotions.length)
+    console.log('📋 Promoções:', promotions)
+    
+    return products.map(product => {
+      console.log(`🔍 Verificando produto: ${product.name} (ID: ${product.id})`)
+      
+      const promotion = promotions.find(p => {
+        console.log(`🔍 Comparando: promoção.productId (${typeof p.productId}) "${p.productId}" === produto.id (${typeof product.id}) "${product.id}"`)
+        return p.productId === product.id && p.isActive
+      })
+      if (promotion) {
+        console.log(`✅ Promoção encontrada para ${product.name}:`, promotion)
+        console.log(`💰 Preço original: ${product.price} → Novo preço: ${promotion.newPrice}`)
+        
+        // Se há uma promoção ativa, ela tem prioridade sobre o originalPrice predefinido
+        return {
+          ...product,
+          price: promotion.newPrice,
+          originalPrice: promotion.originalPrice, // Usa o originalPrice da promoção
+          discount: promotion.discount,
+          promotionImage: promotion.image,
+          hasActivePromotion: true // Marca que tem promoção ativa
+        }
+      } else {
+        console.log(`❌ Nenhuma promoção para ${product.name} (ID: ${product.id})`)
+      }
+      return product
+    })
+  }
+
+  // Carregar promoções e aplicar aos produtos
+  useEffect(() => {
+    const loadPromotions = async () => {
+      try {
+        const response = await fetch('/api/admin/product-promotions')
+        if (response.ok) {
+          const promotionsData = await response.json()
+          setPromotions(promotionsData)
+          
+          // Aplicar promoções aos produtos
+          const productsWithPromotions = applyPromotionsToProducts(productsData, promotionsData)
+          setProducts(productsWithPromotions)
+        }
+      } catch (error) {
+        console.error('Erro ao carregar promoções:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadPromotions()
+  }, [])
+
+  
+  // Pop-up de cadastro (igual à página inicial)
+  const [showSignupModal, setShowSignupModal] = useState(false)
+  const { user } = useAuthStore()
+  
+  useEffect(() => {
+    if (user) return // Não mostrar se logado
+    if (typeof window !== 'undefined' && localStorage.getItem('hideSignupModal') === '1') return
+    const timer = setTimeout(() => setShowSignupModal(true), 10000)
+    const onScroll = () => {
+      if (window.scrollY > window.innerHeight / 2 && !showSignupModal) {
+        setShowSignupModal(true)
+        window.removeEventListener('scroll', onScroll)
+      }
+    }
+    window.addEventListener('scroll', onScroll)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('scroll', onScroll)
+    }
+  }, [user, showSignupModal])
+  
+  function closeSignupModal() {
+    setShowSignupModal(false)
+    if (typeof window !== 'undefined') localStorage.setItem('hideSignupModal', '1')
+  }
+
+  // Capturar parâmetros da URL
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const searchParam = urlParams.get('search')
+      
+      if (searchParam) {
+        setSearchTerm(searchParam)
+      }
+    }
+  }, [])
 
   const filteredProducts = products.filter((product: Product) => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (product.brand?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                         product.category.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = selectedCategory === "all" || product.category === selectedCategory
-    const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1]
-    return matchesSearch && matchesCategory && matchesPrice
-  })
-
-  // Ordenar produtos
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    switch (sortBy) {
-      case 'price-low':
-        return a.price - b.price
-      case 'price-high':
-        return b.price - a.price
-      case 'rating':
-        return b.rating - a.rating
-      case 'name':
-      default:
-        return a.name.localeCompare(b.name)
+    const searchLower = searchTerm.toLowerCase()
+    const matchesSearch = searchTerm === "" || 
+           product.name.toLowerCase().includes(searchLower) ||
+           (product.brand?.toLowerCase() || '').includes(searchLower) ||
+           product.category.toLowerCase().includes(searchLower) ||
+           (product.description?.toLowerCase() || '').includes(searchLower) ||
+           (product.tags?.join(' ').toLowerCase() || '').includes(searchLower)
+    
+    // Lógica para categorias especiais
+    let matchesCategory = false
+    
+    if (selectedCategory === "Todos") {
+      matchesCategory = true
+    } else if (selectedCategory === "Promoções") {
+      // Produtos com preço original maior que o preço atual (em promoção)
+      matchesCategory = !!(product.originalPrice && product.originalPrice > product.price)
+    } else if (selectedCategory === "Mais Vendidos") {
+      // Produtos com rating alto (simulando mais vendidos)
+      matchesCategory = !!((product as any).rating && (product as any).rating >= 4.5)
+    } else if (selectedCategory === "Novidades") {
+      // Produtos adicionados recentemente (simulando novidades)
+      const productDate = new Date((product as any).createdAt || Date.now())
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      matchesCategory = productDate > thirtyDaysAgo
+    } else {
+      // Categorias normais
+      matchesCategory = product.category === selectedCategory
     }
+    
+    return matchesSearch && matchesCategory
   })
 
   const clearFilters = () => {
     setSearchTerm("")
-    setSelectedCategory("all")
-    setPriceRange([0, 100])
-    setSortBy('name')
+    setSelectedCategory("Todos")
   }
 
-  const hasActiveFilters = searchTerm || selectedCategory !== "all" || priceRange[0] > 0 || priceRange[1] < 100
+  const hasActiveFilters = searchTerm || (selectedCategory !== "Todos" && selectedCategory !== "Promoções" && selectedCategory !== "Mais Vendidos" && selectedCategory !== "Novidades")
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-orange-50 page-transition">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-orange-50 page-transition" style={{ overflow: 'visible' }}>
       <Header />
+      <PromotionalBanner />
       
       <div className="container mx-auto px-4 py-8">
+        {/* Abas de Navegação */}
+        <div className="w-full mb-8">
+          <div className="flex flex-wrap gap-2 justify-center">
+            <button
+              onClick={() => setSelectedCategory("Todos")}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
+                selectedCategory === "Todos"
+                  ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Todos os Produtos
+            </button>
+            <button
+              onClick={() => setSelectedCategory("Promoções")}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
+                selectedCategory === "Promoções"
+                  ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              🔥 Promoções
+            </button>
+            <button
+              onClick={() => setSelectedCategory("Mais Vendidos")}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
+                selectedCategory === "Mais Vendidos"
+                  ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              ⭐ Mais Vendidos
+            </button>
+            <button
+              onClick={() => setSelectedCategory("Novidades")}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
+                selectedCategory === "Novidades"
+                  ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              🆕 Novidades
+            </button>
+          </div>
+        </div>
+
+        {/* Carrossel de Categorias - De ponta a ponta */}
+        <div className="w-full mb-8 -mx-4">
+          <div className="px-4">
+            <CategoryCarousel
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onCategorySelect={(category) => {
+                setSelectedCategory(category)
+                // Scroll suave para a seção de produtos
+                setTimeout(() => {
+                  const productsSection = document.getElementById('products-section')
+                  if (productsSection) {
+                    productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }
+                }, 100)
+              }}
+            />
+          </div>
+        </div>
+
         {/* Header Melhorado */}
-        <div className="text-center mb-8 fade-in-up">
+        <div className="text-center mb-8 fade-in-up" id="products-section">
           <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 mb-4 animate-pulse">
             <Sparkles className="h-4 w-4 mr-2" />
-            Catálogo Completo
+            {searchTerm || selectedCategory !== "Todos" ? 'Resultados Filtrados' : 'Catálogo Completo'}
           </Badge>
           <h1 className="text-5xl font-bold text-gray-900 mb-4 bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-            Nossos Produtos
+            {searchTerm ? `Busca: "${searchTerm}"` : 
+              selectedCategory === "Promoções" ? "🔥 Promoções Especiais" :
+              selectedCategory === "Mais Vendidos" ? "⭐ Produtos Mais Vendidos" :
+              selectedCategory === "Novidades" ? "🆕 Produtos Novos" :
+              selectedCategory !== "Todos" ? selectedCategory : 'Nossos Produtos'}
           </h1>
           <p className="text-gray-600 text-xl max-w-2xl mx-auto">
-            Encontre os melhores produtos para sua casa com preços que cabem no seu bolso
+            {searchTerm 
+              ? `Encontramos ${filteredProducts.length} produtos para "${searchTerm}"`
+              : selectedCategory === "Promoções"
+              ? `${filteredProducts.length} produtos em promoção com descontos especiais`
+              : selectedCategory === "Mais Vendidos"
+              ? `${filteredProducts.length} produtos mais vendidos pelos nossos clientes`
+              : selectedCategory === "Novidades"
+              ? `${filteredProducts.length} produtos novos adicionados recentemente`
+              : selectedCategory !== "Todos"
+              ? `${filteredProducts.length} produtos em ${selectedCategory}`
+              : 'Encontre os melhores produtos para sua casa com preços que cabem no seu bolso'
+            }
           </p>
         </div>
 
-        {/* Search and Filter Melhorado */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-8 mb-8 slide-in-right">
-          {/* Barra de Busca Principal */}
-          <div className="relative mb-6">
-            <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
-              <Search className="w-6 h-6" />
-            </div>
-            <input
-              type="text"
-              placeholder="🔍 Buscar produtos, marcas ou categorias..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-14 pr-12 py-4 text-lg border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-200 focus:border-orange-400 transition-all duration-300 hover:border-orange-300 bg-white/50 backdrop-blur-sm"
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm("")}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            )}
-          </div>
 
-          {/* Filtros e Controles */}
-          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-            {/* Filtros Rápidos */}
-            <div className="flex flex-wrap gap-3">
-              <Button
-                onClick={() => setShowFilters(!showFilters)}
-                variant={showFilters ? "default" : "outline"}
-                className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0"
-              >
-                <SlidersHorizontal className="w-4 h-4 mr-2" />
-                Filtros Avançados
-              </Button>
-              
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition-all bg-white/50 backdrop-blur-sm"
-              >
-                <option value="name">Ordenar por Nome</option>
-                <option value="price-low">Menor Preço</option>
-                <option value="price-high">Maior Preço</option>
-                <option value="rating">Melhor Avaliação</option>
-              </select>
 
-              <div className="flex border-2 border-gray-200 rounded-xl overflow-hidden bg-white/50 backdrop-blur-sm">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`px-4 py-2 transition-all ${viewMode === 'grid' ? 'bg-orange-500 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                >
-                  <Grid3X3 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`px-4 py-2 transition-all ${viewMode === 'list' ? 'bg-orange-500 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                >
-                  <List className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Contador de Resultados */}
-            <div className="flex items-center gap-4">
-              <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-orange-200">
-                <Target className="w-3 h-3 mr-1" />
-                {sortedProducts.length} produtos encontrados
-              </Badge>
-              
-              {hasActiveFilters && (
-                <Button
-                  onClick={clearFilters}
-                  variant="outline"
-                  size="sm"
-                  className="text-red-600 border-red-200 hover:bg-red-50"
-                >
-                  <X className="w-3 h-3 mr-1" />
-                  Limpar Filtros
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Filtros Avançados */}
-          {showFilters && (
-            <div className="mt-6 p-6 bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl border border-orange-200 slide-in-down">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Filtro de Categoria */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Categoria</label>
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition-all bg-white"
-                  >
-                    {categories.map((category: string) => (
-                      <option key={category} value={category}>
-                        {category === 'all' ? 'Todas as categorias' : category}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Filtro de Preço */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Faixa de Preço: R$ {priceRange[0]} - R$ {priceRange[1]}
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      placeholder="Min"
-                      value={priceRange[0]}
-                      onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
-                      className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition-all bg-white"
-                    />
-                    <span className="text-gray-400 self-center">-</span>
-                    <input
-                      type="number"
-                      placeholder="Max"
-                      value={priceRange[1]}
-                      onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
-                      className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition-all bg-white"
-                    />
-                  </div>
-                </div>
-
-                {/* Tags de Categoria Rápida */}
-                <div className="lg:col-span-3">
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">Categorias Rápidas</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                    {categories.filter(cat => cat !== 'all').map((category) => (
-                      <button
-                        key={category}
-                        onClick={() => setSelectedCategory(category)}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-center ${
-                          selectedCategory === category
-                            ? 'bg-orange-500 text-white shadow-md transform scale-105'
-                            : 'bg-white text-gray-700 hover:bg-orange-100 hover:text-orange-700 border border-gray-200 hover:border-orange-300'
-                        }`}
-                      >
-                        {category}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Products Grid/List */}
-        <div className={`grid gap-6 ${
-          viewMode === 'grid' 
-            ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5' 
-            : 'grid-cols-1'
-        }`}>
-          {sortedProducts.map((product: Product, index: number) => (
+        {/* Products Grid */}
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+          {filteredProducts.map((product: Product, index: number) => (
             <div key={product.id} className="fade-in-up" style={{ animationDelay: `${index * 0.05}s` }}>
               <ProductCard product={product} />
             </div>
@@ -240,7 +271,7 @@ export default function CatalogPage() {
         </div>
 
         {/* Empty state melhorado */}
-        {sortedProducts.length === 0 && (
+        {filteredProducts.length === 0 && (
           <div className="text-center py-16 fade-in-up">
             <div className="text-8xl mb-6 animate-bounce">🔍</div>
             <h3 className="text-2xl font-bold text-gray-900 mb-4">Nenhum produto encontrado</h3>
@@ -260,15 +291,74 @@ export default function CatalogPage() {
                 variant="outline"
                 className="border-orange-200 text-orange-600 hover:bg-orange-50"
               >
-                <Search className="w-4 h-4 mr-2" />
-                Nova Busca
+                <Target className="w-4 h-4 mr-2" />
+                Limpar Busca
+              </Button>
+              <Button
+                onClick={() => setSelectedCategory("Todos")}
+                variant="outline"
+                className="border-orange-200 text-orange-600 hover:bg-orange-50"
+              >
+                <Target className="w-4 h-4 mr-2" />
+                Todos os Produtos
+              </Button>
+              <Button
+                onClick={() => setSelectedCategory("Promoções")}
+                variant="outline"
+                className="border-orange-200 text-orange-600 hover:bg-orange-50"
+              >
+                🔥 Ver Promoções
               </Button>
             </div>
           </div>
         )}
       </div>
 
+      {/* Modal de Cadastro */}
+      {showSignupModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 flex flex-col items-center relative animate-fade-in">
+            <button onClick={closeSignupModal} className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-2xl">×</button>
+            <div className="mb-4">
+              <img src="https://i.ibb.co/fGSnH3hd/logoatacad-o.jpg" alt="Logo" className="h-16 w-16 rounded-full mx-auto shadow-lg" />
+            </div>
+            <h2 className="text-2xl font-bold text-blue-700 mb-2 text-center">Crie sua conta e aproveite ofertas exclusivas!</h2>
+            <p className="text-gray-600 text-center mb-6">Receba descontos, acompanhe seus pedidos e tenha uma experiência completa no Atacadão Guanabara.</p>
+            <Link href="/register" className="w-full">
+              <button className="w-full bg-gradient-to-r from-orange-400 to-orange-500 text-white font-bold py-3 rounded-lg shadow hover:from-orange-500 hover:to-orange-600 transition mb-2">Criar Conta Grátis</button>
+            </Link>
+            <button onClick={closeSignupModal} className="w-full text-gray-500 hover:text-blue-600 text-sm mt-1">Agora não</button>
+          </div>
+        </div>
+      )}
+
       <Footer />
+      
+      {/* Carrinho Flutuante */}
+      <div className="fixed bottom-8 right-6 md:bottom-10 md:right-8 z-50" style={{ zIndex: 9999 }}>
+        <a href="/cart">
+          <div className="relative group cursor-pointer">
+            {/* Botão principal do carrinho */}
+            <div className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-full p-3 md:p-4 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+              <svg className="h-5 w-5 md:h-6 md:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
+              </svg>
+            </div>
+            
+            {/* Aba com texto */}
+            <div className="absolute bottom-full right-0 mb-3 bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-2 md:px-4 md:py-3 rounded-lg shadow-xl whitespace-nowrap border border-orange-400">
+              <div className="text-sm md:text-base font-bold text-center">
+                Carrinho
+              </div>
+              <div className="text-xs opacity-90 text-center mt-1">
+                Clique para ver
+              </div>
+              {/* Seta da aba */}
+              <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-orange-500"></div>
+            </div>
+          </div>´-hju b
+        </a>
+      </div>
     </div>
   )
 } 

@@ -3,6 +3,7 @@ C:\Users\escritorio atacadao\Downloads\atacadão guanabara\atacadão guanabara\ata
 C:\Users\escritorio atacadao\Downloads\atacadão guanabara\atacadão guanabara\atacadao-guanabara teste\java-backend\src\main\java\com\atacadao\guanabara\model\Order.java
 C:\Users\escritorio atacadao\Downloads\atacadão guanabara\atacadão guanabara\atacadao-guanabara teste\java-backend\src\main\java\com\atacadao\guanabara\service\ProductPromotionService.java
 C:\Users\escritorio atacadao\Downloads\atacadão guanabara\atacadão guanabara\atacadao-guanabara teste\java-backend\src\main\java\com\atacadao\guanabara\repository\CameraRequestRepository.java
+C:\Users\escritorio atacadao\Downloads\atacadão guanabara\atacadão guanabara\atacadao-guanabara teste\java-backend\src\main\java\com\atacadao\guanabara\repository\ReturnRequestRepository.java
 C:\Users\escritorio atacadao\Downloads\atacadão guanabara\atacadão guanabara\atacadao-guanabara teste\java-backend\src\main\java\com\atacadao\guanabara\config\SecurityConfig.java
 C:\Users\escritorio atacadao\Downloads\atacadão guanabara\atacadão guanabara\atacadao-guanabara teste\java-backend\src\main\java\com\atacadao\guanabara\model\OrderItem.java
 C:\Users\escritorio atacadao\Downloads\atacadão guanabara\atacadão guanabara\atacadao-guanabara teste\java-backend\src\main\java\com\atacadao\guanabara\repository\UserRepository.java
@@ -19,9 +20,12 @@ C:\Users\escritorio atacadao\Downloads\atacadão guanabara\atacadão guanabara\ata
 C:\Users\escritorio atacadao\Downloads\atacadão guanabara\atacadão guanabara\atacadao-guanabara teste\java-backend\src\main\java\com\atacadao\guanabara\controller\AuthController.java
 C:\Users\escritorio atacadao\Downloads\atacadão guanabara\atacadão guanabara\atacadao-guanabara teste\java-backend\src\main\java\com\atacadao\guanabara\controller\MigrationController.java
 C:\Users\escritorio atacadao\Downloads\atacadão guanabara\atacadão guanabara\atacadao-guanabara teste\java-backend\src\main\java\com\atacadao\guanabara\model\Product.java
+C:\Users\escritorio atacadao\Downloads\atacadão guanabara\atacadão guanabara\atacadao-guanabara teste\java-backend\src\main\java\com\atacadao\guanabara\service\ReturnRequestService.java
+C:\Users\escritorio atacadao\Downloads\atacadão guanabara\atacadão guanabara\atacadao-guanabara teste\java-backend\src\main\java\com\atacadao\guanabara\model\ReturnRequest.java
 C:\Users\escritorio atacadao\Downloads\atacadão guanabara\atacadão guanabara\atacadao-guanabara teste\java-backend\src\main\java\com\atacadao\guanabara\service\FeedbackService.java
 C:\Users\escritorio atacadao\Downloads\atacadão guanabara\atacadão guanabara\atacadao-guanabara teste\java-backend\src\main\java\com\atacadao\guanabara\config\DataInitializer.java
 C:\Users\escritorio atacadao\Downloads\atacadão guanabara\atacadão guanabara\atacadao-guanabara teste\java-backend\src\main\java\com\atacadao\guanabara\service\MigrationService.java
+C:\Users\escritorio atacadao\Downloads\atacadão guanabara\atacadão guanabara\atacadao-guanabara teste\java-backend\src\main\java\com\atacadao\guanabara\controller\ReturnRequestController.java
 C:\Users\escritorio atacadao\Downloads\atacadão guanabara\atacadão guanabara\atacadao-guanabara teste\java-backend\src\main\java\com\atacadao\guanabara\repository\OrderRepository.java
 C:\Users\escritorio atacadao\Downloads\atacadão guanabara\atacadão guanabara\atacadao-guanabara teste\java-backend\src\main\java\com\atacadao\guanabara\repository\ProductRepository.java
 C:\Users\escritorio atacadao\Downloads\atacadão guanabara\atacadão guanabara\atacadao-guanabara teste\java-backend\src\main\java\com\atacadao\guanabara\service\UserService.java

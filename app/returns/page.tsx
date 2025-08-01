@@ -1,279 +1,461 @@
-import Link from 'next/link'
-import { Clock, Package, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react'
+'use client'
+
+import { useState, useRef } from 'react'
+import { 
+  ArrowLeft, 
+  Upload, 
+  X, 
+  Camera, 
+  Package, 
+  RefreshCw, 
+  CheckCircle, 
+  AlertCircle,
+  FileText,
+  User,
+  Phone,
+  Mail,
+  ShoppingBag,
+  Image as ImageIcon
+} from 'lucide-react'
+import Header from '@/components/header'
+import { Footer } from '@/components/footer'
+import { Button } from '@/components/ui/button'
+import { useRouter } from 'next/navigation'
+
+interface ReturnFormData {
+  orderId: string
+  userName: string
+  userEmail: string
+  userPhone: string
+  productName: string
+  productId: string
+  quantity: number
+  requestType: 'exchange' | 'refund'
+  reason: string
+  description: string
+  photos: File[]
+}
+
+const reasons = [
+  'Produto com defeito',
+  'Produto não corresponde à descrição',
+  'Produto danificado na entrega',
+  'Tamanho/Modelo incorreto',
+  'Produto vencido',
+  'Produto em mau estado',
+  'Erro no pedido',
+  'Outro motivo'
+]
 
 export default function ReturnsPage() {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center space-x-3">
-              <span className="text-3xl md:text-4xl">🏪</span>
-              <div className="flex flex-col">
-                <span className="text-lg md:text-xl font-bold text-orange-500 leading-tight">
-                  Atacadão Guanabara
-                </span>
-                <span className="text-xs md:text-sm text-gray-500 hidden md:block">
-                  Trocas e Devoluções
-                </span>
-              </div>
+  const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [formData, setFormData] = useState<ReturnFormData>({
+    orderId: '',
+    userName: '',
+    userEmail: '',
+    userPhone: '',
+    productName: '',
+    productId: '',
+    quantity: 1,
+    requestType: 'exchange',
+    reason: '',
+    description: '',
+    photos: []
+  })
+
+  const handleInputChange = (field: keyof ReturnFormData, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || [])
+    const imageFiles = files.filter(file => file.type.startsWith('image/'))
+    
+    if (formData.photos.length + imageFiles.length > 5) {
+      alert('Máximo de 5 fotos permitido')
+      return
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      photos: [...prev.photos, ...imageFiles]
+    }))
+  }
+
+  const removePhoto = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      photos: prev.photos.filter((_, i) => i !== index)
+    }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      // Criar FormData para enviar arquivos
+      const formDataToSend = new FormData()
+      formDataToSend.append('orderId', formData.orderId)
+      formDataToSend.append('userName', formData.userName)
+      formDataToSend.append('userEmail', formData.userEmail)
+      formDataToSend.append('userPhone', formData.userPhone)
+      formDataToSend.append('productName', formData.productName)
+      formDataToSend.append('productId', formData.productId || '')
+      formDataToSend.append('quantity', formData.quantity.toString())
+      formDataToSend.append('requestType', formData.requestType)
+      formDataToSend.append('reason', formData.reason)
+      formDataToSend.append('description', formData.description || '')
+      
+      // Adicionar fotos
+      formData.photos.forEach((photo, index) => {
+        formDataToSend.append('photos', photo)
+      })
+
+      // Enviar para a API
+      const response = await fetch('http://localhost:8080/api/returns', {
+        method: 'POST',
+        body: formDataToSend
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro na resposta da API')
+      }
+
+      const result = await response.json()
+      
+      if (result.success) {
+        setShowSuccess(true)
+        setTimeout(() => {
+          router.push('/')
+        }, 3000)
+      } else {
+        throw new Error(result.message || 'Erro desconhecido')
+      }
+    } catch (error) {
+      console.error('Erro ao enviar solicitação:', error)
+      alert('Erro ao enviar solicitação. Tente novamente.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  if (showSuccess) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
+        <Header />
+        <div className="container mx-auto px-4 py-16">
+          <div className="max-w-md mx-auto text-center">
+            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Solicitação Enviada!
+            </h1>
+            <p className="text-gray-600 mb-6">
+              Sua solicitação de {formData.requestType === 'exchange' ? 'troca' : 'devolução'} foi enviada com sucesso. 
+              Entraremos em contato em breve.
+            </p>
+            <div className="bg-white rounded-lg p-4 shadow-sm">
+              <p className="text-sm text-gray-500">
+                Número da solicitação: #{Math.random().toString(36).substr(2, 9).toUpperCase()}
+              </p>
             </div>
-            <Link href="/" className="text-orange-500 hover:text-orange-600 font-medium">
-              Voltar ao Início
-            </Link>
           </div>
         </div>
+        <Footer />
       </div>
+    )
+  }
 
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              Trocas e Devoluções
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+      <Header />
+      
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center text-blue-600 hover:text-blue-700 mb-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar
+            </button>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Solicitar Troca ou Devolução
             </h1>
-            <p className="text-xl md:text-2xl max-w-3xl mx-auto">
-              Garantimos sua satisfação com nossa política de trocas e devoluções
+            <p className="text-gray-600">
+              Preencha o formulário abaixo para solicitar uma troca ou devolução de produtos
             </p>
           </div>
+
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Informações do Pedido */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                <Package className="w-5 h-5 mr-2 text-blue-600" />
+                Informações do Pedido
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Número do Pedido *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.orderId}
+                    onChange={(e) => handleInputChange('orderId', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Ex: 1753957271946"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nome do Produto *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.productName}
+                    onChange={(e) => handleInputChange('productName', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Nome do produto"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Quantidade *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={formData.quantity}
+                    onChange={(e) => handleInputChange('quantity', parseInt(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tipo de Solicitação *
+                  </label>
+                  <select
+                    required
+                    value={formData.requestType}
+                    onChange={(e) => handleInputChange('requestType', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="exchange">Troca</option>
+                    <option value="refund">Devolução</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Informações Pessoais */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                <User className="w-5 h-5 mr-2 text-blue-600" />
+                Informações Pessoais
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nome Completo *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.userName}
+                    onChange={(e) => handleInputChange('userName', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Seu nome completo"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={formData.userEmail}
+                    onChange={(e) => handleInputChange('userEmail', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="seu@email.com"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Telefone *
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={formData.userPhone}
+                    onChange={(e) => handleInputChange('userPhone', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="(85) 99999-9999"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Motivo e Descrição */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                <FileText className="w-5 h-5 mr-2 text-blue-600" />
+                Detalhes da Solicitação
+              </h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Motivo da Solicitação *
+                  </label>
+                  <select
+                    required
+                    value={formData.reason}
+                    onChange={(e) => handleInputChange('reason', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Selecione um motivo</option>
+                    {reasons.map((reason) => (
+                      <option key={reason} value={reason}>{reason}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Descrição Detalhada
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Descreva detalhadamente o problema ou motivo da solicitação..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Upload de Fotos */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                <Camera className="w-5 h-5 mr-2 text-blue-600" />
+                Fotos do Produto
+              </h2>
+              
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Adicione fotos do produto para facilitar a análise. Máximo 5 fotos.
+                </p>
+                
+                {/* Área de Upload */}
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+                  
+                  <div className="space-y-2">
+                    <Upload className="w-8 h-8 text-gray-400 mx-auto" />
+                    <p className="text-sm text-gray-600">
+                      Clique para selecionar fotos ou arraste aqui
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      PNG, JPG, JPEG até 5MB cada
+                    </p>
+                  </div>
+                  
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="mt-4"
+                  >
+                    Selecionar Fotos
+                  </Button>
+                </div>
+
+                {/* Preview das Fotos */}
+                {formData.photos.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {formData.photos.map((photo, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={URL.createObjectURL(photo)}
+                          alt={`Foto ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removePhoto(index)}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Botões */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.back()}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
+              >
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Enviar Solicitação
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
         </div>
       </div>
-
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Política Geral */}
-        <div className="bg-white rounded-lg shadow-sm p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Política de Trocas e Devoluções</h2>
-          
-          <div className="grid md:grid-cols-2 gap-8 mb-8">
-            <div className="flex items-start space-x-4">
-              <Clock className="w-8 h-8 text-orange-500 mt-1" />
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">Prazo de 7 Dias</h3>
-                <p className="text-gray-700">
-                  Aceitamos trocas e devoluções em até 7 dias após a compra, 
-                  contados a partir da data de recebimento do produto.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-4">
-              <Package className="w-8 h-8 text-orange-500 mt-1" />
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">Embalagem Original</h3>
-                <p className="text-gray-700">
-                  O produto deve estar em perfeitas condições e na embalagem original, 
-                  sem sinais de uso ou danos.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
-            <div className="flex items-start space-x-3">
-              <AlertCircle className="w-6 h-6 text-blue-500 mt-1" />
-              <div>
-                <h3 className="text-lg font-bold text-blue-900 mb-2">Importante</h3>
-                <p className="text-blue-800">
-                  Produtos de higiene pessoal, alimentos perecíveis e produtos personalizados 
-                  não podem ser trocados ou devolvidos por questões de segurança e higiene.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Como Solicitar */}
-        <div className="bg-white rounded-lg shadow-sm p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Como Solicitar Trocas e Devoluções</h2>
-          
-          <div className="space-y-6">
-            <div className="flex items-start space-x-4">
-              <div className="bg-orange-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">
-                1
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">Entre em Contato</h3>
-                <p className="text-gray-700">
-                  Entre em contato conosco pelo WhatsApp (85) 98514-7067 ou email 
-                  atacadaoguanabara@outlook.com informando o motivo da troca/devolução.
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-start space-x-4">
-              <div className="bg-orange-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">
-                2
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">Aguarde Aprovação</h3>
-                <p className="text-gray-700">
-                  Nossa equipe analisará sua solicitação e entrará em contato em até 24 horas 
-                  para confirmar a aprovação da troca/devolução.
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-start space-x-4">
-              <div className="bg-orange-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">
-                3
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">Retorne o Produto</h3>
-                <p className="text-gray-700">
-                  Após a aprovação, você pode retornar o produto em nossa loja ou solicitar 
-                  a retirada em domicílio (taxa adicional pode ser cobrada).
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-start space-x-4">
-              <div className="bg-orange-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">
-                4
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">Receba a Solução</h3>
-                <p className="text-gray-700">
-                  Após a análise do produto, você receberá a troca, reembolso ou crédito 
-                  conforme a situação.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tipos de Solução */}
-        <div className="bg-white rounded-lg shadow-sm p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Tipos de Solução</h2>
-          
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="text-center p-6 border border-gray-200 rounded-lg">
-              <RefreshCw className="w-12 h-12 text-orange-500 mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Troca</h3>
-              <p className="text-gray-700">
-                Troque por outro produto de mesmo valor ou complemente a diferença.
-              </p>
-            </div>
-            
-            <div className="text-center p-6 border border-gray-200 rounded-lg">
-              <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Reembolso</h3>
-              <p className="text-gray-700">
-                Receba o valor de volta na forma original do pagamento.
-              </p>
-            </div>
-            
-            <div className="text-center p-6 border border-gray-200 rounded-lg">
-              <span className="text-4xl mx-auto mb-4 block">💳</span>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Crédito</h3>
-              <p className="text-gray-700">
-                Receba crédito para usar em futuras compras em nossa loja.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Casos Especiais */}
-        <div className="bg-white rounded-lg shadow-sm p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Casos Especiais</h2>
-          
-          <div className="space-y-6">
-            <div className="border-l-4 border-orange-500 pl-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Produto com Defeito</h3>
-              <p className="text-gray-700">
-                Produtos com defeito de fabricação podem ser trocados ou devolvidos 
-                independentemente do prazo de 7 dias, conforme a garantia do fabricante.
-              </p>
-            </div>
-            
-            <div className="border-l-4 border-orange-500 pl-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Erro no Pedido</h3>
-              <p className="text-gray-700">
-                Caso você receba um produto diferente do solicitado, faremos a troca 
-                imediatamente sem custos adicionais.
-              </p>
-            </div>
-            
-            <div className="border-l-4 border-orange-500 pl-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Produto Danificado</h3>
-              <p className="text-gray-700">
-                Produtos que chegam danificados devem ser reportados imediatamente 
-                para que possamos resolver a situação.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Contato */}
-        <div className="bg-orange-50 rounded-lg p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Precisa de Ajuda?</h2>
-          <p className="text-gray-700 mb-6">
-            Nossa equipe está pronta para ajudar você com qualquer dúvida sobre 
-            trocas e devoluções.
-          </p>
-          
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="text-center">
-              <div className="bg-orange-500 text-white rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">📱</span>
-              </div>
-              <h3 className="font-bold text-gray-900 mb-2">WhatsApp</h3>
-              <p className="text-gray-600">(85) 98514-7067</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="bg-orange-500 text-white rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">📧</span>
-              </div>
-              <h3 className="font-bold text-gray-900 mb-2">Email</h3>
-              <p className="text-gray-600">atacadaoguanabara@outlook.com</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <h3 className="text-lg font-bold mb-4">Atacadão Guanabara</h3>
-              <p className="text-gray-400">
-                Sua loja de confiança há mais de 4 anos, oferecendo preço baixo e qualidade!
-              </p>
-            </div>
-            <div>
-              <h4 className="text-lg font-bold mb-4">Links Úteis</h4>
-              <ul className="space-y-2">
-                <li><Link href="/" className="text-gray-400 hover:text-white">Início</Link></li>
-                <li><Link href="/about" className="text-gray-400 hover:text-white">Sobre Nós</Link></li>
-                <li><Link href="/privacy" className="text-gray-400 hover:text-white">Política de Privacidade</Link></li>
-                <li><Link href="/terms" className="text-gray-400 hover:text-white">Termos de Uso</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-lg font-bold mb-4">Atendimento</h4>
-              <ul className="space-y-2">
-                <li><Link href="/feedback" className="text-gray-400 hover:text-white">Feedback</Link></li>
-                <li><Link href="/camera-request/form" className="text-gray-400 hover:text-white">Solicitar Câmera</Link></li>
-                <li><Link href="/faq" className="text-gray-400 hover:text-white">FAQ</Link></li>
-                <li><Link href="/returns" className="text-gray-400 hover:text-white">Trocas e Devoluções</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-lg font-bold mb-4">Contato</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li>atacadaoguanabara@outlook.com</li>
-                <li>(85) 98514-7067</li>
-                <li>R. Antônio Arruda, 1170 - Vila Velha - Fortaleza</li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2025 Atacadão Guanabara. Todos os direitos reservados.</p>
-          </div>
-        </div>
-      </footer>
+      
+      <Footer />
     </div>
   )
 } 

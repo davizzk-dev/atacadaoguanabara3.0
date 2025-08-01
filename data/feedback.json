@@ -9,7 +9,8 @@
     "isAnonymous": true,
     "id": "1753405169496",
     "createdAt": "2025-07-25T00:59:29.496Z",
-    "status": "pending"
+    "status": "resolved",
+    "updatedAt": "2025-07-31T09:55:31.078Z"
   },
   {
     "name": "Ana beatriz vasconcelos",
@@ -22,7 +23,8 @@
     "userId": "admin",
     "id": "1753405263586",
     "createdAt": "2025-07-25T01:01:03.586Z",
-    "status": "pending"
+    "status": "resolved",
+    "updatedAt": "2025-07-31T09:55:27.938Z"
   },
   {
     "name": "Anônimo",
@@ -34,7 +36,8 @@
     "isAnonymous": true,
     "id": "1753484493359",
     "createdAt": "2025-07-25T23:01:33.359Z",
-    "status": "pending"
+    "status": "resolved",
+    "updatedAt": "2025-07-31T09:55:35.085Z"
   },
   {
     "name": "José Arimatéa Costa Alexandre",
@@ -47,6 +50,33 @@
     "userId": "1753642224890",
     "id": "1753643052678",
     "createdAt": "2025-07-27T19:04:12.678Z",
-    "status": "pending"
+    "status": "resolved",
+    "updatedAt": "2025-07-31T09:55:38.053Z"
+  },
+  {
+    "id": "1753926038689",
+    "name": "José arimatéa costa alexandre",
+    "email": "aryalexandre430@gmail.com",
+    "phone": "(85) 98699-2962",
+    "type": "elogio",
+    "rating": 5,
+    "message": "Fiz um pedido e gostei muito, o site é top! ",
+    "userId": null,
+    "createdAt": "2025-07-31T01:40:38.689Z",
+    "status": "resolved",
+    "updatedAt": "2025-07-31T09:55:40.271Z"
+  },
+  {
+    "id": "1753972603727",
+    "name": "Anônimo",
+    "email": "anonimo@feedback.com",
+    "phone": "",
+    "type": "sugestao",
+    "rating": 5,
+    "message": "A",
+    "userId": null,
+    "createdAt": "2025-07-31T14:36:43.727Z",
+    "status": "resolved",
+    "updatedAt": "2025-07-31T14:36:59.647Z"
   }
 ]

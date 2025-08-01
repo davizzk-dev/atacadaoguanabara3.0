@@ -50,13 +50,18 @@ export default function OrdersPage() {
         
         if (response.ok) {
           const data = await response.json()
-          console.log('📦 Pedidos recebidos:', data.length)
-          console.log('📋 Dados dos pedidos:', data)
+          console.log('📦 Pedidos recebidos:', data)
+          console.log('📋 Tipo dos dados:', typeof data)
+          console.log('📋 É array?', Array.isArray(data))
           
-          setOrdersData(data)
+          // Garantir que data é um array
+          const ordersArray = Array.isArray(data) ? data : []
+          console.log('📋 Array de pedidos:', ordersArray.length)
+          
+          setOrdersData(ordersArray)
           
           // Adicionar pedidos ao store local se não existirem
-          data.forEach((order: any) => {
+          ordersArray.forEach((order: any) => {
             const existingOrder = orders.find(o => o.id === order.id)
             if (!existingOrder) {
               addOrder(order)
@@ -64,6 +69,7 @@ export default function OrdersPage() {
           })
         } else {
           console.error('❌ Erro na resposta:', response.status)
+          setOrdersData([])
         }
       } catch (error) {
         console.error('❌ Erro ao carregar pedidos:', error)
@@ -223,59 +229,59 @@ export default function OrdersPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-xl">Pedido #{order.id}</CardTitle>
-                    <p className="text-gray-600">
-                      Realizado em {new Date(order.createdAt).toLocaleDateString("pt-BR")} às{" "}
-                      {new Date(order.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                    </p>
+                                         <CardTitle className="text-xl">Pedido #{order.id || 'N/A'}</CardTitle>
+                     <p className="text-gray-600">
+                       Realizado em {new Date(order.createdAt || Date.now()).toLocaleDateString("pt-BR")} às{" "}
+                       {new Date(order.createdAt || Date.now()).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                     </p>
                   </div>
-                  <div className="text-right">
-                    {getStatusBadge(order.status)}
-                    <p className="text-lg font-bold text-primary mt-2">
-                      R$ {order.total.toFixed(2)}
-                    </p>
+                                     <div className="text-right">
+                     {getStatusBadge(order.status || 'pending')}
+                                         <p className="text-lg font-bold text-primary mt-2">
+                       R$ {(order.total || 0).toFixed(2)}
+                     </p>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {/* Order Items */}
-                  <div className="space-y-3">
-                    {order.items.map((item: any, index: number) => (
+                                     {/* Order Items */}
+                   <div className="space-y-3">
+                     {(order.items || []).map((item: any, index: number) => (
                       <div key={index} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
-                        <div className="relative w-16 h-16">
-                          <Image
-                            src={item.image || "/placeholder.svg"}
-                            alt={item.name}
-                            fill
-                            className="object-cover rounded-md"
-                          />
+                                                 <div className="relative w-16 h-16">
+                           <Image
+                             src={item.image || "/placeholder.svg"}
+                             alt={item.name || 'Produto'}
+                             fill
+                             className="object-cover rounded-md"
+                           />
+                         </div>
+                         <div className="flex-1">
+                           <h4 className="font-semibold">{item.name || 'Produto sem nome'}</h4>
+                                                     <p className="text-sm text-gray-600">
+                             Quantidade: {item.quantity || 0} x R$ {(item.price || 0).toFixed(2)}
+                           </p>
                         </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold">{item.name}</h4>
-                          <p className="text-sm text-gray-600">
-                            Quantidade: {item.quantity} x R$ {item.price.toFixed(2)}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold">
-                            R$ {(item.quantity * item.price).toFixed(2)}
-                          </p>
-                        </div>
+                                                 <div className="text-right">
+                           <p className="font-semibold">
+                             R$ {((item.quantity || 0) * (item.price || 0)).toFixed(2)}
+                           </p>
+                         </div>
                       </div>
                     ))}
                   </div>
 
                   {/* Order Info */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-                    <div>
-                      <h4 className="font-semibold mb-2">Informações de Entrega</h4>
-                      <p className="text-sm text-gray-600">{order.customerInfo?.name || order.userName}</p>
-                      <p className="text-sm text-gray-600">{order.customerInfo?.address || 'Jardim Guanabara'}</p>
-                      <p className="text-sm text-gray-600">
-                        {order.customerInfo?.city || 'Fortaleza'} - {order.customerInfo?.zipCode || 'CEP'}
-                      </p>
-                    </div>
+                                         <div>
+                       <h4 className="font-semibold mb-2">Informações de Entrega</h4>
+                       <p className="text-sm text-gray-600">{order.customerInfo?.name || order.userName || 'Cliente'}</p>
+                       <p className="text-sm text-gray-600">{order.customerInfo?.address || 'Jardim Guanabara'}</p>
+                       <p className="text-sm text-gray-600">
+                         {order.customerInfo?.city || 'Fortaleza'} - {order.customerInfo?.zipCode || 'CEP'}
+                       </p>
+                     </div>
                     <div className="flex flex-col gap-2 items-end">
                       <Link href={`/order-tracking/${order.id}`}>
                         <Button variant="outline" className="w-full md:w-auto">

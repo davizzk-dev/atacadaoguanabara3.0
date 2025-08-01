@@ -1,49 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { promises as fs } from 'fs'
+import path from 'path'
 
 export async function GET(request: NextRequest) {
   try {
-    // Conectar com o backend Java
-    const response = await fetch('http://localhost:8080/api/admin/feedback', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return NextResponse.json(data)
+    // Ler dados do arquivo JSON
+    const dataDir = path.join(process.cwd(), 'data')
+    const feedbackData = JSON.parse(await fs.readFile(path.join(dataDir, 'feedback.json'), 'utf-8'))
+    
+    return NextResponse.json(feedbackData)
   } catch (error) {
     console.error('Erro ao buscar feedbacks:', error)
     
     // Dados mockados em caso de erro
-    return NextResponse.json([
-      {
-        id: '1',
-        name: 'Ana Silva',
-        email: 'ana@email.com',
-        message: 'Excelente atendimento! Produtos de qualidade.',
-        rating: 5,
-        createdAt: '2024-06-15T16:30:00Z',
-        status: 'pending',
-        isAnonymous: false,
-        type: 'satisfaction'
-      },
-      {
-        id: '2',
-        name: 'Carlos Santos',
-        email: 'carlos@email.com',
-        message: 'Preços muito altos, precisam melhorar.',
-        rating: 2,
-        createdAt: '2024-06-14T12:20:00Z',
-        status: 'reviewed',
-        isAnonymous: false,
-        type: 'complaint'
-      }
-    ])
+    return NextResponse.json([])
   }
 }
 

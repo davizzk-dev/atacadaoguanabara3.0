@@ -52,13 +52,16 @@ import {
   Loader2,
   Upload,
   Link,
-  Copy
+  Copy,
+  RotateCcw,
+  Save
 } from 'lucide-react'
 import Header from '@/components/header'
 import { Footer } from '@/components/footer'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog'
 import { useRouter } from 'next/navigation'
-import { ChartContainer } from '@/components/ui/chart'
+
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, Legend } from 'recharts'
 import { Button } from '@/components/ui/button'
 import { generateSalesReportPDF, generateProductsPDF, generatePromotionsPDF, generateOrdersPDF, generateCustomersPDF } from '@/lib/utils'
 
@@ -105,10 +108,17 @@ interface Product {
   id: string
   name: string
   price: number
+  originalPrice?: number
   category: string
   description: string
   inStock: boolean
   image?: string
+  brand?: string
+  unit?: string
+  stock?: number
+  tags?: string[]
+  rating?: number
+  reviews?: number
 }
 
 interface User {
@@ -143,7 +153,16 @@ interface Order {
     name: string
     email: string
     phone: string
-    address: string
+    address: string | {
+      street?: string
+      number?: string
+      complement?: string
+      neighborhood?: string
+      city?: string
+      state?: string
+      zipCode?: string
+      reference?: string
+    }
   }
 }
 
@@ -173,27 +192,9 @@ export default function AdminPage() {
     pendingFeedback: 0,
     productsByCategory: {},
     ordersByStatus: {},
-    monthlyRevenue: [
-      { month: 'Jan', revenue: 15000, orders: 45 },
-      { month: 'Fev', revenue: 18000, orders: 52 },
-      { month: 'Mar', revenue: 22000, orders: 68 },
-      { month: 'Abr', revenue: 19000, orders: 55 },
-      { month: 'Mai', revenue: 25000, orders: 75 },
-      { month: 'Jun', revenue: 28000, orders: 82 }
-    ],
-    productCategories: [
-      { name: 'Grãos', value: 25 },
-      { name: 'Bebidas', value: 20 },
-      { name: 'Laticínios', value: 15 },
-      { name: 'Limpeza', value: 12 },
-      { name: 'Outros', value: 28 }
-    ],
-    orderStatus: [
-      { name: 'Entregue', value: 45 },
-      { name: 'Em Preparo', value: 15 },
-      { name: 'Pendente', value: 8 },
-      { name: 'Cancelado', value: 2 }
-    ]
+    monthlyRevenue: [],
+    productCategories: [],
+    orderStatus: []
   })
   const [cameraRequests, setCameraRequests] = useState<CameraRequest[]>([])
   const [feedback, setFeedback] = useState<Feedback[]>([])
@@ -201,11 +202,21 @@ export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [productPromotions, setProductPromotions] = useState<ProductPromotion[]>([])
+  const [returnRequests, setReturnRequests] = useState<any[]>([])
   const [isUpdating, setIsUpdating] = useState(false)
   const [cameraDetail, setCameraDetail] = useState<CameraRequest | null>(null)
+  const [returnDetail, setReturnDetail] = useState<any>(null)
   const [feedbackDetail, setFeedbackDetail] = useState<any | null>(null)
   const [showPromotionModal, setShowPromotionModal] = useState(false)
+  const [showProductModal, setShowProductModal] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [editingPromotion, setEditingPromotion] = useState<ProductPromotion | null>(null)
+  const [showOrderDetailsModal, setShowOrderDetailsModal] = useState(false)
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [visitorStats, setVisitorStats] = useState<any>(null)
+  const [analyticsPeriod, setAnalyticsPeriod] = useState('all')
+  const [reportPeriod, setReportPeriod] = useState('all')
+  const [chartPeriod, setChartPeriod] = useState<'day' | 'month' | 'year'>('month')
   
   // Estados para o sistema Java
   const [javaSystemStatus, setJavaSystemStatus] = useState<any>(null)
@@ -234,6 +245,16 @@ export default function AdminPage() {
   const [analyticsData, setAnalyticsData] = useState<any>(null)
   const [quotationData, setQuotationData] = useState<any>(null)
   const [quotationLoading, setQuotationLoading] = useState(false)
+
+  // Adicionar estados para dados dinâmicos do dashboard
+  const [dashboardMetrics, setDashboardMetrics] = useState({
+    revenueGrowth: 0,
+    userGrowth: 0,
+    conversionRate: 0,
+    systemUptime: 0,
+    memoryUsage: 0,
+    cpuUsage: 0
+  })
 
   // Adicionar estado para logs de atividade
   const [activityLogs, setActivityLogs] = useState<Array<{
@@ -299,11 +320,30 @@ export default function AdminPage() {
   const loadData = async () => {
     setIsLoading(true)
     try {
+      console.log('🔄 Iniciando carregamento de dados...')
+      
       // Carregar estatísticas
       const statsResponse = await fetch('/api/admin/stats')
+      console.log('📊 Resposta da API stats:', statsResponse.status)
       if (statsResponse.ok) {
         const statsData = await statsResponse.json()
+        console.log('📊 Dados de stats recebidos:', statsData)
         setStats(statsData)
+        
+        // Calcular métricas dinâmicas
+        const metrics = {
+          revenueGrowth: statsData.totalRevenue > 0 ? Math.round((statsData.totalRevenue / 15000 - 1) * 100) : 0,
+          userGrowth: statsData.totalUsers > 0 ? Math.round((statsData.totalUsers / 1000 - 1) * 100) : 0,
+          conversionRate: statsData.totalOrders > 0 && statsData.totalUsers > 0 ? 
+            Math.round((statsData.totalOrders / statsData.totalUsers) * 100 * 10) / 10 : 0,
+          systemUptime: 99.9,
+          memoryUsage: 45,
+          cpuUsage: 25
+        }
+        console.log('📈 Métricas calculadas:', metrics)
+        setDashboardMetrics(metrics)
+      } else {
+        console.error('❌ Erro ao carregar stats:', statsResponse.status)
       }
 
       // Carregar solicitações de câmera
@@ -322,9 +362,14 @@ export default function AdminPage() {
 
       // Carregar produtos
       const productsResponse = await fetch('/api/admin/products')
+      console.log('📦 Resposta da API produtos:', productsResponse.status)
       if (productsResponse.ok) {
         const productsData = await productsResponse.json()
+        console.log('📦 Produtos carregados:', productsData.length)
+        console.log('📦 Primeiros produtos:', productsData.slice(0, 3))
         setProducts(productsData)
+      } else {
+        console.error('❌ Erro ao carregar produtos:', productsResponse.status)
       }
 
       // Carregar usuários
@@ -334,11 +379,21 @@ export default function AdminPage() {
         setUsers(usersData)
       }
 
-      // Carregar pedidos
-      const ordersResponse = await fetch('/api/orders')
-      if (ordersResponse.ok) {
-        const ordersData = await ordersResponse.json()
-        setOrders(ordersData)
+      // Carregar pedidos (API específica para admin)
+      try {
+        const ordersResponse = await fetch('/api/admin/orders')
+        console.log('📋 Resposta da API admin/orders:', ordersResponse.status)
+        if (ordersResponse.ok) {
+          const ordersData = await ordersResponse.json()
+          console.log('📋 Pedidos carregados:', ordersData.length)
+          setOrders(ordersData)
+        } else {
+          console.error('❌ Erro ao carregar pedidos:', ordersResponse.status)
+          setOrders([])
+        }
+      } catch (error) {
+        console.error('❌ Erro ao carregar pedidos:', error)
+        setOrders([])
       }
 
       // Carregar promoções de produtos
@@ -350,6 +405,23 @@ export default function AdminPage() {
         setProductPromotions(promotionsData)
       } else {
         console.error('Erro ao carregar promoções:', promotionsResponse.status)
+      }
+
+      // Carregar solicitações de trocas e devoluções
+      try {
+        const returnsResponse = await fetch('http://localhost:8080/api/returns')
+        console.log('Status da resposta de trocas/devoluções:', returnsResponse.status)
+        if (returnsResponse.ok) {
+          const returnsData = await returnsResponse.json()
+          console.log('Solicitações de trocas/devoluções carregadas:', returnsData.length)
+          setReturnRequests(returnsData)
+        } else {
+          console.error('Erro ao carregar solicitações de trocas/devoluções:', returnsResponse.status)
+          setReturnRequests([])
+        }
+      } catch (error) {
+        console.error('Erro ao carregar solicitações de trocas/devoluções:', error)
+        setReturnRequests([])
       }
     } catch (error) {
       console.error('Erro ao carregar dados:', error)
@@ -436,25 +508,41 @@ export default function AdminPage() {
     }
   }
 
-  const deleteProduct = async (id: string) => {
-    if (!confirm('Tem certeza que deseja deletar este produto?')) return
-
+  const updateOrderStatus = async (orderId: string, status: Order['status']) => {
     setIsUpdating(true)
     try {
-      const response = await fetch(`/api/admin/products?id=${id}`, {
-        method: 'DELETE'
+      const response = await fetch('/api/admin/orders', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, status })
       })
-
+      
       if (response.ok) {
-        setProducts(prev => prev.filter(product => product.id !== id))
+        setOrders(prev => prev.map(order => 
+          order.id === orderId ? { ...order, status } : order
+        ))
+        addNotification('success', `Status do pedido atualizado para ${status}`)
         loadData()
+        
+        // Scroll para a seção de pedidos após atualização
+        setTimeout(() => {
+          const ordersSection = document.getElementById('orders-section')
+          if (ordersSection) {
+            ordersSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }
+        }, 100)
+      } else {
+        addNotification('error', 'Erro ao atualizar status do pedido')
       }
     } catch (error) {
-      console.error('Erro ao deletar produto:', error)
+      console.error('Erro ao atualizar status do pedido:', error)
+      addNotification('error', 'Erro ao atualizar status do pedido')
     } finally {
       setIsUpdating(false)
     }
   }
+
+
 
   const deletePromotion = async (id: string) => {
     if (!confirm('Tem certeza que deseja deletar esta promoção?')) return
@@ -476,10 +564,193 @@ export default function AdminPage() {
     }
   }
 
+  const saveProduct = async (productData: any) => {
+    try {
+      setIsUpdating(true)
+      addNotification('info', editingProduct ? 'Atualizando produto...' : 'Criando produto...')
+      
+      console.log('💾 Salvando produto:', productData)
+      
+      if (editingProduct) {
+        // Atualizar produto existente - preservar o ID original
+        const updatedProduct = {
+          ...productData,
+          id: editingProduct.id // Garantir que o ID original seja preservado
+        }
+        
+        console.log('🔄 Atualizando produto:', updatedProduct)
+        
+        const response = await fetch('/api/admin/products', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedProduct)
+        })
+        
+        console.log('📊 Resposta da API (PUT):', response.status, response.statusText)
+        
+        if (response.ok) {
+          let result
+          try {
+            result = await response.json()
+            console.log('✅ Produto atualizado:', result)
+          } catch (parseError) {
+            console.warn('⚠️ Resposta não é JSON válido, mas operação foi bem-sucedida')
+            result = { success: true }
+          }
+          
+          setProducts(prev => prev.map(p => 
+            p.id === editingProduct.id 
+              ? { ...p, ...productData, id: editingProduct.id }
+              : p
+          ))
+          addNotification('success', 'Produto atualizado com sucesso!')
+          addActivityLog('update', `Produto ${editingProduct.id} atualizado`, 'success')
+        } else {
+          let errorMessage = 'Erro ao atualizar produto'
+          try {
+            const errorData = await response.json()
+            errorMessage = errorData.error || errorData.details || errorMessage
+          } catch (parseError) {
+            console.error('❌ Erro ao fazer parse da resposta de erro:', parseError)
+            errorMessage = `Erro ${response.status}: ${response.statusText}`
+          }
+          throw new Error(errorMessage)
+        }
+      } else {
+        // Criar novo produto - usar o ID fornecido pelo usuário
+        const newProduct = {
+          ...productData,
+          rating: 0,
+          reviews: 0,
+          inStock: productData.inStock ?? true,
+          stock: productData.stock || 0
+        }
+        
+        console.log('📝 Criando novo produto:', newProduct)
+        
+        const response = await fetch('/api/admin/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newProduct)
+        })
+        
+        console.log('📊 Resposta da API (POST):', response.status, response.statusText)
+        
+        if (response.ok) {
+          let result
+          try {
+            result = await response.json()
+            console.log('✅ Produto criado:', result)
+          } catch (parseError) {
+            console.warn('⚠️ Resposta não é JSON válido, mas operação foi bem-sucedida')
+            result = { success: true }
+          }
+          
+          setProducts(prev => [...prev, newProduct])
+          addNotification('success', `Produto criado com sucesso! ID: ${productData.id}`)
+          addActivityLog('create', `Produto ${productData.id} criado`, 'success')
+        } else {
+          let errorMessage = 'Erro ao criar produto'
+          try {
+            const errorData = await response.json()
+            errorMessage = errorData.error || errorData.details || errorMessage
+          } catch (parseError) {
+            console.error('❌ Erro ao fazer parse da resposta de erro:', parseError)
+            errorMessage = `Erro ${response.status}: ${response.statusText}`
+          }
+          throw new Error(errorMessage)
+        }
+      }
+      
+      setShowProductModal(false)
+      setEditingProduct(null)
+      // Recarregar dados para garantir sincronização
+      loadData()
+    } catch (error: any) {
+      console.error('❌ Erro ao salvar produto:', error)
+      addNotification('error', `Erro ao salvar produto: ${error.message}`)
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const deleteProduct = async (id: string) => {
+    if (!confirm('Tem certeza que deseja deletar este produto?')) return
+    
+    try {
+      setIsUpdating(true)
+      addNotification('info', 'Deletando produto...')
+      
+      const response = await fetch(`/api/admin/products?id=${id}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        setProducts(prev => prev.filter(p => p.id !== id))
+        addNotification('success', 'Produto deletado com sucesso!')
+        addActivityLog('delete', `Produto ${id} deletado`, 'success')
+      } else {
+        throw new Error('Erro ao deletar produto')
+      }
+    } catch (error) {
+      console.error('Erro ao deletar produto:', error)
+      addNotification('error', 'Erro ao deletar produto')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const syncProducts = async (direction: 'to-json' | 'to-data' | 'both') => {
+    try {
+      setIsUpdating(true)
+      addNotification('info', 'Sincronizando produtos...')
+      
+      const response = await fetch('/api/sync-products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ direction }),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success) {
+          addNotification('success', `Produtos sincronizados com sucesso! ${result.count || ''} produtos processados.`)
+          addActivityLog('sync', `Sincronização ${direction} realizada`, 'success')
+          loadData() // Recarregar dados
+        } else {
+          addNotification('error', result.error || 'Erro na sincronização')
+        }
+      } else {
+        let errorMessage = 'Erro na sincronização'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.error || errorMessage
+        } catch {
+          errorMessage = `Erro ${response.status}: ${response.statusText}`
+        }
+        addNotification('error', errorMessage)
+      }
+    } catch (error) {
+      console.error('❌ Erro na sincronização:', error)
+      addNotification('error', 'Erro na sincronização de produtos')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
   const savePromotion = async (promotionData: any) => {
     setIsUpdating(true)
     try {
       console.log('Salvando promoção:', promotionData)
+          console.log('💾 Salvando promoção...')
+    console.log('🆔 Produto ID sendo salvo:', promotionData.productId)
+    console.log('📝 Nome do produto sendo salvo:', promotionData.productName)
+    console.log('💰 Preço original:', promotionData.originalPrice)
+    console.log('🎯 Novo preço:', promotionData.newPrice)
+    console.log('📊 Desconto:', promotionData.discount)
+    console.log('🖼️ Imagem:', promotionData.image)
       
       const method = editingPromotion ? 'PUT' : 'POST'
       const url = '/api/admin/product-promotions'
@@ -516,6 +787,65 @@ export default function AdminPage() {
   const handleLogout = () => {
     // Simular logout
     window.location.href = '/'
+  }
+
+  // Funções para gerenciar solicitações de trocas e devoluções
+  const updateReturnRequestStatus = async (id: number, status: string, adminNotes?: string) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/returns/${id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: status,
+          adminNotes: adminNotes || ''
+        })
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success) {
+          // Atualizar a lista local
+          setReturnRequests(prev => prev.map(req => 
+            req.id === id ? { ...req, status: status, adminNotes: adminNotes } : req
+          ))
+          addNotification('success', 'Status atualizado com sucesso!')
+        } else {
+          addNotification('error', result.message || 'Erro ao atualizar status')
+        }
+      } else {
+        addNotification('error', 'Erro ao atualizar status')
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error)
+      addNotification('error', 'Erro ao atualizar status')
+    }
+  }
+
+  const deleteReturnRequest = async (id: number) => {
+    if (!confirm('Tem certeza que deseja deletar esta solicitação?')) return
+
+    try {
+      const response = await fetch(`http://localhost:8080/api/returns/${id}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success) {
+          setReturnRequests(prev => prev.filter(req => req.id !== id))
+          addNotification('success', 'Solicitação deletada com sucesso!')
+        } else {
+          addNotification('error', result.message || 'Erro ao deletar solicitação')
+        }
+      } else {
+        addNotification('error', 'Erro ao deletar solicitação')
+      }
+    } catch (error) {
+      console.error('Erro ao deletar solicitação:', error)
+      addNotification('error', 'Erro ao deletar solicitação')
+    }
   }
 
   // Funções de filtro
@@ -600,38 +930,148 @@ export default function AdminPage() {
   };
 
   // Função para buscar dados de analytics
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = async (period: 'day' | 'month' | 'year' = chartPeriod) => {
     setAnalyticsLoading(true)
     try {
-      const [salesTrendsRes, topProductsRes, performanceRes] = await Promise.all([
-        fetch('/api/proxy/java/admin/analytics/sales-trends'),
-        fetch('/api/proxy/java/admin/analytics/top-products'),
-        fetch('/api/proxy/java/admin/analytics/performance')
-      ])
-
-      if (salesTrendsRes.ok && topProductsRes.ok && performanceRes.ok) {
-        const [salesTrends, topProducts, performance] = await Promise.all([
-          salesTrendsRes.json(),
-          topProductsRes.json(),
-          performanceRes.json()
-        ])
-
-        setAnalyticsData({
-          salesTrends,
-          topProducts,
-          performance
-        })
-        addNotification('success', 'Dados de analytics carregados com sucesso!')
+      console.log('🔍 Iniciando busca de dados de analytics...', { period })
+      
+      // Buscar dados reais dos pedidos
+      const ordersResponse = await fetch('/api/admin/orders')
+      let allOrders: any[] = []
+      
+      if (ordersResponse.ok) {
+        allOrders = await ordersResponse.json()
+        console.log('📦 Pedidos carregados:', allOrders.length)
       } else {
-        addNotification('error', 'Erro ao carregar dados de analytics')
+        console.log('⚠️ Erro ao carregar pedidos, usando dados do estado local')
+        allOrders = orders // Usar dados do estado local se disponível
       }
+      
+      // Filtrar apenas pedidos entregues ou confirmados para faturamento
+      const validOrders = allOrders.filter(order => 
+        order.status === 'delivered' || order.status === 'confirmed' || order.status === 'preparing' || order.status === 'delivering'
+      )
+      
+      const currentDate = new Date()
+      const revenueData = []
+      const ordersData = []
+      
+      let dataPoints = 0
+      let dateKey = ''
+      
+      switch (period) {
+        case 'day':
+          dataPoints = 30 // Últimos 30 dias
+          dateKey = 'day'
+          break
+        case 'month':
+          dataPoints = 12 // Últimos 12 meses
+          dateKey = 'month'
+          break
+        case 'year':
+          dataPoints = 5 // Últimos 5 anos
+          dateKey = 'year'
+          break
+      }
+      
+      for (let i = dataPoints - 1; i >= 0; i--) {
+        let date: Date
+        let startDate: Date
+        let endDate: Date
+        
+        switch (period) {
+          case 'day':
+            date = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - i)
+            startDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0)
+            endDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59)
+            break
+          case 'month':
+            date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
+            startDate = new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0)
+            endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59)
+            break
+          case 'year':
+            date = new Date(currentDate.getFullYear() - i, 0, 1)
+            startDate = new Date(date.getFullYear(), 0, 1, 0, 0, 0)
+            endDate = new Date(date.getFullYear(), 11, 31, 23, 59, 59)
+            break
+        }
+        
+        let label = ''
+        switch (period) {
+          case 'day':
+            label = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+            break
+          case 'month':
+            label = date.toLocaleDateString('pt-BR', { month: 'short' })
+            break
+          case 'year':
+            label = date.getFullYear().toString()
+            break
+        }
+        
+        // Filtrar pedidos do período
+        const periodOrders = validOrders.filter(order => {
+          const orderDate = new Date(order.createdAt)
+          return orderDate >= startDate && orderDate <= endDate
+        })
+        
+        // Calcular faturamento e número de pedidos do período
+        const revenue = periodOrders.reduce((sum, order) => sum + (order.total || 0), 0)
+        const ordersCount = periodOrders.length
+        
+        console.log(`📊 Período ${label}: ${ordersCount} pedidos, R$ ${revenue.toFixed(2)}`)
+        
+        revenueData.push({
+          [dateKey]: label,
+          revenue: revenue
+        })
+        
+        ordersData.push({
+          [dateKey]: label,
+          total: ordersCount
+        })
+      }
+      
+      // Dados de categorias baseados nos produtos
+      const categoryDistribution = Object.entries(stats?.productsByCategory || {}).map(([name, value]) => ({
+        name,
+        value: value as number
+      }))
+      
+      // Dados de status baseados nos pedidos
+      const orderStatus = Object.entries(stats?.ordersByStatus || {}).map(([name, value]) => ({
+        name: name === 'pending' ? 'Pendente' : 
+              name === 'confirmed' ? 'Confirmado' : 
+              name === 'preparing' ? 'Preparando' : 
+              name === 'delivering' ? 'Em Rota' : 
+              name === 'delivered' ? 'Entregue' : 
+              name === 'cancelled' ? 'Cancelado' : name,
+        value: value as number
+      }))
+      
+      const analyticsData = {
+        monthlyRevenue: revenueData,
+        monthlyOrders: ordersData,
+        categoryDistribution,
+        orderStatus,
+        currentPeriod: period
+      }
+      
+      console.log('📊 Dados de analytics gerados:', analyticsData)
+      console.log('📈 Dados do gráfico:', analyticsData.monthlyRevenue)
+      setAnalyticsData(analyticsData)
+      addNotification('success', `Dados de analytics carregados com sucesso! (${validOrders.length} pedidos válidos)`)
+      
     } catch (error) {
-      console.error('Erro ao buscar analytics:', error)
+      console.error('❌ Erro ao buscar analytics:', error)
       addNotification('error', 'Erro ao carregar dados de analytics')
     } finally {
       setAnalyticsLoading(false)
     }
   }
+
+
 
   const fetchQuotationData = async () => {
     setQuotationLoading(true)
@@ -653,10 +1093,29 @@ export default function AdminPage() {
     }
   }
 
+  const fetchVisitorStats = async (period: string = 'all') => {
+    try {
+      const response = await fetch(`/api/analytics/visitors?period=${period}`)
+      if (response.ok) {
+        const data = await response.json()
+        setVisitorStats(data)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas de visitantes:', error)
+    }
+  }
+
   // Carregar analytics quando o componente montar
   useEffect(() => {
     fetchAnalytics();
   }, []);
+
+  // Carregar estatísticas de visitantes quando a aba analytics for selecionada
+  useEffect(() => {
+    if (activeTab === 'analytics') {
+      fetchVisitorStats(analyticsPeriod);
+    }
+  }, [activeTab, analyticsPeriod]);
 
   // Função para adicionar log de atividade
   const addActivityLog = (action: string, description: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') => {
@@ -791,6 +1250,45 @@ function PromotionForm({
   onCancel: () => void
   isLoading: boolean
 }) {
+  // Função para mostrar notificações bonitas
+  const showNotification = (type: 'success' | 'error' | 'warning' | 'info', message: string) => {
+    // Criar elemento de notificação
+    const notification = document.createElement('div')
+    notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm transform transition-all duration-300 translate-x-full ${
+      type === 'success' ? 'bg-green-500 text-white' :
+      type === 'error' ? 'bg-red-500 text-white' :
+      type === 'warning' ? 'bg-yellow-500 text-white' :
+      'bg-blue-500 text-white'
+    }`
+    notification.innerHTML = `
+      <div class="flex items-center justify-between">
+        <div class="flex items-center">
+          <span class="font-medium">${message}</span>
+        </div>
+        <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+    `
+    document.body.appendChild(notification)
+    
+    // Animar entrada
+    setTimeout(() => {
+      notification.classList.remove('translate-x-full')
+    }, 100)
+    
+    // Remover automaticamente após 5 segundos
+    setTimeout(() => {
+      notification.classList.add('translate-x-full')
+      setTimeout(() => {
+        if (notification.parentElement) {
+          notification.remove()
+        }
+      }, 300)
+    }, 5000)
+  }
   const [formData, setFormData] = useState({
     productId: promotion?.productId || '',
     productName: promotion?.productName || '',
@@ -801,18 +1299,65 @@ function PromotionForm({
     isActive: promotion?.isActive ?? true
   })
 
+  console.log('🎯 Promoção recebida:', promotion)
+  console.log('🖼️ Imagem inicial:', promotion?.image)
+
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
 
+  // useEffect para garantir que a imagem seja carregada quando uma promoção existente é editada
+  useEffect(() => {
+    if (promotion && promotion.image) {
+      console.log('🖼️ Carregando imagem da promoção existente:', promotion.image)
+      setFormData(prev => ({
+        ...prev,
+        image: promotion.image
+      }))
+    }
+  }, [promotion])
+
+  // Debug para verificar o estado do formData
+  useEffect(() => {
+    console.log('📋 Estado atual do formData:', formData)
+  }, [formData])
+
   const handleProductChange = (productId: string) => {
+    console.log('🔍 Produto selecionado - ID:', productId)
+    console.log('📦 Total de produtos disponíveis:', products.length)
+    
+    if (!productId) {
+      setSelectedProduct(null)
+      setFormData((prev: any) => ({
+        ...prev,
+        productId: '',
+        productName: '',
+        originalPrice: '',
+        image: ''
+      }))
+      return
+    }
+    
     const product = products.find((p: Product) => p.id === productId)
     if (product) {
+      console.log('✅ Produto encontrado:', product.name, 'ID:', product.id)
       setSelectedProduct(product)
+      
+      // Atualizar formData diretamente para evitar problemas de timing
       setFormData((prev: any) => ({
         ...prev,
         productId: product.id,
         productName: product.name,
         originalPrice: product.price.toString(),
-        image: product.image || ''
+        image: product.image || '/placeholder.svg' // Usar placeholder se não houver imagem
+      }))
+    } else {
+      console.log('❌ Produto não encontrado para ID:', productId)
+      setSelectedProduct(null)
+      setFormData((prev: any) => ({
+        ...prev,
+        productId: '',
+        productName: '',
+        originalPrice: '',
+        image: ''
       }))
     }
   }
@@ -898,10 +1443,15 @@ function PromotionForm({
           <option value="">Selecione um produto</option>
           {products.map((product) => (
             <option key={product.id} value={product.id}>
-              {product.name}
+              {product.name} (ID: {product.id})
             </option>
           ))}
         </select>
+        {formData.productId && (
+          <p className="text-sm text-gray-600 mt-1">
+            Produto selecionado: <strong>{formData.productName}</strong> (ID: {formData.productId})
+          </p>
+        )}
       </div>
       {/* Campo Nome do Produto */}
       <div>
@@ -1014,7 +1564,7 @@ function PromotionForm({
                     const file = e.target.files?.[0]
                     if (file) {
                       if (file.size > 5 * 1024 * 1024) { // 5MB
-                        alert('Arquivo muito grande. Use uma imagem menor que 5MB.')
+                        showNotification('error', 'Arquivo muito grande. Use uma imagem menor que 5MB.')
                         return
                       }
                       const reader = new FileReader()
@@ -1062,10 +1612,10 @@ function PromotionForm({
                           }
                         }
                       }
-                      alert('Nenhuma imagem encontrada na área de transferência')
+                      showNotification('warning', 'Nenhuma imagem encontrada na área de transferência')
                     } catch (error) {
                       console.error('Erro ao colar imagem:', error)
-                      alert('Erro ao colar imagem. Verifique se há uma imagem na área de transferência.')
+                      showNotification('error', 'Erro ao colar imagem. Verifique se há uma imagem na área de transferência.')
                     }
                   }}
                   className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
@@ -1078,7 +1628,7 @@ function PromotionForm({
           )}
 
           {/* Preview da imagem */}
-          {formData.image && (
+          {(formData.image && formData.image.trim() !== '') && (
             <div className="relative bg-gray-50 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-700">Preview da Imagem</span>
@@ -1096,8 +1646,13 @@ function PromotionForm({
                   alt="Preview" 
                   className="w-full h-40 object-contain rounded-lg border bg-white"
                   onError={(e) => {
+                    console.log('❌ Erro ao carregar imagem:', formData.image)
                     e.currentTarget.style.display = 'none'
-                    alert('Erro ao carregar imagem. Verifique se o link está correto.')
+                    // Mostrar placeholder quando a imagem falha
+                    const placeholder = document.createElement('div')
+                    placeholder.className = 'w-full h-40 bg-gray-200 rounded-lg border flex items-center justify-center text-gray-500'
+                    placeholder.innerHTML = '<span>Imagem não encontrada</span>'
+                    e.currentTarget.parentElement?.appendChild(placeholder)
                   }}
                 />
               </div>
@@ -1346,7 +1901,9 @@ function PromotionForm({
                 { id: 'products', name: 'Produtos', icon: Package },
                 { id: 'promotions', name: 'Promoções', icon: Tag },
                 { id: 'orders', name: 'Pedidos', icon: ShoppingCart },
+                { id: 'returns', name: 'Trocas e Devoluções', icon: RotateCcw },
                 { id: 'reports', name: 'Relatórios', icon: FileText },
+                { id: 'analytics', name: 'Analytics', icon: BarChart3 },
                 { id: 'camera-requests', name: 'Solicitações Câmera', icon: Camera },
                 { id: 'feedback', name: 'Feedback', icon: MessageSquare },
                 { id: 'users', name: 'Usuários', icon: Users },
@@ -1415,7 +1972,7 @@ function PromotionForm({
                     <DollarSign className="w-8 h-8 text-purple-500" />
                     <div className="ml-4">
                       <p className="text-sm font-medium text-purple-600">Receita Total</p>
-                      <p className="text-2xl font-bold text-purple-900">R$ {stats.totalRevenue.toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-purple-900">R$ {(stats.totalRevenue || 0).toFixed(2)}</p>
                     </div>
                   </div>
                 </div>
@@ -1554,130 +2111,305 @@ function PromotionForm({
                 <TrendingUp className={`w-12 h-12 ${stats.totalOrders > 0 ? 'text-green-400 animate-bounce' : 'text-red-400 animate-pulse'}`} />
               </div>
 
-              {/* Gráfico de Faturamento Mensal */}
-              {stats.monthlyRevenue && stats.monthlyRevenue.length > 0 && (
-                <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                    <TrendingUp className="w-5 h-5 mr-2" /> Faturamento Mensal
+              {/* Gráfico de Faturamento */}
+              <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                    <TrendingUp className="w-5 h-5 mr-2 text-blue-600" /> 
+                    Faturamento {chartPeriod === 'day' ? 'Diário' : chartPeriod === 'month' ? 'Mensal' : 'Anual'}
                   </h3>
-                  <ChartContainer
-                    config={{
-                      faturamento: { label: 'Faturamento', color: '#3b82f6' },
-                    }}
-                  >
-                    {({ ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid }: any) => (
-                      <ResponsiveContainer width="100%" height={300}>
-                        <LineChart data={stats.monthlyRevenue}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="month" />
-                          <YAxis />
-                          <Tooltip formatter={(value: number) => [`R$ ${value.toFixed(2)}`, 'Faturamento']} />
-                          <Line type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    )}
-                  </ChartContainer>
+                  <div className="flex items-center gap-4">
+                    {/* Filtro de Período */}
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-gray-600">Período:</label>
+                      <select
+                        value={chartPeriod}
+                        onChange={(e) => {
+                          const period = e.target.value as 'day' | 'month' | 'year'
+                          setChartPeriod(period)
+                          fetchAnalytics(period)
+                        }}
+                        className="px-3 py-1 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="day">Dia</option>
+                        <option value="month">Mês</option>
+                        <option value="year">Ano</option>
+                      </select>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-blue-600">
+                        R$ {(stats.totalRevenue || 0).toFixed(2)}
+                      </p>
+                      <p className="text-sm text-gray-600">Total Geral</p>
+                    </div>
+                  </div>
                 </div>
-              )}
+                
+                {(() => {
+                  console.log('🎯 Renderizando gráfico - analyticsData:', analyticsData)
+                  console.log('🎯 monthlyRevenue:', analyticsData?.monthlyRevenue)
+                  return analyticsData?.monthlyRevenue && analyticsData.monthlyRevenue.length > 0
+                })() ? (
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={analyticsData.monthlyRevenue}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis 
+                          dataKey={chartPeriod === 'day' ? 'day' : chartPeriod === 'month' ? 'month' : 'year'} 
+                          tick={{ fontSize: 12, fill: '#6b7280' }}
+                          axisLine={{ stroke: '#e5e7eb' }}
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 12, fill: '#6b7280' }}
+                          axisLine={{ stroke: '#e5e7eb' }}
+                          tickFormatter={(value: number) => `R$ ${(value / 1000).toFixed(0)}k`}
+                        />
+                        <Tooltip 
+                          formatter={(value: number) => [`R$ ${(value || 0).toFixed(2)}`, 'Faturamento']}
+                          labelStyle={{ color: '#374151' }}
+                          contentStyle={{ 
+                            backgroundColor: '#ffffff', 
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                          }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="revenue" 
+                          stroke="#3b82f6" 
+                          strokeWidth={3}
+                          dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
+                          activeDot={{ r: 6, stroke: '#3b82f6', strokeWidth: 2 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg">
+                    <div className="text-center">
+                      <TrendingUp className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                      <p className="text-gray-500">Nenhum dado de faturamento disponível</p>
+                      <p className="text-xs text-gray-400 mt-2">Analytics: {JSON.stringify(analyticsData)}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Gráfico de Pedidos Mensais */}
-              {stats.monthlyRevenue && stats.monthlyRevenue.length > 0 && (
+              {analyticsData?.monthlyOrders && analyticsData.monthlyOrders.length > 0 && (
                 <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
                   <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
                     <TrendingUp className="w-5 h-5 mr-2" /> Evolução de Pedidos Mensais
                   </h3>
-                  <ChartContainer
-                    config={{
-                      pedidos: { label: 'Pedidos', color: '#f59e42' },
-                    }}
-                  >
-                    {({ ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend }: any) => (
-                      <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={stats.monthlyRevenue}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="month" />
-                          <YAxis />
-                          <Tooltip formatter={(value: number) => [value, 'Pedidos']} />
-                          <Legend />
-                          <Bar dataKey="orders" fill="#f59e42" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    )}
-                  </ChartContainer>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={analyticsData.monthlyOrders}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis 
+                        dataKey="month" 
+                        tick={{ fontSize: 12, fill: '#6b7280' }}
+                        axisLine={{ stroke: '#e5e7eb' }}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 12, fill: '#6b7280' }}
+                        axisLine={{ stroke: '#e5e7eb' }}
+                      />
+                      <Tooltip 
+                        formatter={(value: number) => [value, 'Pedidos']}
+                        labelStyle={{ color: '#374151' }}
+                        contentStyle={{ 
+                          backgroundColor: '#ffffff', 
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                        }}
+                      />
+                      <Legend />
+                      <Bar dataKey="total" fill="#f59e42" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               )}
 
               {/* Gráfico de Status dos Pedidos */}
-              {stats.orderStatus && stats.orderStatus.length > 0 && (
+              {analyticsData?.orderStatus && analyticsData.orderStatus.length > 0 && (
                 <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
                   <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
                     <PieChart className="w-5 h-5 mr-2" /> Status dos Pedidos
                   </h3>
-                  <ChartContainer
-                    config={{
-                      status: { label: 'Status', color: '#6366f1' },
-                    }}
-                  >
-                    {({ ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend }: any) => (
-                      <ResponsiveContainer width="100%" height={300}>
-                        <PieChart>
-                          <Pie
-                            data={stats.orderStatus}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="value"
-                          >
-                            {stats.orderStatus.map((entry: any, index: number) => (
-                              <Cell key={`cell-${index}`} fill={['#10b981', '#f59e42', '#ef4444', '#6366f1'][index % 4]} />
-                            ))}
-                          </Pie>
-                          <Tooltip formatter={(value: number) => [value, 'Pedidos']} />
-                          <Legend />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    )}
-                  </ChartContainer>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <RechartsPieChart>
+                      <Pie
+                        data={analyticsData.orderStatus}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {analyticsData.orderStatus.map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={['#10b981', '#f59e42', '#ef4444', '#6366f1', '#8b5cf6', '#06b6d4'][index % 6]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value: number) => [value, 'Pedidos']}
+                        contentStyle={{ 
+                          backgroundColor: '#ffffff', 
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                        }}
+                      />
+                      <Legend />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
                 </div>
               )}
 
               {/* Gráfico de Categorias de Produtos */}
-              {stats.productCategories && stats.productCategories.length > 0 && (
+              {analyticsData?.categoryDistribution && analyticsData.categoryDistribution.length > 0 && (
                 <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
                   <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
                     <PieChart className="w-5 h-5 mr-2" /> Distribuição por Categoria
                   </h3>
-                  <ChartContainer
-                    config={{
-                      categorias: { label: 'Categorias', color: '#10b981' },
+                  <ResponsiveContainer width="100%" height={300}>
+                    <RechartsPieChart>
+                      <Pie
+                        data={analyticsData.categoryDistribution}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {analyticsData.categoryDistribution.map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={['#10b981', '#3b82f6', '#f59e42', '#ef4444', '#8b5cf6', '#06b6d4'][index % 6]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value: number) => [value, 'Produtos']}
+                        contentStyle={{ 
+                          backgroundColor: '#ffffff', 
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                        }}
+                      />
+                      <Legend />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'analytics' && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Analytics de Visitantes</h2>
+                <div className="flex items-center space-x-4">
+                  <select
+                    value={analyticsPeriod}
+                    onChange={(e) => {
+                      setAnalyticsPeriod(e.target.value)
+                      fetchVisitorStats(e.target.value)
                     }}
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
                   >
-                    {({ ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend }: any) => (
-                      <ResponsiveContainer width="100%" height={300}>
-                        <PieChart>
-                          <Pie
-                            data={stats.productCategories}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="value"
-                          >
-                            {stats.productCategories.map((entry: any, index: number) => (
-                              <Cell key={`cell-${index}`} fill={['#10b981', '#3b82f6', '#f59e42', '#ef4444', '#8b5cf6'][index % 5]} />
-                            ))}
-                          </Pie>
-                          <Tooltip formatter={(value: number) => [value, 'Produtos']} />
-                          <Legend />
-                        </PieChart>
-                      </ResponsiveContainer>
+                    <option value="all">Todos os Períodos</option>
+                    <option value="daily">Diário</option>
+                    <option value="monthly">Mensal</option>
+                    <option value="yearly">Anual</option>
+                  </select>
+                  <button
+                    onClick={() => fetchVisitorStats(analyticsPeriod)}
+                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                  >
+                    Atualizar
+                  </button>
+                </div>
+              </div>
+
+              {!visitorStats ? (
+                <div className="text-center py-12">
+                  <BarChart3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Carregando Analytics</h3>
+                  <p className="text-gray-600">Aguarde enquanto carregamos os dados...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Estatísticas Gerais */}
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Visitas Totais</h3>
+                    <div className="text-3xl font-bold text-blue-600 mb-2">
+                      {analyticsPeriod === 'all' ? visitorStats.total : Object.values(visitorStats).reduce((sum: any, stat: any) => sum + (stat.total || 0), 0)}
+                    </div>
+                    <p className="text-sm text-gray-600">Total de visitas registradas</p>
+                  </div>
+
+                  {/* Dispositivos */}
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Dispositivos</h3>
+                    {analyticsPeriod === 'all' && visitorStats.devices ? (
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Desktop</span>
+                          <span className="font-semibold text-blue-600">{visitorStats.devices.desktop || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Mobile</span>
+                          <span className="font-semibold text-green-600">{visitorStats.devices.mobile || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Tablet</span>
+                          <span className="font-semibold text-purple-600">{visitorStats.devices.tablet || 0}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">Selecione "Todos os Períodos" para ver detalhes</p>
                     )}
-                  </ChartContainer>
+                  </div>
+
+                  {/* Navegadores */}
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Navegadores</h3>
+                    {analyticsPeriod === 'all' && visitorStats.browsers ? (
+                      <div className="space-y-2">
+                        {Object.entries(visitorStats.browsers).map(([browser, count]) => (
+                          <div key={browser} className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">{browser}</span>
+                            <span className="font-semibold text-orange-600">{count as number}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">Selecione "Todos os Períodos" para ver detalhes</p>
+                    )}
+                  </div>
+
+                  {/* Páginas Mais Visitadas */}
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Páginas Mais Visitadas</h3>
+                    {analyticsPeriod === 'all' && visitorStats.pages ? (
+                      <div className="space-y-2">
+                        {Object.entries(visitorStats.pages)
+                          .sort(([,a], [,b]) => (b as number) - (a as number))
+                          .slice(0, 5)
+                          .map(([page, count]) => (
+                            <div key={page} className="flex justify-between items-center">
+                              <span className="text-sm text-gray-600 truncate">{page}</span>
+                              <span className="font-semibold text-indigo-600">{count as number}</span>
+                            </div>
+                          ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">Selecione "Todos os Períodos" para ver detalhes</p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -1845,7 +2577,7 @@ function PromotionForm({
               {/* Modal de detalhes do feedback */}
               {feedbackDetail && (
                 <Dialog open={!!feedbackDetail} onOpenChange={open => !open && setFeedbackDetail(null)}>
-                  <DialogContent className="max-w-lg p-6 rounded-2xl shadow-xl bg-gradient-to-br from-white to-blue-50 border-2 border-blue-100">
+                  <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-6 rounded-2xl shadow-xl bg-gradient-to-br from-white to-blue-50 border-2 border-blue-100">
                     <DialogHeader>
                       <DialogTitle className="flex items-center gap-2 text-xl font-bold text-blue-800">
                         <MessageSquare className="w-6 h-6 text-blue-500" /> Detalhes do Feedback
@@ -2056,6 +2788,36 @@ function PromotionForm({
                     </span>
                   )}
                   <button
+                    onClick={() => {
+                      setEditingProduct(null)
+                      setShowProductModal(true)
+                    }}
+                    className="flex items-center gap-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Novo Produto
+                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => syncProducts('to-json')}
+                      disabled={isUpdating}
+                      className="flex items-center gap-2 bg-purple-500 text-white px-3 py-2 rounded-lg hover:bg-purple-600 transition-colors text-sm disabled:opacity-50"
+                      title="Sincronizar data.ts -> products.json"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Sync → JSON
+                    </button>
+                    <button
+                      onClick={() => syncProducts('to-data')}
+                      disabled={isUpdating}
+                      className="flex items-center gap-2 bg-indigo-500 text-white px-3 py-2 rounded-lg hover:bg-indigo-600 transition-colors text-sm disabled:opacity-50"
+                      title="Sincronizar products.json -> data.ts"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Sync → Data
+                    </button>
+                  </div>
+                  <button
                     onClick={() => exportToCSV(filteredProducts, 'produtos')}
                     className="flex items-center gap-2 bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition-colors text-sm"
                   >
@@ -2134,13 +2896,21 @@ function PromotionForm({
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div className="flex space-x-2">
-                              <button className="text-blue-600 hover:text-blue-900">
+                              <button 
+                                onClick={() => {
+                                  setEditingProduct(product)
+                                  setShowProductModal(true)
+                                }}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="Editar produto"
+                              >
                                 <Edit className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => deleteProduct(product.id)}
                                 disabled={isUpdating}
                                 className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                                title="Deletar produto"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -2156,7 +2926,7 @@ function PromotionForm({
           )}
 
           {activeTab === 'orders' && (
-            <div>
+            <div id="orders-section">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Pedidos</h2>
                 <div className="flex items-center gap-2">
@@ -2228,15 +2998,25 @@ function PromotionForm({
                         <tr key={order.id || idx}>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div>
-                              <div className="text-sm font-medium text-gray-900">{order.userName || '-'}</div>
-                              <div className="text-sm text-gray-500">{order.userPhone || '-'}</div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {order.customerInfo?.name || order.userName || 'Cliente não informado'}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                📧 {order.customerInfo?.email || order.userEmail || 'Email não informado'}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                📞 {order.customerInfo?.phone || order.userPhone || 'Telefone não informado'}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                📍 {order.customerInfo?.address ? (typeof order.customerInfo.address === 'string' ? order.customerInfo.address : formatAddress(order.customerInfo.address)) : 'Endereço não informado'}
+                              </div>
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {order.items.length} item{order.items.length !== 1 ? 's' : ''}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            R$ {order.total.toFixed(2) || '0.00'}
+                            R$ {(order.total || 0).toFixed(2)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {order.createdAt ? new Date(order.createdAt).toLocaleDateString('pt-BR') : '-'}
@@ -2259,12 +3039,73 @@ function PromotionForm({
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button className="text-blue-600 hover:text-blue-900 mr-3">
-                              Ver Detalhes
-                            </button>
-                            <button className="text-green-600 hover:text-green-900">
-                              Atualizar Status
-                            </button>
+                            <div className="flex flex-col space-y-2">
+                              <button 
+                                onClick={() => {
+                                  setSelectedOrder(order)
+                                  setShowOrderDetailsModal(true)
+                                }}
+                                className="text-blue-600 hover:text-blue-900 text-xs flex items-center gap-1"
+                              >
+                                <Eye className="w-3 h-3" />
+                                Ver Detalhes
+                              </button>
+                              <div className="flex space-x-1">
+                                {order.status !== 'delivered' && order.status !== 'cancelled' && (
+                                  <>
+                                    <button 
+                                      onClick={() => updateOrderStatus(order.id, 'confirmed')}
+                                      disabled={isUpdating || order.status === 'confirmed'}
+                                      className={`text-xs px-2 py-1 rounded ${
+                                        order.status === 'confirmed' 
+                                          ? 'bg-green-100 text-green-800 cursor-not-allowed' 
+                                          : 'bg-green-500 text-white hover:bg-green-600'
+                                      }`}
+                                    >
+                                      Confirmar
+                                    </button>
+                                    <button 
+                                      onClick={() => updateOrderStatus(order.id, 'preparing')}
+                                      disabled={isUpdating || order.status === 'preparing'}
+                                      className={`text-xs px-2 py-1 rounded ${
+                                        order.status === 'preparing' 
+                                          ? 'bg-orange-100 text-orange-800 cursor-not-allowed' 
+                                          : 'bg-orange-500 text-white hover:bg-orange-600'
+                                      }`}
+                                    >
+                                      Preparar
+                                    </button>
+                                  </>
+                                )}
+                                {order.status !== 'delivered' && order.status !== 'cancelled' && (
+                                  <button 
+                                    onClick={() => updateOrderStatus(order.id, 'delivering')}
+                                    disabled={isUpdating || order.status === 'delivering'}
+                                    className={`text-xs px-2 py-1 rounded ${
+                                      order.status === 'delivering'
+                                        ? 'bg-blue-100 text-blue-800 cursor-not-allowed' 
+                                        : 'bg-blue-500 text-white hover:bg-blue-600'
+                                    }`}
+                                  >
+                                    Entregar
+                                  </button>
+                                )}
+                                {order.status === 'delivering' && (
+                                  <button 
+                                    onClick={() => updateOrderStatus(order.id, 'delivered')}
+                                    disabled={isUpdating}
+                                    className="text-xs px-2 py-1 rounded bg-green-500 text-white hover:bg-green-600"
+                                  >
+                                    ✅ Entrega Concluída
+                                  </button>
+                                )}
+                                {order.status === 'delivered' && (
+                                  <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-800">
+                                    ✅ Entregue
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -2380,9 +3221,149 @@ function PromotionForm({
             </div>
           )}
 
+          {activeTab === 'returns' && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Trocas e Devoluções</h2>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => exportToCSV(returnRequests, 'trocas-devolucoes')}
+                    className="flex items-center gap-2 bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition-colors text-sm"
+                  >
+                    <Download className="w-4 h-4" />
+                    Exportar CSV
+                  </button>
+                </div>
+              </div>
+              
+              {returnRequests.length === 0 ? (
+                <div className="bg-gray-50 rounded-lg p-8 text-center">
+                  <RotateCcw className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma solicitação de troca/devolução</h3>
+                  <p className="text-gray-600">As solicitações aparecerão aqui quando forem enviadas pelos clientes</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Cliente
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Produto
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Tipo
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Data
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Ações
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {returnRequests.map((request, idx) => (
+                        <tr key={request.id || idx}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{request.userName || '-'}</div>
+                              <div className="text-sm text-gray-500">{request.userEmail || '-'}</div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{request.productName || '-'}</div>
+                              <div className="text-sm text-gray-500">Qtd: {request.quantity || 1}</div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              request.requestType === 'exchange' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'
+                            }`}>
+                              {request.requestType === 'exchange' ? 'Troca' : 'Devolução'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                              request.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {request.status === 'pending' ? 'Pendente' :
+                               request.status === 'approved' ? 'Aprovado' :
+                               request.status === 'rejected' ? 'Rejeitado' :
+                               request.status || 'Pendente'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {request.createdAt ? new Date(request.createdAt).toLocaleDateString('pt-BR') : '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => setReturnDetail(request)}
+                                className="text-blue-600 hover:text-blue-900"
+                              >
+                                Ver Detalhes
+                              </button>
+                              {request.status === 'PENDING' && (
+                                <>
+                                  <button
+                                    onClick={() => updateReturnRequestStatus(request.id, 'APPROVED')}
+                                    className="text-green-600 hover:text-green-900"
+                                  >
+                                    Aprovar
+                                  </button>
+                                  <button
+                                    onClick={() => updateReturnRequestStatus(request.id, 'REJECTED')}
+                                    className="text-red-600 hover:text-red-900"
+                                  >
+                                    Rejeitar
+                                  </button>
+                                </>
+                              )}
+                              <button
+                                onClick={() => deleteReturnRequest(request.id)}
+                                className="text-gray-600 hover:text-gray-900"
+                              >
+                                Deletar
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === 'reports' && (
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Relatórios e Exportações</h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Relatórios e Exportações</h2>
+                <div className="flex items-center space-x-4">
+                  <select
+                    value={reportPeriod}
+                    onChange={(e) => setReportPeriod(e.target.value)}
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="all">Todos os Períodos</option>
+                    <option value="today">Hoje</option>
+                    <option value="week">Última Semana</option>
+                    <option value="month">Último Mês</option>
+                    <option value="year">Último Ano</option>
+                  </select>
+                </div>
+              </div>
               
               {/* Relatórios PDF */}
               <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
@@ -2458,9 +3439,14 @@ function PromotionForm({
                   <button
                     onClick={async () => {
                       try {
-                        addNotification('info', 'Gerando relatório de pedidos...');
-                        const doc = await generateOrdersPDF(filteredOrders);
-                        doc.save('relatorio-pedidos.pdf');
+                        const periodText = reportPeriod === 'all' ? 'Todos os Períodos' : 
+                                         reportPeriod === 'today' ? 'Hoje' :
+                                         reportPeriod === 'week' ? 'Última Semana' :
+                                         reportPeriod === 'month' ? 'Último Mês' : 'Último Ano';
+                        
+                        addNotification('info', `Gerando relatório de pedidos (${periodText})...`);
+                        const doc = await generateOrdersPDF(filteredOrders, periodText);
+                        doc.save(`relatorio-pedidos-${reportPeriod}.pdf`);
                         addNotification('success', 'Relatório de pedidos gerado com sucesso!');
                       } catch (error) {
                         console.error('Erro ao gerar PDF:', error);
@@ -2471,7 +3457,7 @@ function PromotionForm({
                   >
                     <ShoppingCart className="h-8 w-8 mb-2" />
                     <span className="font-semibold">Relatório de Pedidos</span>
-                    <span className="text-xs opacity-90">Vendas e status</span>
+                    <span className="text-xs opacity-90">Vendas e status por período</span>
                   </button>
                   
                   <button
@@ -2547,7 +3533,7 @@ function PromotionForm({
                     <div className="text-3xl font-bold text-blue-800 mb-2">R$ {stats?.totalRevenue?.toFixed(2) || '0,00'}</div>
                     <div className="flex items-center text-sm text-blue-600">
                       <ArrowUp className="w-4 h-4 mr-1" />
-                      +12% vs ontem
+                      +{dashboardMetrics.revenueGrowth}% vs ontem
                     </div>
                   </div>
                   
@@ -2559,7 +3545,7 @@ function PromotionForm({
                     <div className="text-3xl font-bold text-green-800 mb-2">{stats?.totalUsers || 0}</div>
                     <div className="flex items-center text-sm text-green-600">
                       <ArrowUp className="w-4 h-4 mr-1" />
-                      +3 esta semana
+                      +{dashboardMetrics.userGrowth}% este mês
                     </div>
                   </div>
                   
@@ -2568,7 +3554,7 @@ function PromotionForm({
                       <h4 className="font-semibold text-purple-900">Taxa de Conversão</h4>
                       <Target className="w-5 h-5 text-purple-600" />
                     </div>
-                    <div className="text-3xl font-bold text-purple-800 mb-2">3.2%</div>
+                    <div className="text-3xl font-bold text-purple-800 mb-2">{dashboardMetrics.conversionRate}%</div>
                     <div className="flex items-center text-sm text-purple-600">
                       <ArrowUp className="w-4 h-4 mr-1" />
                       +0.5% vs mês passado
@@ -2718,20 +3704,20 @@ function PromotionForm({
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                           <span>Heap Usado:</span>
-                          <span>{(javaSystemStatus.memory.usedHeap / 1024 / 1024).toFixed(1)} MB</span>
+                          <span>{((javaSystemStatus.memory?.usedHeap || 0) / 1024 / 1024).toFixed(1)} MB</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span>Heap Máximo:</span>
-                          <span>{(javaSystemStatus.memory.maxHeap / 1024 / 1024).toFixed(1)} MB</span>
+                          <span>{((javaSystemStatus.memory?.maxHeap || 0) / 1024 / 1024).toFixed(1)} MB</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
                           <div 
                             className="bg-blue-600 h-2 rounded-full" 
-                            style={{ width: `${javaSystemStatus.memory.heapUsagePercent}%` }}
+                            style={{ width: `${javaSystemStatus.memory?.heapUsagePercent || 0}%` }}
                           ></div>
                         </div>
                         <div className="text-xs text-gray-500 text-center">
-                          {javaSystemStatus.memory.heapUsagePercent.toFixed(1)}% usado
+                          {(javaSystemStatus.memory?.heapUsagePercent || 0).toFixed(1)}% usado
                         </div>
                       </div>
                     )}
@@ -2869,7 +3855,7 @@ function PromotionForm({
                     Análise Avançada
                   </h2>
                   <Button 
-                    onClick={fetchAnalytics} 
+                    onClick={() => fetchAnalytics()} 
                     disabled={analyticsLoading}
                     className="bg-blue-600 hover:bg-blue-700"
                   >
@@ -2896,13 +3882,13 @@ function PromotionForm({
                         <div className="grid grid-cols-2 gap-4">
                           <div className="text-center">
                             <p className="text-2xl font-bold text-blue-800">
-                              R$ {performanceMetrics.currentMonthRevenue?.toFixed(2) || '0.00'}
+                              R$ {(performanceMetrics.currentMonthRevenue || 0).toFixed(2)}
                             </p>
                             <p className="text-sm text-blue-600">Receita do Mês</p>
                           </div>
                           <div className="text-center">
-                            <p className={`text-2xl font-bold ${performanceMetrics.revenueGrowth >= 0 ? 'text-green-800' : 'text-red-800'}`}>
-                              {performanceMetrics.revenueGrowth >= 0 ? '+' : ''}{performanceMetrics.revenueGrowth?.toFixed(1) || '0'}%
+                            <p className={`text-2xl font-bold ${(performanceMetrics.revenueGrowth || 0) >= 0 ? 'text-green-800' : 'text-red-800'}`}>
+                              {(performanceMetrics.revenueGrowth || 0) >= 0 ? '+' : ''}{(performanceMetrics.revenueGrowth || 0).toFixed(1)}%
                             </p>
                             <p className="text-sm text-gray-600">Crescimento</p>
                           </div>
@@ -2914,7 +3900,7 @@ function PromotionForm({
                           </div>
                           <div className="text-center">
                             <p className="text-2xl font-bold text-purple-800">
-                              R$ {performanceMetrics.averageOrderValue?.toFixed(2) || '0.00'}
+                              R$ {(performanceMetrics.averageOrderValue || 0).toFixed(2)}
                             </p>
                             <p className="text-sm text-purple-600">Ticket Médio</p>
                           </div>
@@ -3027,7 +4013,7 @@ function PromotionForm({
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm opacity-90">Uptime</p>
-                      <p className="text-2xl font-bold">99.9%</p>
+                      <p className="text-2xl font-bold">{dashboardMetrics.systemUptime}%</p>
                     </div>
                     <Clock className="w-8 h-8 opacity-80" />
                   </div>
@@ -3037,7 +4023,7 @@ function PromotionForm({
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm opacity-90">Memória</p>
-                      <p className="text-2xl font-bold">45%</p>
+                      <p className="text-2xl font-bold">{dashboardMetrics.memoryUsage}%</p>
                     </div>
                     <Activity className="w-8 h-8 opacity-80" />
                   </div>
@@ -3066,7 +4052,7 @@ function PromotionForm({
                       {stats?.totalUsers || 0}
                     </div>
                     <div className="text-sm text-gray-600">Usuários Ativos</div>
-                    <div className="text-xs text-green-600 mt-1">+12% este mês</div>
+                    <div className="text-xs text-green-600 mt-1">+{dashboardMetrics.userGrowth}% este mês</div>
                   </div>
                   
                   <div className="text-center p-4 bg-gray-50 rounded-lg">
@@ -3074,7 +4060,7 @@ function PromotionForm({
                       {stats?.totalOrders || 0}
                     </div>
                     <div className="text-sm text-gray-600">Pedidos Hoje</div>
-                    <div className="text-xs text-green-600 mt-1">+8% vs ontem</div>
+                    <div className="text-xs text-green-600 mt-1">+{dashboardMetrics.revenueGrowth}% vs ontem</div>
                   </div>
                   
                   <div className="text-center p-4 bg-gray-50 rounded-lg">
@@ -3082,7 +4068,7 @@ function PromotionForm({
                       R$ {stats?.totalRevenue?.toFixed(2) || '0.00'}
                     </div>
                     <div className="text-sm text-gray-600">Receita Hoje</div>
-                    <div className="text-xs text-green-600 mt-1">+15% vs ontem</div>
+                    <div className="text-xs text-green-600 mt-1">+{dashboardMetrics.revenueGrowth}% vs ontem</div>
                   </div>
                 </div>
               </div>
@@ -3148,7 +4134,7 @@ function PromotionForm({
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span>Uptime:</span>
-                        <span className="font-medium text-green-600">99.9%</span>
+                        <span className="font-medium text-green-600">{dashboardMetrics.systemUptime}%</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span>Latência:</span>
@@ -3271,10 +4257,37 @@ function PromotionForm({
         </Dialog>
       )}
 
+      {/* Modal de Produto */}
+      {showProductModal && (
+        <Dialog open={showProductModal} onOpenChange={setShowProductModal}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl shadow-xl bg-gradient-to-br from-white to-orange-50 border-2 border-orange-100">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-xl font-bold text-orange-800">
+                <Package className="w-6 h-6 text-orange-500" />
+                {editingProduct ? 'Editar Produto' : 'Novo Produto'}
+              </DialogTitle>
+              <DialogDescription className="text-gray-500">
+                {editingProduct ? 'Edite as informações do produto' : 'Adicione um novo produto ao catálogo. Escolha um ID único para o produto.'}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <ProductForm
+              product={editingProduct}
+              onSave={saveProduct}
+              onCancel={() => {
+                setShowProductModal(false)
+                setEditingProduct(null)
+              }}
+              isLoading={isUpdating}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* (1) Modal de detalhes do feedback */}
       {feedbackDetail && (
         <Dialog open={!!feedbackDetail} onOpenChange={open => !open && setFeedbackDetail(null)}>
-          <DialogContent className="max-w-lg p-6 rounded-2xl shadow-xl bg-gradient-to-br from-white to-blue-50 border-2 border-blue-100">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-6 rounded-2xl shadow-xl bg-gradient-to-br from-white to-blue-50 border-2 border-blue-100">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-xl font-bold text-blue-800">
                 <MessageSquare className="w-6 h-6 text-blue-500" /> Detalhes do Feedback
@@ -3332,7 +4345,7 @@ function PromotionForm({
       {/* (2) Modal de detalhes da solicitação de câmera */}
       {cameraDetail && (
         <Dialog open={!!cameraDetail} onOpenChange={open => !open && setCameraDetail(null)}>
-          <DialogContent className="max-w-lg p-6 rounded-2xl shadow-xl bg-gradient-to-br from-white to-orange-50 border-2 border-orange-100">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-6 rounded-2xl shadow-xl bg-gradient-to-br from-white to-orange-50 border-2 border-orange-100">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-xl font-bold text-orange-800">
                 <Camera className="w-6 h-6 text-orange-500" /> Detalhes da Solicitação de Câmera
@@ -3396,10 +4409,788 @@ function PromotionForm({
         </Dialog>
       )}
 
+      {/* Modal de Detalhes da Solicitação de Troca/Devolução */}
+      {returnDetail && (
+        <Dialog open={!!returnDetail} onOpenChange={open => !open && setReturnDetail(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl shadow-xl bg-gradient-to-br from-white to-green-50 border-2 border-green-100">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-xl font-bold text-green-800">
+                <RotateCcw className="w-6 h-6 text-green-500" /> Detalhes da Solicitação #{returnDetail.id}
+              </DialogTitle>
+              <DialogDescription className="text-gray-500">Informações completas da solicitação de troca/devolução</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              {/* Informações do Cliente */}
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <User className="w-4 h-4 text-green-500" />
+                  Informações do Cliente
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-500">Nome:</span>
+                    <div className="font-medium text-gray-900">{returnDetail.userName || '-'}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Email:</span>
+                    <div className="font-medium text-gray-900">{returnDetail.userEmail || '-'}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Telefone:</span>
+                    <div className="font-medium text-gray-900">{returnDetail.userPhone || '-'}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Pedido:</span>
+                    <div className="font-medium text-gray-900">{returnDetail.orderId || '-'}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Informações do Produto */}
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Package className="w-4 h-4 text-green-500" />
+                  Informações do Produto
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-500">Produto:</span>
+                    <div className="font-medium text-gray-900">{returnDetail.productName || '-'}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Quantidade:</span>
+                    <div className="font-medium text-gray-900">{returnDetail.quantity || '-'}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Tipo:</span>
+                    <div className="font-medium text-gray-900">
+                      {returnDetail.requestType === 'EXCHANGE' ? 'Troca' : 'Devolução'}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Status:</span>
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                      returnDetail.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                      returnDetail.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                      returnDetail.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {returnDetail.status === 'PENDING' ? 'Pendente' :
+                       returnDetail.status === 'APPROVED' ? 'Aprovado' :
+                       returnDetail.status === 'REJECTED' ? 'Rejeitado' :
+                       returnDetail.status || 'Pendente'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Motivo e Descrição */}
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-green-500" />
+                  Detalhes da Solicitação
+                </h3>
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <span className="text-gray-500">Motivo:</span>
+                    <div className="font-medium text-gray-900">{returnDetail.reason || '-'}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Descrição:</span>
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mt-1 text-gray-800 whitespace-pre-line">
+                      {returnDetail.description || 'Não informado'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Fotos */}
+              {returnDetail.photoUrls && returnDetail.photoUrls.length > 0 && (
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <Camera className="w-4 h-4 text-green-500" />
+                    Fotos do Produto
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {returnDetail.photoUrls.map((photo: string, index: number) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={`http://localhost:8080${photo}`}
+                          alt={`Foto ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-lg border border-gray-200"
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://via.placeholder.com/150x100?text=Erro+na+imagem'
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Notas do Admin */}
+              {returnDetail.adminNotes && (
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <Settings className="w-4 h-4 text-green-500" />
+                    Notas do Administrador
+                  </h3>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
+                    {returnDetail.adminNotes}
+                  </div>
+                </div>
+              )}
+
+              {/* Datas */}
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-green-500" />
+                  Informações de Data
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-500">Criado em:</span>
+                    <div className="font-medium text-gray-900">
+                      {returnDetail.createdAt ? new Date(returnDetail.createdAt).toLocaleString('pt-BR') : '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Atualizado em:</span>
+                    <div className="font-medium text-gray-900">
+                      {returnDetail.updatedAt ? new Date(returnDetail.updatedAt).toLocaleString('pt-BR') : '-'}
+                    </div>
+                  </div>
+                  {returnDetail.resolvedAt && (
+                    <div>
+                      <span className="text-gray-500">Resolvido em:</span>
+                      <div className="font-medium text-gray-900">
+                        {new Date(returnDetail.resolvedAt).toLocaleString('pt-BR')}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <DialogClose asChild>
+                <button className="px-4 py-2 rounded-lg font-semibold bg-gray-200 hover:bg-gray-300 text-gray-700">Fechar</button>
+              </DialogClose>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Modal de Detalhes do Pedido */}
+      {showOrderDetailsModal && selectedOrder && (
+        <Dialog open={showOrderDetailsModal} onOpenChange={setShowOrderDetailsModal}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl shadow-xl bg-gradient-to-br from-white to-blue-50 border-2 border-blue-100">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-xl font-bold text-blue-800">
+                <ShoppingCart className="w-6 h-6 text-blue-500" /> Detalhes do Pedido #{selectedOrder.id}
+              </DialogTitle>
+              <DialogDescription className="text-gray-500">Informações completas do pedido</DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              {/* Informações do Cliente */}
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <User className="w-4 h-4 text-blue-500" />
+                  Informações do Cliente
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">📝 Nome:</span>
+                    <span className="font-medium text-gray-900">
+                      {selectedOrder.customerInfo?.name || selectedOrder.userName || 'Não informado'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">📧 Email:</span>
+                    <span className="font-medium text-gray-900">
+                      {selectedOrder.customerInfo?.email || selectedOrder.userEmail || 'Não informado'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">📞 Telefone:</span>
+                    <span className="font-medium text-gray-900">
+                      {selectedOrder.customerInfo?.phone || selectedOrder.userPhone || 'Não informado'}
+                    </span>
+                  </div>
+                                     <div className="flex items-start gap-2">
+                     <span className="text-gray-500 mt-1">📍 Endereço:</span>
+                     <span className="font-medium text-gray-900">
+                       {selectedOrder.customerInfo?.address ? (typeof selectedOrder.customerInfo.address === 'string' ? selectedOrder.customerInfo.address : formatAddress(selectedOrder.customerInfo.address)) : 'Não informado'}
+                     </span>
+                   </div>
+                </div>
+              </div>
+
+              {/* Detalhes do Pedido */}
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Package className="w-4 h-4 text-orange-500" />
+                  Detalhes do Pedido
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">📅 Data:</span>
+                    <span className="font-medium text-gray-900">
+                      {selectedOrder.createdAt ? new Date(selectedOrder.createdAt).toLocaleString('pt-BR') : 'Não informado'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">📊 Status:</span>
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                      selectedOrder.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      selectedOrder.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                      selectedOrder.status === 'preparing' ? 'bg-orange-100 text-orange-800' :
+                      selectedOrder.status === 'delivering' ? 'bg-purple-100 text-purple-800' :
+                      selectedOrder.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {selectedOrder.status === 'pending' ? 'Pendente' :
+                       selectedOrder.status === 'confirmed' ? 'Confirmado' :
+                       selectedOrder.status === 'preparing' ? 'Preparando' :
+                       selectedOrder.status === 'delivering' ? 'Entregando' :
+                       selectedOrder.status === 'delivered' ? 'Entregue' :
+                       'Cancelado'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">📦 Itens:</span>
+                    <span className="font-medium text-gray-900">
+                      {selectedOrder.items?.length || 0} produto(s)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">💰 Total:</span>
+                    <span className="font-bold text-lg text-green-600">
+                      R$ {(selectedOrder.total || 0).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Lista de Itens */}
+            <div className="mt-6 bg-white p-4 rounded-lg border border-gray-200">
+              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <ShoppingCart className="w-4 h-4 text-green-500" />
+                Itens do Pedido
+              </h3>
+              <div className="space-y-3">
+                {selectedOrder.items?.map((item, index) => (
+                  <div key={index} className="flex justify-between items-center py-3 border-b border-gray-100 last:border-b-0">
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">{item.name || 'Produto não informado'}</p>
+                      <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
+                        <span>📊 Qtd: {item.quantity || 0}</span>
+                        <span>💰 Preço: R$ {(item.price || 0).toFixed(2)}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-gray-900">R$ {((item.price || 0) * (item.quantity || 0)).toFixed(2)}</p>
+                    </div>
+                  </div>
+                )) || (
+                  <p className="text-gray-500 text-center py-4">Nenhum item encontrado</p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <DialogClose asChild>
+                <button className="px-4 py-2 rounded-lg font-semibold bg-gray-200 hover:bg-gray-300 text-gray-700">
+                  Fechar
+                </button>
+              </DialogClose>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* Seção de Exportação PDF Completa */}
 
 
 
     </div>
+  )
+}
+
+// Função para formatar endereço
+function formatAddress(address: any): string {
+  if (typeof address === 'string') {
+    return address
+  }
+  
+  if (typeof address === 'object' && address !== null) {
+    const parts = []
+    
+    if (address.street) parts.push(address.street)
+    if (address.number) parts.push(address.number)
+    if (address.complement) parts.push(address.complement)
+    if (address.neighborhood) parts.push(address.neighborhood)
+    if (address.city) parts.push(address.city)
+    if (address.state) parts.push(address.state)
+    if (address.zipCode) parts.push(address.zipCode)
+    
+    return parts.join(', ')
+  }
+  
+  return 'Endereço não informado'
+}
+
+function ProductForm({ 
+  product, 
+  onSave, 
+  onCancel, 
+  isLoading 
+}: {
+  product: Product | null
+  onSave: (data: any) => void
+  onCancel: () => void
+  isLoading: boolean
+}) {
+  const [formData, setFormData] = useState<{
+    id: string
+    name: string
+    price: number
+    originalPrice: number
+    category: string
+    description: string
+    image: string
+    brand: string
+    unit: string
+    stock: number
+    inStock: boolean
+    tags: string[]
+  }>({
+    id: '',
+    name: '',
+    price: 0,
+    originalPrice: 0,
+    category: '',
+    description: '',
+    image: '',
+    brand: '',
+    unit: '',
+    stock: 0,
+    inStock: true,
+    tags: []
+  })
+
+  // Atualizar formData quando product mudar
+  useEffect(() => {
+    if (product) {
+      setFormData({
+        id: product.id || '',
+        name: product.name || '',
+        price: product.price || 0,
+        originalPrice: product.originalPrice || 0,
+        category: product.category || '',
+        description: product.description || '',
+        image: product.image || '',
+        brand: product.brand || '',
+        unit: product.unit || '',
+        stock: product.stock || 0,
+        inStock: product.inStock ?? true,
+        tags: product.tags || []
+      })
+    } else {
+      setFormData({
+        id: '',
+        name: '',
+        price: 0,
+        originalPrice: 0,
+        category: '',
+        description: '',
+        image: '',
+        brand: '',
+        unit: '',
+        stock: 0,
+        inStock: true,
+        tags: []
+      })
+    }
+  }, [product])
+
+  const [newTag, setNewTag] = useState('')
+  const [uploadedImage, setUploadedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string>('')
+
+  const categories = [
+    "REFRIGERANTES E OUTROS LIQUIDOS",
+    "MERCEARIA",
+    "MOLHOS",
+    "RESFRIADOS",
+    "BISCOITOS",
+    "FRIOS Á GRANEL E PACOTES",
+    "CONFEITARIA E OUTROS",
+    "PANIFICAÇÃO",
+    "DESCARTÁVEIS",
+    "PRODUTOS DE LIMPEZA",
+    "TEMPEROS",
+    "ENLATADOS E EM CONSERVA",
+    "CONGELADOS",
+    "SUSHITERIA"
+  ]
+
+  const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      setUploadedImage(file)
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string)
+        setFormData(prev => ({ ...prev, image: e.target?.result as string }))
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const addTag = () => {
+    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        tags: [...prev.tags, newTag.trim()]
+      }))
+      setNewTag('')
+    }
+  }
+
+  const removeTag = (tagToRemove: string) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: prev.tags.filter(tag => tag !== tagToRemove)
+    }))
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    console.log('📋 Validando formulário:', formData)
+    
+    // Validação mais detalhada
+    const errors = []
+    
+    if (!formData.id || formData.id.trim() === '') {
+      errors.push('ID do produto é obrigatório')
+    }
+    
+    if (!formData.name || formData.name.trim() === '') {
+      errors.push('Nome do produto é obrigatório')
+    }
+    
+    if (!formData.price || formData.price <= 0) {
+      errors.push('Preço deve ser maior que zero')
+    }
+    
+    if (!formData.category || formData.category.trim() === '') {
+      errors.push('Categoria é obrigatória')
+    }
+    
+    if (errors.length > 0) {
+      const errorMessage = 'Por favor, corrija os seguintes erros:\n' + errors.join('\n')
+      alert(errorMessage)
+      return
+    }
+    
+    // Preparar dados para envio
+    const productToSave = {
+      ...formData,
+      id: formData.id.trim(),
+      name: formData.name.trim(),
+      category: formData.category.trim(),
+      description: formData.description?.trim() || '',
+      brand: formData.brand?.trim() || '',
+      unit: formData.unit?.trim() || '',
+      price: parseFloat(formData.price.toString()),
+      originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice.toString()) : 0,
+      stock: parseInt(formData.stock.toString()) || 0,
+      inStock: formData.inStock,
+      tags: formData.tags || []
+    }
+    
+    console.log('✅ Dados validados, enviando:', productToSave)
+    onSave(productToSave)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Informações Básicas */}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              ID do Produto <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.id || ''}
+              onChange={(e) => handleInputChange('id', e.target.value)}
+              disabled={!!product} // Desabilitar durante edição
+              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+                product ? 'bg-gray-100 cursor-not-allowed' : ''
+              }`}
+              placeholder="Ex: 110, 111, 112..."
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {product ? 'ID não pode ser alterado durante a edição' : 'Escolha um ID único para o produto'}
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nome do Produto <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.name}
+              onChange={(e) => handleInputChange('name', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="Nome do produto"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Descrição
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => handleInputChange('description', e.target.value)}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="Descrição detalhada do produto"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Categoria <span className="text-red-500">*</span>
+            </label>
+            <select
+              required
+              value={formData.category}
+              onChange={(e) => handleInputChange('category', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            >
+              <option value="">Selecione uma categoria</option>
+              {categories.map((category) => (
+                <option key={category} value={category}>{category}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Marca
+            </label>
+            <input
+              type="text"
+              value={formData.brand}
+              onChange={(e) => handleInputChange('brand', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="Marca do produto"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Unidade
+            </label>
+            <input
+              type="text"
+              value={formData.unit}
+              onChange={(e) => handleInputChange('unit', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="Ex: kg, L, un, g"
+            />
+          </div>
+        </div>
+
+        {/* Preços e Estoque */}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Preço Atual <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              required
+              step="0.01"
+              min="0"
+              value={formData.price?.toString() || ''}
+              onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="0.00"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Preço Original
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.originalPrice?.toString() || ''}
+              onChange={(e) => handleInputChange('originalPrice', parseFloat(e.target.value) || 0)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="0.00"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Estoque
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={formData.stock?.toString() || ''}
+              onChange={(e) => handleInputChange('stock', parseInt(e.target.value) || 0)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="0"
+            />
+          </div>
+
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="inStock"
+              checked={formData.inStock}
+              onChange={(e) => handleInputChange('inStock', e.target.checked)}
+              className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+            />
+            <label htmlFor="inStock" className="ml-2 block text-sm text-gray-900">
+              Em estoque
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* Descrição */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Descrição
+        </label>
+        <textarea
+          value={formData.description}
+          onChange={(e) => handleInputChange('description', e.target.value)}
+          rows={4}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          placeholder="Descrição detalhada do produto..."
+        />
+      </div>
+
+      {/* Upload de Imagem */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Imagem do Produto
+        </label>
+        <div className="space-y-4">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          />
+          {(imagePreview || formData.image) && (
+            <div className="mt-2">
+              <img
+                src={imagePreview || formData.image}
+                alt="Preview"
+                className="w-32 h-32 object-cover rounded-lg border border-gray-200"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Tags */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Tags
+        </label>
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newTag}
+              onChange={(e) => setNewTag(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="Adicionar tag"
+            />
+            <button
+              type="button"
+              onClick={addTag}
+              className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
+            >
+              Adicionar
+            </button>
+          </div>
+          {formData.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {formData.tags.map((tag, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-orange-100 text-orange-800"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    className="ml-2 text-orange-600 hover:text-orange-800"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Botões */}
+      <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
+              Salvando...
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4 mr-2 inline" />
+              {product ? 'Atualizar' : 'Criar'} Produto
+            </>
+          )}
+        </button>
+      </div>
+    </form>
   )
 }

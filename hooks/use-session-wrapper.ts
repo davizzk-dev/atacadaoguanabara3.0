@@ -5,6 +5,16 @@ import { useSession } from 'next-auth/react'
 export function useSessionWrapper() {
   try {
     const session = useSession()
+    
+    // Verificar se session é undefined (pode acontecer durante build estático)
+    if (!session) {
+      return {
+        data: null,
+        status: 'unauthenticated' as const,
+        update: () => Promise.resolve(null),
+      }
+    }
+    
     return {
       data: session.data || null,
       status: session.status || 'unauthenticated',

@@ -10,8 +10,7 @@ const nextConfig = {
     domains: ['i.ibb.co', 'images.unsplash.com'],
     unoptimized: true, // Para build estático
   },
-  // Configuração para build estático
-  output: 'export',
+  // Removido output: 'export' para permitir rotas dinâmicas e APIs
   trailingSlash: true,
   skipTrailingSlashRedirect: true,
   // Desabilitar otimizações que causam problemas no build estático

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
+  console.log('📈 API Sales Trends: Iniciando requisição...')
+  
   try {
+    console.log('📈 API Sales Trends: Tentando conectar com backend Java...')
+    
     const response = await fetch('http://localhost:8080/api/admin/analytics/sales-trends', {
       method: 'GET',
       headers: {
@@ -9,30 +13,29 @@ export async function GET(request: NextRequest) {
       },
     })
 
+    console.log('📈 API Sales Trends: Status da resposta:', response.status)
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
     const data = await response.json()
+    console.log('📈 API Sales Trends: Dados recebidos do backend Java')
     return NextResponse.json(data)
   } catch (error) {
-    console.error('Erro ao buscar tendências de vendas:', error)
-    return NextResponse.json({
-      daily: [
-        { date: '2024-06-01', sales: 1250.00, orders: 45 },
-        { date: '2024-06-02', sales: 1380.50, orders: 52 },
-        { date: '2024-06-03', sales: 1420.75, orders: 58 },
-        { date: '2024-06-04', sales: 1380.00, orders: 55 },
-        { date: '2024-06-05', sales: 1560.25, orders: 62 },
-        { date: '2024-06-06', sales: 1620.00, orders: 68 },
-        { date: '2024-06-07', sales: 1580.50, orders: 65 }
-      ],
-      weekly: [
-        { week: 'Semana 1', sales: 8500.00, orders: 320 },
-        { week: 'Semana 2', sales: 9200.00, orders: 345 },
-        { week: 'Semana 3', sales: 9800.00, orders: 370 },
-        { week: 'Semana 4', sales: 10500.00, orders: 395 }
-      ]
-    })
+    console.error('❌ API Sales Trends: Erro ao buscar tendências de vendas:', error)
+    
+    // Dados mockados em caso de erro
+    const mockData = [
+      { month: 'Jan', sales: 12000.0, orders: 45 },
+      { month: 'Fev', sales: 13500.0, orders: 52 },
+      { month: 'Mar', sales: 14200.0, orders: 58 },
+      { month: 'Abr', sales: 13800.0, orders: 55 },
+      { month: 'Mai', sales: 15600.0, orders: 62 },
+      { month: 'Jun', sales: 16200.0, orders: 68 }
+    ]
+    
+    console.log('📈 API Sales Trends: Retornando dados mockados')
+    return NextResponse.json(mockData)
   }
 } 

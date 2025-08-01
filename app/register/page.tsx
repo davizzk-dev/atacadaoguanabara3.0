@@ -1,24 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { Mail, Lock, Eye, EyeOff, ArrowLeft, User, Phone, MapPin, Home, Hash } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Mail, Lock, Eye, EyeOff, ArrowLeft, User, Phone, MapPin, Home, Hash, CheckCircle } from 'lucide-react'
+import { signIn } from 'next-auth/react'
 import Header from '@/components/header'
 import { Footer } from '@/components/footer'
 import { useAuthStore } from '@/lib/store'
-import { useEffect } from 'react'
-import { shippingService } from '@/lib/shipping'
+import { ShippingService } from '@/lib/shipping'
 import type { Address } from '@/lib/types'
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
     password: '',
     confirmPassword: '',
-    // Campos de endereço
     street: '',
     number: '',
     complement: '',
@@ -33,9 +32,27 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [isLoadingZipCode, setIsLoadingZipCode] = useState(false)
+  const [passwordStrength, setPasswordStrength] = useState(0)
+  const [isGoogleUser, setIsGoogleUser] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { register } = useAuthStore()
-  const [animateLogin, setAnimateLogin] = useState(false)
+
+  // Detectar se veio do Google e preencher dados
+  useEffect(() => {
+    const google = searchParams.get('google')
+    const name = searchParams.get('name')
+    const email = searchParams.get('email')
+    
+    if (google === 'true' && name && email) {
+      setIsGoogleUser(true)
+      setFormData(prev => ({
+        ...prev,
+        name: decodeURIComponent(name),
+        email: decodeURIComponent(email)
+      }))
+    }
+  }, [searchParams])
 
   // Formatar telefone
   const formatPhone = (value: string) => {
@@ -59,6 +76,18 @@ export default function RegisterPage() {
     return value.slice(0, 9)
   }
 
+  // Verificar força da senha
+  const checkPasswordStrength = (password: string) => {
+    let strength = 0
+    if (password.length >= 6) strength++
+    if (password.length >= 8) strength++
+    if (/[A-Z]/.test(password)) strength++
+    if (/[a-z]/.test(password)) strength++
+    if (/[0-9]/.test(password)) strength++
+    if (/[^A-Za-z0-9]/.test(password)) strength++
+    return Math.min(strength, 5)
+  }
+
   // Buscar endereço pelo CEP
   const handleZipCodeBlur = async () => {
     const zipCode = formData.zipCode.replace(/\D/g, '')
@@ -66,7 +95,7 @@ export default function RegisterPage() {
     if (zipCode.length === 8) {
       setIsLoadingZipCode(true)
       try {
-        const addressData = await shippingService.getAddressByZipCode(zipCode)
+        const addressData = await ShippingService.getAddressByZipCode(zipCode)
         if (addressData) {
           setFormData(prev => ({
             ...prev,
@@ -84,7 +113,7 @@ export default function RegisterPage() {
     }
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     
     if (name === 'phone') {
@@ -97,6 +126,12 @@ export default function RegisterPage() {
         ...formData,
         [name]: formatZipCode(value)
       })
+    } else if (name === 'password') {
+      setFormData({
+        ...formData,
+        [name]: value
+      })
+      setPasswordStrength(checkPasswordStrength(value))
     } else {
       setFormData({
         ...formData,
@@ -105,33 +140,56 @@ export default function RegisterPage() {
     }
   }
 
+  // Função para login social
+  const handleSocialLogin = async (provider: string) => {
+    try {
+      setIsLoading(true)
+      setError('')
+      
+      if (provider === 'Google') {
+        await signIn('google', { 
+          callbackUrl: '/',
+          redirect: true 
+        })
+      } else {
+        setError('Login social não implementado ainda.')
+      }
+    } catch (error) {
+      console.error('Erro no login social:', error)
+      setError('Erro ao fazer login social. Tente novamente.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError('')
 
-    // Validações
-    if (formData.password !== formData.confirmPassword) {
-      setError('As senhas não coincidem')
-      setIsLoading(false)
-      return
+    // Validações específicas para usuários Google vs usuários normais
+    if (!isGoogleUser) {
+      if (formData.password !== formData.confirmPassword) {
+        setError('As senhas não coincidem')
+        setIsLoading(false)
+        return
+      }
+
+      if (formData.password.length < 6) {
+        setError('A senha deve ter pelo menos 6 caracteres')
+        setIsLoading(false)
+        return
+      }
+
+      const phoneNumbers = formData.phone.replace(/\D/g, '')
+      if (phoneNumbers.length < 10) {
+        setError('Telefone inválido')
+        setIsLoading(false)
+        return
+      }
     }
 
-    if (formData.password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres')
-      setIsLoading(false)
-      return
-    }
-
-    // Validar telefone (deve ter pelo menos 10 dígitos)
-    const phoneNumbers = formData.phone.replace(/\D/g, '')
-    if (phoneNumbers.length < 10) {
-      setError('Telefone inválido')
-      setIsLoading(false)
-      return
-    }
-
-    // Validar endereço obrigatório
+    // Validar endereço obrigatório (para todos os usuários)
     if (!formData.street || !formData.number || !formData.neighborhood || !formData.city || !formData.state || !formData.zipCode) {
       setError('Todos os campos de endereço são obrigatórios')
       setIsLoading(false)
@@ -147,7 +205,6 @@ export default function RegisterPage() {
     }
 
     try {
-      // Criar objeto de endereço
       const address: Address = {
         street: formData.street,
         number: formData.number,
@@ -159,19 +216,42 @@ export default function RegisterPage() {
         reference: formData.reference || undefined
       }
 
-      // Registrar usuário com endereço
-      const success = await register({
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        password: formData.password,
-        address: address
-      } as any)
+      if (isGoogleUser) {
+        const response = await fetch('/api/auth/google-complete-registration', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            address: address
+          })
+        })
 
-      if (success) {
-        router.push('/')
+        if (response.ok) {
+          await signIn('google', { 
+            callbackUrl: '/',
+            redirect: true 
+          })
+        } else {
+          const errorData = await response.json()
+          setError(errorData.error || 'Erro ao completar cadastro. Tente novamente.')
+        }
       } else {
-        setError('Erro ao criar conta. Tente novamente.')
+        const success = await register({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
+          address: address
+        } as any)
+
+        if (success) {
+          router.push('/')
+        } else {
+          setError('Erro ao criar conta. Tente novamente.')
+        }
       }
     } catch (error) {
       console.error('Erro no registro:', error)
@@ -182,34 +262,48 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50">
       <Header />
       
-      <main className="max-w-2xl mx-auto px-4 py-12 pt-20">
-        <div className="bg-white rounded-2xl shadow-lg p-8">
+      <main className="max-w-4xl mx-auto px-4 py-8 pt-20">
+        <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 border border-orange-100">
           {/* Botões sociais */}
-          <div className="space-y-3 mt-2 mb-8">
-            <button className="w-full flex items-center justify-center space-x-3 bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+          <div className="space-y-3 mb-8">
+            <button 
+              onClick={() => handleSocialLogin('Google')}
+              disabled={isLoading}
+              className="w-full flex items-center justify-center space-x-3 bg-white border-2 border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02]"
+            >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
-              <span>Continuar com Google</span>
+              <span>{isLoading ? 'Entrando...' : 'Continuar com Google'}</span>
             </button>
-            <button className="w-full flex items-center justify-center space-x-3 bg-black text-white py-2 px-4 rounded-lg font-medium hover:bg-gray-800 transition-colors">
+            
+            <button className="w-full flex items-center justify-center space-x-3 bg-black text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-800 transition-all duration-200 transform hover:scale-[1.02]">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
               </svg>
               <span>Continuar com Apple</span>
             </button>
-            <button className="w-full flex items-center justify-center space-x-3 bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+            <button className="w-full flex items-center justify-center space-x-3 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-all duration-200 transform hover:scale-[1.02]">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
               </svg>
               <span>Continuar com Facebook</span>
             </button>
+          </div>
+
+          <div className="relative mb-8">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-white text-gray-500 font-medium">ou crie sua conta com email</span>
+            </div>
           </div>
 
           <div className="text-center mb-8">
@@ -220,13 +314,30 @@ export default function RegisterPage() {
               <ArrowLeft className="w-4 h-4" />
               <span>Voltar</span>
             </Link>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Criar conta</h1>
-            <p className="text-gray-600">Junte-se ao Atacadão Guanabara</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+              {isGoogleUser ? 'Complete seu cadastro' : 'Criar conta'}
+            </h1>
+            <p className="text-gray-600">
+              {isGoogleUser 
+                ? 'Preencha seu endereço para finalizar o cadastro' 
+                : 'Junte-se ao Atacadão Guanabara'
+              }
+            </p>
+            
+            {/* Mensagem especial para usuários Google */}
+            {isGoogleUser && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-blue-700 text-sm">
+                  ✅ Seus dados do Google foram preenchidos automaticamente. 
+                  Agora só precisamos do seu endereço para finalizar o cadastro.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-3">
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-3 animate-pulse">
               <span className="text-red-700 text-sm">{error}</span>
             </div>
           )}
@@ -234,121 +345,173 @@ export default function RegisterPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Informações Pessoais */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Informações Pessoais</h3>
+              <h3 className="text-lg font-semibold text-gray-900 border-b pb-2 flex items-center">
+                <User className="w-5 h-5 mr-2 text-orange-500" />
+                Informações Pessoais
+              </h3>
               
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                  Nome completo *
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
-                  placeholder="Seu nome completo"
-                  required
-                />
-              </div>
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                    Nome completo *
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type="text"
+                      id="name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
+                      placeholder="Seu nome completo"
+                      required
+                    />
+                  </div>
+                </div>
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email *
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
-                  placeholder="seu@email.com"
-                  required
-                />
-              </div>
-            </div>
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                    Email *
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
+                      placeholder="seu@email.com"
+                      required
+                    />
+                  </div>
+                </div>
 
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                  Telefone *
-              </label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
-                  placeholder="(85) 99999-9999"
-                  required
-                />
-              </div>
-            </div>
+                    <div>
+                      <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                        Telefone *
+                      </label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <input
+                          type="tel"
+                          id="phone"
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleChange}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
+                          placeholder="(85) 99999-9999"
+                          required
+                        />
+                      </div>
+                    </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                  Senha *
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
-                    placeholder="Mínimo 6 caracteres"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
+                {/* Campos de senha sempre visíveis */}
+                    <div>
+                      <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                        Senha *
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          id="password"
+                          name="password"
+                          value={formData.password}
+                          onChange={handleChange}
+                          className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
+                          placeholder="Mínimo 6 caracteres"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                      </div>
+                      {/* Indicador de força da senha */}
+                      {formData.password && (
+                        <div className="mt-2">
+                          <div className="flex space-x-1">
+                            {[1, 2, 3, 4, 5].map((level) => (
+                              <div
+                                key={level}
+                                className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                                  level <= passwordStrength
+                                    ? passwordStrength <= 2
+                                      ? 'bg-red-500'
+                                      : passwordStrength <= 3
+                                      ? 'bg-yellow-500'
+                                      : 'bg-green-500'
+                                    : 'bg-gray-200'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <p className={`text-xs mt-1 ${
+                            passwordStrength <= 2 ? 'text-red-600' :
+                            passwordStrength <= 3 ? 'text-yellow-600' : 'text-green-600'
+                          }`}>
+                            {passwordStrength <= 2 ? 'Senha fraca' :
+                             passwordStrength <= 3 ? 'Senha média' : 'Senha forte'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
 
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirmar senha *
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
-                  placeholder="Confirme sua senha"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
+                    <div>
+                      <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                        Confirmar senha *
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <input
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          value={formData.confirmPassword}
+                          onChange={handleChange}
+                          className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
+                            formData.confirmPassword && formData.password === formData.confirmPassword
+                              ? 'border-green-300 bg-green-50'
+                              : formData.confirmPassword && formData.password !== formData.confirmPassword
+                              ? 'border-red-300 bg-red-50'
+                              : 'border-gray-300'
+                          }`}
+                          placeholder="Confirme sua senha"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                        {formData.confirmPassword && (
+                          <div className="absolute right-10 top-1/2 transform -translate-y-1/2">
+                            {formData.password === formData.confirmPassword ? (
+                              <CheckCircle className="w-5 h-5 text-green-500" />
+                            ) : (
+                              <div className="w-5 h-5 text-red-500">✕</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
               </div>
-            </div>
             </div>
 
             {/* Endereço */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Endereço de Entrega *</h3>
+              <h3 className="text-lg font-semibold text-gray-900 border-b pb-2 flex items-center">
+                <MapPin className="w-5 h-5 mr-2 text-orange-500" />
+                Endereço de Entrega *
+              </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
@@ -364,7 +527,7 @@ export default function RegisterPage() {
                       value={formData.zipCode}
                       onChange={handleChange}
                       onBlur={handleZipCodeBlur}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                       placeholder="00000-000"
                       required
                     />
@@ -388,7 +551,7 @@ export default function RegisterPage() {
                       name="street"
                       value={formData.street}
                       onChange={handleChange}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                       placeholder="Nome da rua"
                       required
                     />
@@ -407,7 +570,7 @@ export default function RegisterPage() {
                       name="number"
                       value={formData.number}
                       onChange={handleChange}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                       placeholder="123"
                       required
                     />
@@ -424,7 +587,7 @@ export default function RegisterPage() {
                     name="complement"
                     value={formData.complement}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                     placeholder="Apto, bloco, etc."
                   />
                 </div>
@@ -439,7 +602,7 @@ export default function RegisterPage() {
                     name="neighborhood"
                     value={formData.neighborhood}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                     placeholder="Nome do bairro"
                     required
                   />
@@ -455,8 +618,8 @@ export default function RegisterPage() {
                     name="city"
                     value={formData.city}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
-                    placeholder="Fortaleza"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
+                    placeholder="Nome da cidade"
                     required
                   />
                 </div>
@@ -470,7 +633,7 @@ export default function RegisterPage() {
                     name="state"
                     value={formData.state}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                     required
                   >
                     <option value="">Selecione o estado</option>
@@ -490,23 +653,13 @@ export default function RegisterPage() {
                     <option value="PA">Pará</option>
                     <option value="PB">Paraíba</option>
                     <option value="PR">Paraná</option>
-                    <option value="PE">Pernambuco</option>
-                    <option value="PI">Piauí</option>
-                    <option value="RJ">Rio de Janeiro</option>
-                    <option value="RN">Rio Grande do Norte</option>
-                    <option value="RS">Rio Grande do Sul</option>
-                    <option value="RO">Rondônia</option>
-                    <option value="RR">Roraima</option>
-                    <option value="SC">Santa Catarina</option>
-                    <option value="SP">São Paulo</option>
-                    <option value="SE">Sergipe</option>
-                    <option value="TO">Tocantins</option>
+                  
                   </select>
                 </div>
 
                 <div className="md:col-span-2">
                   <label htmlFor="reference" className="block text-sm font-medium text-gray-700 mb-2">
-                    Ponto de Referência
+                    Referência
                   </label>
                   <input
                     type="text"
@@ -514,61 +667,46 @@ export default function RegisterPage() {
                     name="reference"
                     value={formData.reference}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
-                    placeholder="Próximo ao mercado, farmácia, etc."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
+                    placeholder="Ponto de referência (opcional)"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="flex items-start space-x-3">
-              <input 
-                type="checkbox" 
-                id="terms" 
-                className="rounded border-gray-300 text-orange-500 focus:ring-orange-500 mt-1" 
-                required
-              />
-              <label htmlFor="terms" className="text-sm text-gray-600">
-                Concordo com os{' '}
-                <Link href="/terms" className="text-orange-500 hover:text-orange-600">
-                  Termos de Uso
-                </Link>
-                {' '}e{' '}
-                <Link href="/privacy" className="text-orange-500 hover:text-orange-600">
-                  Política de Privacidade
-                </Link>
-              </label>
+            {/* Botão de submit */}
+            <div className="pt-6">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-orange-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-orange-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02]"
+              >
+                {isLoading ? 'Processando...' : (isGoogleUser ? 'Completar Cadastro' : 'Criar Conta')}
+              </button>
             </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-orange-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-orange-600 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Criando conta...' : 'Criar conta'}
-            </button>
+            {/* Link para login */}
+            <div className="text-center">
+              <p className="text-gray-600">
+                Já tem uma conta?{' '}
+                <Link href="/login" className="text-orange-500 hover:text-orange-600 font-medium">
+                  Fazer login
+                </Link>
+              </p>
+            </div>
           </form>
-          
-          {/* Botão Entrar discreto */}
-          <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={() => {
-                setAnimateLogin(true)
-                setTimeout(() => {
-                  setAnimateLogin(false)
-                  router.push('/login')
-                }, 700)
-              }}
-              className={`text-xs text-orange-500 hover:text-orange-600 font-bold px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 mt-2 ${animateLogin ? 'animate-bounce animate-pulse animate-shake scale-105' : ''}`}
-            >
-              Entrar
-            </button>
-          </div>
         </div>
       </main>
-
+      
       <Footer />
     </div>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div>Carregando...</div>}>
+      <RegisterPageContent />
+    </Suspense>
   )
 } 

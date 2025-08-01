@@ -5,16 +5,15 @@ import { useParams } from "next/navigation"
 import Header from "@/components/header"
 import { Footer } from "@/components/footer"
 import { ProductCard } from "@/components/product-card"
-import { ProductReviews } from "@/components/product-reviews"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { products } from "@/lib/data"
 import { useCartStore, useFavoritesStore } from "@/lib/store"
-import { Star, Heart, Share2, ShoppingCart, Truck, Shield, RotateCcw } from "lucide-react"
+import { Heart, Share2, ShoppingCart, Truck, Shield, RotateCcw, Check, ArrowLeft } from "lucide-react"
 import Image from "next/image"
-import type { Review } from "@/lib/types"
+import Link from "next/link"
 
 export default function ProductPage() {
   const params = useParams()
@@ -24,37 +23,8 @@ export default function ProductPage() {
   const { addFavorite, removeFavorite, isFavorite } = useFavoritesStore()
   const [selectedImage, setSelectedImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
-
-  // Mock reviews data
-  const mockReviews: Review[] = [
-    {
-      id: "1",
-      productId: productId,
-      userId: "1",
-      userName: "Maria Silva",
-      rating: 5,
-      comment: "Produto excelente! Chegou rapidinho e a qualidade é ótima. Recomendo!",
-      createdAt: new Date("2024-01-10"),
-    },
-    {
-      id: "2",
-      productId: productId,
-      userId: "2",
-      userName: "João Santos",
-      rating: 4,
-      comment: "Bom produto, preço justo. Só achei a embalagem um pouco danificada.",
-      createdAt: new Date("2024-01-08"),
-    },
-    {
-      id: "3",
-      productId: productId,
-      userId: "3",
-      userName: "Ana Costa",
-      rating: 5,
-      comment: "Sempre compro aqui! Qualidade garantida e entrega super rápida.",
-      createdAt: new Date("2024-01-05"),
-    },
-  ]
+  const [showAddAnimation, setShowAddAnimation] = useState(false)
+  const [showNotification, setShowNotification] = useState(false)
 
   const relatedProducts = products.filter((p) => p.category === product?.category && p.id !== productId).slice(0, 4)
 
@@ -76,6 +46,20 @@ export default function ProductPage() {
     for (let i = 0; i < quantity; i++) {
       addItem(product)
     }
+    
+    // Mostrar animação
+    setShowAddAnimation(true)
+    setShowNotification(true)
+    
+    // Esconder animação após 2 segundos
+    setTimeout(() => {
+      setShowAddAnimation(false)
+    }, 2000)
+    
+    // Esconder notificação após 3 segundos
+    setTimeout(() => {
+      setShowNotification(false)
+    }, 3000)
   }
 
   const handleToggleFavorite = () => {
@@ -89,8 +73,28 @@ export default function ProductPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
+      
+      {/* Notificação flutuante */}
+      {showNotification && (
+        <div className="fixed top-20 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-slide-in">
+          <div className="flex items-center space-x-2">
+            <Check className="w-5 h-5" />
+            <span className="font-medium">Produto adicionado ao carrinho!</span>
+          </div>
+        </div>
+      )}
 
       <div className="container mx-auto px-4 py-8">
+        {/* Botão Voltar ao Catálogo */}
+        <div className="mb-6">
+          <Link href="/catalog">
+            <Button variant="outline" className="flex items-center gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Voltar ao Catálogo
+            </Button>
+          </Link>
+        </div>
+
         {/* Breadcrumb */}
         <nav className="text-sm text-gray-600 mb-8">
           <span>Início</span> / <span>{product.category}</span> /{" "}
@@ -147,21 +151,7 @@ export default function ProductPage() {
               )}
             </div>
 
-            {/* Rating */}
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`h-5 w-5 ${
-                      i < Math.floor(product.rating) ? "text-yellow-400 fill-current" : "text-gray-300"
-                    }`}
-                  />
-                ))}
-              </div>
-              <span className="text-lg font-medium">{product.rating}</span>
-              <span className="text-gray-600">({product.reviews} avaliações)</span>
-            </div>
+
 
             {/* Price */}
             <div className="space-y-2">
@@ -175,17 +165,30 @@ export default function ProductPage() {
               {product.unit && <p className="text-gray-600">por {product.unit}</p>}
             </div>
 
-            {/* Description */}
+            {/* Ver mais button */}
             <div>
-              <h3 className="font-semibold text-lg mb-2">Descrição</h3>
-              <p className="text-gray-700 leading-relaxed">{product.description}</p>
+              <Button 
+                variant="outline" 
+                className="bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:border-blue-700 font-medium"
+                onClick={() => {
+                  // Scroll para as abas
+                  document.querySelector('[data-value="description"]')?.scrollIntoView({ behavior: 'smooth' })
+                  // Ativar a aba de descrição
+                  const descriptionTab = document.querySelector('[data-value="description"]') as HTMLElement
+                  if (descriptionTab) {
+                    descriptionTab.click()
+                  }
+                }}
+              >
+                Ver mais
+              </Button>
             </div>
 
-            {/* Stock */}
+            {/* Status de disponibilidade */}
             <div className="flex items-center space-x-2">
-              <div className={`w-3 h-3 rounded-full ${product.stock > 10 ? "bg-green-500" : "bg-red-500"}`}></div>
-              <span className={`font-medium ${product.stock > 10 ? "text-green-600" : "text-red-600"}`}>
-                {product.stock > 10 ? "Em estoque" : `Apenas ${product.stock} restantes`}
+              <div className="w-3 h-3 rounded-full bg-green-500"></div>
+              <span className="font-medium text-green-600">
+                Sem estoque - Adicione quantos quiser
               </span>
             </div>
 
@@ -202,7 +205,7 @@ export default function ProductPage() {
                   </button>
                   <span className="px-4 py-2 font-medium">{quantity}</span>
                   <button
-                    onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
+                    onClick={() => setQuantity(quantity + 1)}
                     className="px-3 py-2 hover:bg-gray-100 transition-colors"
                   >
                     +
@@ -214,10 +217,22 @@ export default function ProductPage() {
                 <Button
                   onClick={handleAddToCart}
                   disabled={product.stock === 0}
-                  className="flex-1 bg-secondary hover:bg-secondary/90 text-white font-bold py-4 text-lg"
+                  className={`flex-1 bg-secondary hover:bg-secondary/90 text-white font-bold py-4 text-lg relative overflow-hidden transition-all duration-300 ${
+                    showAddAnimation ? 'animate-pulse-glow' : ''
+                  }`}
                 >
                   <ShoppingCart className="h-5 w-5 mr-2" />
                   Adicionar ao Carrinho
+                  
+                  {/* Animação de confirmação */}
+                  {showAddAnimation && (
+                    <div className="absolute inset-0 bg-green-500 flex items-center justify-center animate-slide-in">
+                      <div className="flex items-center space-x-2 text-white">
+                        <Check className="w-6 h-6 animate-bounce" />
+                        <span className="font-bold">Adicionado!</span>
+                      </div>
+                    </div>
+                  )}
                 </Button>
 
                 <Button
@@ -272,47 +287,41 @@ export default function ProductPage() {
         {/* Product Details Tabs */}
         <Card className="mb-16">
           <CardContent className="p-0">
-            <Tabs defaultValue="reviews" className="w-full">
+            <Tabs defaultValue="description" className="w-full">
               <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="reviews">Avaliações</TabsTrigger>
+                <TabsTrigger value="description" data-value="description">Descrição</TabsTrigger>
                 <TabsTrigger value="details">Detalhes</TabsTrigger>
                 <TabsTrigger value="shipping">Entrega</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="reviews" className="p-6">
-                <ProductReviews
-                  productId={product.id}
-                  reviews={mockReviews}
-                  averageRating={product.rating}
-                  totalReviews={product.reviews}
-                />
+              <TabsContent value="description" className="p-6">
+                <div className="space-y-4">
+                  <h3 className="text-xl font-bold">Descrição do Produto</h3>
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <p className="text-gray-700 leading-relaxed text-lg">{product.description}</p>
+                  </div>
+                </div>
               </TabsContent>
 
               <TabsContent value="details" className="p-6">
                 <div className="space-y-4">
                   <h3 className="text-xl font-bold">Informações do Produto</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <h4 className="font-semibold mb-2">Especificações</h4>
-                      <ul className="space-y-2 text-gray-700">
-                        <li>
-                          <strong>Marca:</strong> {product.brand}
-                        </li>
-                        <li>
-                          <strong>Categoria:</strong> {product.category}
-                        </li>
-                        <li>
-                          <strong>Unidade:</strong> {product.unit}
-                        </li>
-                        <li>
-                          <strong>Código:</strong> {product.id}
-                        </li>
-                      </ul>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold mb-2">Características</h4>
-                      <p className="text-gray-700">{product.description}</p>
-                    </div>
+                  <div>
+                    <h4 className="font-semibold mb-2">Especificações</h4>
+                    <ul className="space-y-2 text-gray-700">
+                      <li>
+                        <strong>Marca:</strong> {product.brand}
+                      </li>
+                      <li>
+                        <strong>Categoria:</strong> {product.category}
+                      </li>
+                      <li>
+                        <strong>Unidade:</strong> {product.unit}
+                      </li>
+                      <li>
+                        <strong>Código:</strong> {product.id}
+                      </li>
+                    </ul>
                   </div>
                 </div>
               </TabsContent>

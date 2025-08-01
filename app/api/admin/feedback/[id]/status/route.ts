@@ -1,4 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { promises as fs } from 'fs'
+import path from 'path'
+
+const feedbackPath = path.join(process.cwd(), 'data', 'feedback.json')
+
+async function ensureDataFile() {
+  const dir = path.dirname(feedbackPath)
+  try {
+    await fs.mkdir(dir, { recursive: true })
+  } catch (error) {
+    console.error('Erro ao criar diretório:', error)
+  }
+  
+  try {
+    await fs.access(feedbackPath)
+  } catch {
+    await fs.writeFile(feedbackPath, JSON.stringify([], null, 2))
+  }
+}
 
 export async function PUT(
   request: NextRequest,
@@ -9,21 +28,22 @@ export async function PUT(
     const body = await request.json()
     const { status } = body
     
-    // Conectar com o backend Java
-    const response = await fetch(`http://localhost:8080/api/admin/feedback/${id}/status`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ status }),
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+    await ensureDataFile()
+    const data = await fs.readFile(feedbackPath, 'utf-8')
+    const feedbacks = JSON.parse(data)
+    
+    const feedbackIndex = feedbacks.findIndex((feedback: any) => feedback.id === id)
+    if (feedbackIndex === -1) {
+      return NextResponse.json({ error: 'Feedback não encontrado' }, { status: 404 })
     }
-
-    const data = await response.json()
-    return NextResponse.json(data)
+    
+    feedbacks[feedbackIndex].status = status
+    feedbacks[feedbackIndex].updatedAt = new Date().toISOString()
+    
+    await fs.writeFile(feedbackPath, JSON.stringify(feedbacks, null, 2))
+    
+    console.log(`✅ Feedback ${id} atualizado para status: ${status}`)
+    return NextResponse.json({ success: true, feedback: feedbacks[feedbackIndex] })
   } catch (error) {
     console.error('Erro ao atualizar status do feedback:', error)
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })

@@ -21,6 +21,19 @@ import { useAuthStore } from '@/lib/store'
 import { ProductCard } from '@/components/product-card'
 
 export default function HomePage() {
+  // Verificar se é a primeira visita
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hasVisitedBefore = localStorage.getItem('hasVisitedBefore')
+      if (!hasVisitedBefore) {
+        // Primeira visita - redirecionar para catálogo
+        localStorage.setItem('hasVisitedBefore', 'true')
+        window.location.href = '/catalog'
+      }
+      // Se já visitou antes, não redirecionar - permitir acesso à página inicial
+    }
+  }, [])
+
   const { searchQuery } = useUIStore()
   const { addItem } = useCartStore() // Corrigido
   const { addFavorite, removeFavorite, favorites } = useFavoritesStore() // Corrigido
@@ -80,10 +93,52 @@ export default function HomePage() {
     if (typeof window !== 'undefined') localStorage.setItem('hideSignupModal', '1')
   }
 
+  // Função para aplicar promoções aos produtos
+  const applyPromotionsToProducts = (products: any[], promotions: any[]) => {
+    return products.map(product => {
+      const promotion = promotions.find(p => p.productId === product.id && p.isActive)
+      if (promotion) {
+        // Se há uma promoção ativa, ela tem prioridade sobre o originalPrice predefinido
+        return {
+          ...product,
+          price: promotion.newPrice,
+          originalPrice: promotion.originalPrice, // Usa o originalPrice da promoção
+          discount: promotion.discount,
+          promotionImage: promotion.image,
+          hasActivePromotion: true // Marca que tem promoção ativa
+        }
+      }
+      return product
+    })
+  }
+
   useEffect(() => {
-    // Simular carregamento
-    const timer = setTimeout(() => setIsLoading(false), 1000)
-    return () => clearTimeout(timer)
+    const loadData = async () => {
+      try {
+        // Carregar promoções
+        const promotionsResponse = await fetch('/api/admin/product-promotions')
+        if (promotionsResponse.ok) {
+          const promotionsData = await promotionsResponse.json()
+          setProductPromotions(promotionsData)
+          
+          // Aplicar promoções aos produtos
+          const productsWithPromotions = applyPromotionsToProducts(productsData, promotionsData)
+          setProducts(productsWithPromotions)
+          
+          // Produtos em destaque (primeiros 8 com promoções aplicadas)
+          setFeaturedProducts(productsWithPromotions.slice(0, 8))
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error)
+        // Fallback para dados originais
+        setProducts(productsData)
+        setFeaturedProducts(productsData.slice(0, 8))
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadData()
   }, [])
 
   // Carregar produtos e promoções da API
@@ -349,9 +404,8 @@ export default function HomePage() {
                   
                   // Se não encontrar, tentar como números
                   if (!product) {
-                    const productId = typeof p.id === 'string' ? parseInt(p.id) : p.id
                     const promotionProductId = typeof promotion.productId === 'string' ? parseInt(promotion.productId) : promotion.productId
-                    product = products.find(p => productId === promotionProductId)
+                    product = products.find(p => p.id === promotionProductId)
                   }
                   
                   console.log('Promoção ID:', promotion.productId, 'Produto encontrado:', !!product, 'Nome do produto:', product?.name, 'ID do produto:', product?.id)
@@ -603,8 +657,21 @@ export default function HomePage() {
                   <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full font-semibold ml-auto">{modalProduct.unit}</span>
                 </div>
 
-                {/* Descrição */}
-                <p className="text-gray-700 text-base mb-4 leading-relaxed">{modalProduct.description}</p>
+                {/* Ver mais button */}
+                <div className="mb-4">
+                  <Button 
+                    variant="outline" 
+                    className="bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:border-blue-700 font-medium"
+                    onClick={() => {
+                      // Fechar modal
+                      setModalProduct(null)
+                      // Navegar para a página do produto
+                      window.location.href = `/product/${modalProduct.id}`
+                    }}
+                  >
+                    Ver mais
+                  </Button>
+                </div>
 
                 {/* Controles de quantidade */}
                 <div className="flex items-center justify-center mb-6">
@@ -638,6 +705,32 @@ export default function HomePage() {
           </DialogContent>
         </Dialog>
       )}
+      
+      {/* Carrinho Flutuante */}
+      <div className="fixed bottom-8 right-6 md:bottom-10 md:right-8 z-50" style={{ zIndex: 9999 }}>
+        <a href="/cart">
+          <div className="relative group cursor-pointer">
+            {/* Botão principal do carrinho */}
+            <div className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-full p-3 md:p-4 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+              <svg className="h-5 w-5 md:h-6 md:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
+              </svg>
+            </div>
+            
+            {/* Aba com texto */}
+            <div className="absolute bottom-full right-0 mb-3 bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-2 md:px-4 md:py-3 rounded-lg shadow-xl whitespace-nowrap border border-orange-400">
+              <div className="text-sm md:text-base font-bold text-center">
+                Carrinho
+              </div>
+              <div className="text-xs opacity-90 text-center mt-1">
+                Clique para ver
+              </div>
+              {/* Seta da aba */}
+              <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-orange-500"></div>
+            </div>
+          </div>
+        </a>
+      </div>
     </div>
   )
 }

@@ -2,12 +2,15 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Menu, X, ShoppingCart, Heart, User, Home, Package, MessageSquare, Camera, FileText, HelpCircle, Settings, LogOut, Info } from 'lucide-react'
+import { Menu, X, ShoppingCart, Heart, User, Home, Package, MessageSquare, Camera, FileText, HelpCircle, Settings, LogOut, Info, Search, RefreshCw } from 'lucide-react'
 import { useCartStore, useFavoritesStore } from '@/lib/store'
 import { useAuth } from '@/hooks/use-auth'
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showSearchResults, setShowSearchResults] = useState(false)
+  const [searchResults, setSearchResults] = useState<any[]>([])
   const { getItemCount } = useCartStore()
   const { favorites } = useFavoritesStore()
   const { user, logout } = useAuth()
@@ -20,19 +23,57 @@ export default function Header() {
     setIsMenuOpen(false)
   }
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (searchQuery.trim()) {
+      // Redirecionar para o catálogo com a busca
+      window.location.href = `/catalog?search=${encodeURIComponent(searchQuery.trim())}`
+    }
+  }
+
+  // Busca em tempo real
+  const handleSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value
+    setSearchQuery(query)
+    
+    if (query.trim().length > 1) {
+      try {
+        const response = await fetch(`/api/products?search=${encodeURIComponent(query)}`)
+        if (response.ok) {
+          const products = await response.json()
+          setSearchResults(products.slice(0, 8)) // Limitar a 8 resultados
+          setShowSearchResults(true)
+        }
+      } catch (error) {
+        console.error('Erro na busca:', error)
+      }
+    } else {
+      setShowSearchResults(false)
+      setSearchResults([])
+    }
+  }
+
+  const handleProductClick = (productId: string) => {
+    window.location.href = `/product/${productId}`
+    setShowSearchResults(false)
+    setSearchQuery('')
+  }
+
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50 min-h-[64px]">
+    <header className="bg-orange-500 shadow-sm border-b border-gray-200 sticky top-0 z-50 min-h-[64px]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
+          <Link href="/" className="flex items-center space-x-2 flex-shrink-0">
           <img
             src="https://i.ibb.co/fGSnH3hd/logoatacad-o.jpg"
               alt="Atacadão Guanabara"
-              className="h-10 w-auto"
+              className="h-12 w-auto"
             />
-            <span className="text-xl font-bold text-gray-900 hidden sm:block">Atacadão Guanabara</span>
+            <span className="text-xl font-bold text-white hidden sm:block">Atacadão Guanabara</span>
           </Link>
+
+
 
           {/* Desktop Actions */}
           <div className="flex items-center space-x-4">
@@ -64,10 +105,10 @@ export default function Header() {
               </div>
             ) : (
               <div className="flex items-center space-x-2 sm:space-x-3">
-                <Link href="/login" className="text-gray-700 hover:text-orange-600 transition-colors font-medium text-sm sm:text-base">
+                <Link href="/login" className="text-white hover:text-orange-200 transition-colors font-medium text-sm sm:text-base">
                   Entrar
                 </Link>
-                <Link href="/register" className="bg-orange-500 text-white px-2 py-1 sm:px-4 sm:py-2 rounded-lg hover:bg-orange-600 transition-colors font-medium text-sm sm:text-base">
+                <Link href="/register" className="bg-blue-600 text-white px-2 py-1 sm:px-4 sm:py-2 rounded-lg hover:bg-orange-700 transition-colors font-medium text-sm sm:text-base">
                   Criar Conta
                 </Link>
               </div>
@@ -92,6 +133,60 @@ export default function Header() {
               )}
           </button>
           </div>
+        </div>
+      </div>
+
+      {/* Search Bar Mobile - Linha separada */}
+      <div className="md:hidden border-t border-orange-400 bg-orange-500">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <form onSubmit={handleSearch} className="relative">
+            <input
+              type="text"
+              placeholder="Pesquisar produtos ou marcas..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              onFocus={() => searchQuery.length > 2 && setShowSearchResults(true)}
+              onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
+              className="w-full px-4 py-2 pl-10 pr-10 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white"
+            />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            
+            {/* Resultados da busca mobile */}
+            {showSearchResults && searchResults.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+                <div className="p-4">
+                  <div className="text-sm font-semibold text-gray-700 mb-3">PRODUTOS PARA: {searchQuery.toUpperCase()}</div>
+                  <div className="space-y-3">
+                    {searchResults.map((product) => (
+                      <button
+                        key={product.id}
+                        onClick={() => handleProductClick(product.id)}
+                        className="w-full text-left hover:bg-gray-50 rounded-lg p-3 transition-colors"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <img
+                            src={product.image}
+                            alt={product.name}
+                            className="w-12 h-12 object-cover rounded-lg"
+                          />
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900 text-sm line-clamp-2">{product.name}</div>
+                            <div className="text-sm text-orange-600 font-semibold">R$ {product.price.toFixed(2)}</div>
+                            {product.originalPrice && product.originalPrice > product.price && (
+                              <div className="text-xs text-gray-500 line-through">R$ {product.originalPrice.toFixed(2)}</div>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            {product.stock > 0 ? `${product.stock} em estoque` : 'Fora de estoque'}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </form>
         </div>
       </div>
 
@@ -253,6 +348,20 @@ export default function Header() {
                   </Link>
 
                   <Link 
+                    href="/returns" 
+                    className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors mobile-tap-highlight group"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                      <RefreshCw className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <span className="font-medium text-gray-900">Trocas e Devoluções</span>
+                      <p className="text-xs text-gray-500">Solicitar troca ou devolução</p>
+                    </div>
+                  </Link>
+
+                  <Link 
                     href="/about" 
                     className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors mobile-tap-highlight group"
                     onClick={() => setIsMenuOpen(false)}
@@ -320,6 +429,8 @@ export default function Header() {
               </div>
           </div>
         )}
+
+
     </header>
   )
 } 

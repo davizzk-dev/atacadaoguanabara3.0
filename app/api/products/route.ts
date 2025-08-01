@@ -1,109 +1,96 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { products } from '@/lib/data'
+import { getAllProductsFromFile } from '@/lib/data'
 
 export async function GET(request: NextRequest) {
   try {
-    // Conectar com o backend Java
-    const response = await fetch('http://localhost:8080/api/products', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+    const { searchParams } = new URL(request.url)
+    const search = searchParams.get('search')
+    
+    // Carregar produtos do arquivo JSON (produtos dinâmicos)
+    let allProducts = []
+    try {
+      allProducts = await getAllProductsFromFile()
+      console.log('📦 Produtos carregados do arquivo JSON:', allProducts.length)
+    } catch (error) {
+      console.error('❌ Erro ao carregar produtos do JSON, usando produtos estáticos:', error)
+      allProducts = products
     }
-
-    const data = await response.json()
-    return NextResponse.json(data)
-  } catch (error) {
-    console.error('Erro ao buscar produtos:', error)
-    // Dados mockados em caso de erro
-    return NextResponse.json([
-      {
-        id: 1,
-        name: "ÁGUA MINERAL NATURAGUA 1,5L",
-        price: 2.99,
-        originalPrice: 2.30,
-        image: "https://i.ibb.co/N65dsgfh/aguanaturagua1-5l.jpg",
-        category: "Bebidas",
-        description: "Água mineral natural 1,5 litros",
-        stock: 6,
-        rating: 4.5,
-        reviews: 12,
-        brand: "Naturagua",
-        unit: "1,5L"
-      },
-      {
-        id: 2,
-        name: "ÁGUA MINERAL NATURAGUA 500ML C/ GÁS",
-        price: 1.99,
-        originalPrice: 1.44,
-        image: "https://i.ibb.co/p6WM3mnK/aguacomg-s.jpg",
-        category: "Bebidas",
-        description: "Água mineral com C/GÁS 500ml",
-        stock: 12,
-        rating: 4.3,
-        reviews: 8,
-        brand: "Naturagua",
-        unit: "500ml"
-      },
-      {
-        id: 3,
-        name: "ÁGUA MINERAL NATURAGUA 500ML S/ GÁS",
-        price: 1.49,
-        originalPrice: 1.08,
-        image: "https://i.ibb.co/4gVp5kbz/aguasemg-s.jpg",
-        category: "Bebidas",
-        description: "Água mineral sem gás 500ml",
-        stock: 12,
-        rating: 4.4,
-        reviews: 15,
-        brand: "Naturagua",
-        unit: "500ml"
-      },
-      {
-        id: 4,
-        name: "AMENDOIM EM BANDA CASTRO 1KG",
-        price: 13.99,
-        originalPrice: 13.49,
-        image: "https://i.ibb.co/PZ9HLZrg/amendoimembanda.jpg",
-        category: "Snacks",
-        description: "Amendoim em banda tradicional 1kg",
-        stock: 4,
-        rating: 4.7,
-        reviews: 25,
-        brand: "Castro",
-        unit: "1kg"
-      },
-      {
-        id: 5,
-        name: "ARROZ BRANCO NAMORADO 1KG",
-        price: 5.69,
-        originalPrice: 5.29,
-        image: "https://i.ibb.co/V0rGtJcP/arroznamorado.jpg",
-        category: "Grãos",
-        description: "Arroz branco tipo 1 1kg",
-        stock: 10,
-        rating: 4.6,
-        reviews: 45,
-        brand: "Namorado",
-        unit: "1kg"
-      },
-      {
-        id: 6,
-        name: "ARROZ BRANCO PAI JOÃO 1KG",
-        price: 5.49,
-        originalPrice: 5.39,
-        image: "https://i.ibb.co/gbzsG1wc/arrozbrancopaijo-o.jpg",
-        category: "Grãos",
-        description: "Arroz branco tipo 1 1kg",
-        stock: 10,
-        rating: 4.5,
-        reviews: 38,
-        brand: "Pai João",
-        unit: "1kg"
+    
+    if (!search) {
+      return NextResponse.json(allProducts) // Retorna todos os produtos se não houver busca
+    }
+    
+    const searchLower = search.toLowerCase()
+    const searchWords = searchLower.split(' ').filter(word => word.length > 0)
+    
+    const filteredProducts = allProducts.filter((product: any) => {
+      const productText = [
+        product.name.toLowerCase(),
+        (product.brand?.toLowerCase() || ''),
+        product.category.toLowerCase(),
+        (product.description?.toLowerCase() || ''),
+        (product.tags?.join(' ').toLowerCase() || '')
+      ].join(' ')
+      
+      // Busca exata
+      if (productText.includes(searchLower)) {
+        return true
       }
-    ])
+      
+      // Busca por palavras individuais
+      return searchWords.some(word => productText.includes(word))
+    })
+    
+    // Ordenar por relevância
+    const scoredProducts = filteredProducts.map((product: any) => {
+      let score = 0
+      const productText = [
+        product.name.toLowerCase(),
+        (product.brand?.toLowerCase() || ''),
+        product.category.toLowerCase(),
+        (product.description?.toLowerCase() || ''),
+        (product.tags?.join(' ').toLowerCase() || '')
+      ].join(' ')
+      
+      // Pontuação por posição da busca no nome
+      if (product.name.toLowerCase().startsWith(searchLower)) {
+        score += 100
+      } else if (product.name.toLowerCase().includes(searchLower)) {
+        score += 50
+      }
+      
+      // Pontuação por marca
+      if (product.brand?.toLowerCase().includes(searchLower)) {
+        score += 30
+      }
+      
+      // Pontuação por categoria
+      if (product.category.toLowerCase().includes(searchLower)) {
+        score += 20
+      }
+      
+      // Pontuação por palavras individuais
+      searchWords.forEach(word => {
+        if (productText.includes(word)) {
+          score += 10
+        }
+      })
+      
+      return { ...product, _score: score }
+    })
+    
+    // Ordenar por pontuação (maior primeiro)
+    scoredProducts.sort((a: any, b: any) => b._score - a._score)
+    
+    // Remover a pontuação antes de retornar
+    const result = scoredProducts.map(({ _score, ...product }: any) => product)
+    
+    console.log(`Busca por "${search}" retornou ${result.length} produtos`)
+    
+    return NextResponse.json(result)
+  } catch (error) {
+    console.error('Erro na busca de produtos:', error)
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
 } 

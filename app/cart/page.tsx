@@ -2,12 +2,14 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Trash2, Minus, Plus, MapPin, Phone, User, AlertCircle, Truck, Calculator } from 'lucide-react'
+import { Trash2, Minus, Plus, MapPin, Phone, User, AlertCircle, Truck, Calculator, Heart, Star } from 'lucide-react'
 import Header from '@/components/header'
 import { Footer } from '@/components/footer'
 import { useCartStore, useAuthStore, useOrderStore } from '@/lib/store'
 import { shippingService } from '@/lib/shipping'
 import type { Address, ShippingCalculation } from '@/lib/types'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, getTotal, clearCart } = useCartStore()
@@ -18,6 +20,9 @@ export default function CartPage() {
   const [debugInfo, setDebugInfo] = useState<string | null>(null)
   const [shippingCalculation, setShippingCalculation] = useState<ShippingCalculation | null>(null)
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false)
+  const [showThankYouDialog, setShowThankYouDialog] = useState(false)
+  const [showRatingDialog, setShowRatingDialog] = useState(false)
+  const [orderId, setOrderId] = useState<string | null>(null)
   const router = useRouter()
   const errorRef = useRef<HTMLDivElement>(null)
 
@@ -129,6 +134,13 @@ export default function CartPage() {
       return
     }
 
+    // Verificar valor mínimo de R$ 100
+    const subtotal = getTotal()
+    if (subtotal < 100) {
+      setError(`Valor mínimo para pedido é R$ 100,00. Seu carrinho tem R$ ${subtotal.toFixed(2)}.`)
+      return
+    }
+
     setIsLoading(true)
 
     try {
@@ -136,42 +148,86 @@ export default function CartPage() {
       console.log('Usuário:', user)
       console.log('Itens:', items)
 
-      // Obter dados do formulário
-      const formData = new FormData(document.querySelector('form') as HTMLFormElement)
-      const customerName = formData.get('name') as string || user?.name || ''
-      const customerPhone = formData.get('phone') as string || user?.phone || ''
-      const customerEmail = formData.get('email') as string || user?.email || ''
+      // Obter dados do localStorage (dados salvos automaticamente)
+      let formData
+      try {
+        const savedData = localStorage.getItem('cartFormData')
+        formData = savedData ? JSON.parse(savedData) : {}
+      } catch (error) {
+        console.error('Erro ao carregar dados do formulário:', error)
+        formData = {}
+      }
 
-      // Obter dados de endereço
-      const street = formData.get('street') as string || ''
-      const number = formData.get('number') as string || ''
-      const complement = formData.get('complement') as string || ''
-      const neighborhood = formData.get('neighborhood') as string || ''
-      const city = formData.get('city') as string || ''
-      const state = formData.get('state') as string || ''
-      const zipCode = formData.get('zipCode') as string || ''
+      const customerName = formData.name || user?.name || ''
+      const customerPhone = formData.phone || user?.phone || ''
+      const customerEmail = formData.email || user?.email || ''
+      const street = formData.street || ''
+      const number = formData.number || ''
+      const complement = formData.complement || ''
+      const neighborhood = formData.neighborhood || ''
+      const city = formData.city || ''
+      const state = formData.state || ''
+      const zipCode = formData.zipCode || ''
+
+      // Debug: mostrar valores obtidos
+      console.log('Dados do formulário:', {
+        customerName,
+        customerPhone,
+        customerEmail,
+        street,
+        number,
+        neighborhood,
+        city,
+        state,
+        zipCode
+      })
+
+      // Debug: mostrar dados carregados
+      console.log('Dados carregados do localStorage:', formData)
 
       // Validar dados obrigatórios
       if (!customerName.trim()) {
         setError('Nome é obrigatório.')
+        setDebugInfo(`Nome obtido: "${customerName}"`)
         return
       }
 
       if (!customerPhone.trim()) {
         setError('Telefone é obrigatório.')
+        setDebugInfo(`Telefone obtido: "${customerPhone}"`)
         return
       }
 
-      if (!customerEmail.trim()) {
-        setError('Email é obrigatório.')
+      // Email é opcional, mas se fornecido deve ser válido
+      if (customerEmail.trim() && !customerEmail.includes('@')) {
+        setError('Email deve ser válido (contém @).')
+        setDebugInfo(`Email obtido: "${customerEmail}"`)
         return
       }
 
-      // Validar endereço
-      if (!street || !number || !neighborhood || !city || !state || !zipCode) {
-        setError('Todos os campos de endereço são obrigatórios.')
+      // Validar endereço - verificar se os campos estão preenchidos
+      const addressFields = { street, number, neighborhood, city, state, zipCode }
+      const emptyFields = Object.entries(addressFields)
+        .filter(([key, value]) => !value || !value.trim())
+        .map(([key]) => key)
+
+      if (emptyFields.length > 0) {
+        const fieldNames = {
+          street: 'Rua',
+          number: 'Número',
+          neighborhood: 'Bairro',
+          city: 'Cidade',
+          state: 'Estado',
+          zipCode: 'CEP'
+        }
+        const missingFields = emptyFields.map(field => fieldNames[field as keyof typeof fieldNames]).join(', ')
+        setError(`Preencha os campos obrigatórios: ${missingFields}`)
+        setDebugInfo(`Campos vazios: ${emptyFields.join(', ')}`)
         return
       }
+
+      // Obter referência do localStorage
+      const reference = formData.reference || ''
 
       // Criar objeto de endereço
       const address: Address = {
@@ -182,7 +238,7 @@ export default function CartPage() {
         city,
         state,
         zipCode,
-        reference: formData.get('reference') as string || undefined
+        reference: reference || undefined
       }
 
       // Calcular frete se ainda não foi calculado
@@ -221,6 +277,8 @@ export default function CartPage() {
       }
 
       // Salvar pedido na API
+      console.log('📤 Enviando pedido para API:', JSON.stringify(order, null, 2))
+      
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: {
@@ -229,12 +287,27 @@ export default function CartPage() {
         body: JSON.stringify(order)
       })
 
+      console.log('📥 Resposta da API:', response.status, response.statusText)
+      
       if (response.ok) {
-        const savedOrder = await response.json()
-        console.log('Pedido salvo:', savedOrder)
+        const responseText = await response.text()
+        console.log('📄 Resposta completa:', responseText)
+        
+        let savedOrder
+        try {
+          savedOrder = JSON.parse(responseText)
+          console.log('✅ Pedido salvo:', savedOrder)
+        } catch (parseError) {
+          console.error('❌ Erro ao fazer parse da resposta:', parseError)
+          setError('Erro ao processar resposta do servidor')
+          return
+        }
         
         // Salvar pedido no store local
-        addOrder(savedOrder)
+        addOrder(savedOrder.order || savedOrder)
+        
+        // Armazenar ID do pedido para redirecionamento
+        setOrderId(savedOrder.order?.id || savedOrder.id)
 
         // Enviar para WhatsApp
         const orderItems = items.map(item => 
@@ -281,13 +354,13 @@ Obrigado pela preferência! 🧡`
         // Limpar carrinho
         clearCart()
         
-        // Mostrar mensagem de sucesso
-        alert('Seu pedido foi enviado! Finalize a conversa no WhatsApp. Obrigado por comprar no Atacadão Guanabara! 🧡')
-        router.push('/')
+        // Mostrar popup de agradecimento
+        setShowThankYouDialog(true)
       } else {
-        const errorData = await response.json()
-        console.error('Erro da API:', errorData)
-        setError(`Erro ao processar pedido: ${errorData.error || 'Tente novamente.'}`)
+        const errorText = await response.text()
+        console.error('❌ Erro na API:', response.status, errorText)
+        setError(`Erro ao salvar pedido: ${response.status} - ${errorText}`)
+        return
       }
     } catch (error) {
       console.error('Erro completo:', error)
@@ -350,7 +423,32 @@ Obrigado pela preferência! 🧡`
                   </div>
                 </div>
 
+                {/* Aviso de valor mínimo */}
+                <div className={`border-l-4 rounded-xl px-4 py-3 mb-2 text-center shadow ${
+                  getTotal() >= 100 
+                    ? 'bg-green-50 border-green-400 text-green-700' 
+                    : 'bg-red-50 border-red-400 text-red-700 animate-pulse'
+                }`}>
+                  <div className="flex items-center justify-center gap-2">
+                    <AlertCircle className="w-5 h-5" />
+                    <span className="font-bold">
+                      {getTotal() >= 100 
+                        ? '✅ Valor mínimo atingido!' 
+                        : `Valor mínimo: R$ 100,00 (Faltam R$ ${(100 - getTotal()).toFixed(2)})`
+                      }
+                    </span>
+                  </div>
+                </div>
 
+                {/* Informações sobre frete */}
+                <div className="bg-blue-50 border-l-4 border-blue-400 text-blue-700 rounded-xl px-4 py-3 mb-2 text-center shadow">
+                  <div className="flex items-center justify-center gap-2">
+                    <Truck className="w-5 h-5" />
+                    <span className="font-bold">
+                      Frete: R$ 3,00 por km | Grátis em pedidos acima de R$ 150,00
+                    </span>
+                  </div>
+                </div>
 
               {/* Informações de debug */}
               {debugInfo && (
@@ -377,25 +475,31 @@ Obrigado pela preferência! 🧡`
                   <button
                     type="button"
                     onClick={async () => {
-                      const form = document.querySelector('form') as HTMLFormElement
-                      if (form) {
-                        const formData = new FormData(form)
-                        const address: Address = {
-                          street: formData.get('street') as string,
-                          number: formData.get('number') as string,
-                          complement: formData.get('complement') as string || undefined,
-                          neighborhood: formData.get('neighborhood') as string,
-                          city: formData.get('city') as string,
-                          state: formData.get('state') as string,
-                          zipCode: formData.get('zipCode') as string,
-                          reference: formData.get('reference') as string || undefined
-                        }
-                        
-                        if (address.street && address.number && address.neighborhood && address.city && address.state && address.zipCode) {
-                          await calculateShipping(address)
-                        } else {
-                          setError('Preencha todos os campos de endereço para calcular o frete')
-                        }
+                      // Obter dados do localStorage
+                      let formData
+                      try {
+                        const savedData = localStorage.getItem('cartFormData')
+                        formData = savedData ? JSON.parse(savedData) : {}
+                      } catch (error) {
+                        console.error('Erro ao carregar dados do formulário:', error)
+                        formData = {}
+                      }
+
+                      const address: Address = {
+                        street: formData.street || '',
+                        number: formData.number || '',
+                        complement: formData.complement || undefined,
+                        neighborhood: formData.neighborhood || '',
+                        city: formData.city || '',
+                        state: formData.state || '',
+                        zipCode: formData.zipCode || '',
+                        reference: formData.reference || undefined
+                      }
+                      
+                      if (address.street && address.number && address.neighborhood && address.city && address.state && address.zipCode) {
+                        await calculateShipping(address)
+                      } else {
+                        setError('Preencha todos os campos de endereço para calcular o frete')
                       }
                     }}
                     disabled={isCalculatingShipping}
@@ -455,9 +559,9 @@ Obrigado pela preferência! 🧡`
               {/* Botão WhatsApp */}
               <button
                 onClick={handleWhatsAppOrder}
-                disabled={isLoading}
+                disabled={isLoading || getTotal() < 100}
                 className={`w-full py-5 px-10 rounded-2xl font-extrabold transition-colors flex items-center justify-center gap-3 text-2xl shadow-2xl border-2 focus:outline-none focus:ring-2 focus:ring-green-400 ${
-                  isLoading
+                  isLoading || getTotal() < 100
                     ? 'bg-gray-400 text-gray-600 border-gray-400 cursor-not-allowed'
                     : 'bg-[#25D366] text-white hover:bg-[#1ebe57] border-[#25D366]'
                 }`}
@@ -466,6 +570,10 @@ Obrigado pela preferência! 🧡`
                   <>
                     <div className="animate-spin rounded-full h-6 w-6 border-2 border-white border-t-transparent" />
                     <span>Processando...</span>
+                  </>
+                ) : getTotal() < 100 ? (
+                  <>
+                    <span>Valor mínimo: R$ 100,00</span>
                   </>
                 ) : (
                   <>
@@ -479,6 +587,118 @@ Obrigado pela preferência! 🧡`
         </div>
       </main>
       </div>
+
+      {/* Popup de Agradecimento */}
+      <Dialog open={showThankYouDialog} onOpenChange={setShowThankYouDialog}>
+        <DialogContent className="sm:max-w-md text-center">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-orange-600 mb-4">
+              🎉 Pedido Enviado com Sucesso!
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-6xl mb-4">🧡</div>
+            <p className="text-gray-700 text-lg">
+              Obrigado por comprar no <strong>Atacadão Guanabara</strong>!
+            </p>
+            <p className="text-gray-600">
+              Seu pedido foi enviado para o WhatsApp. Finalize a conversa por lá para confirmar sua compra.
+            </p>
+            <div className="flex flex-col gap-3 pt-4">
+              {orderId && (
+                <Button 
+                  onClick={() => {
+                    setShowThankYouDialog(false)
+                    router.push(`/order-status/${orderId}`)
+                  }}
+                  className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
+                >
+                  📱 Acompanhar Pedido
+                </Button>
+              )}
+              <Button 
+                onClick={() => {
+                  setShowThankYouDialog(false)
+                  setShowRatingDialog(true)
+                }}
+                className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"
+              >
+                <Star className="w-4 h-4 mr-2" />
+                Avaliar Experiência
+              </Button>
+              <Button 
+                onClick={() => {
+                  setShowThankYouDialog(false)
+                  router.push('/')
+                }}
+                variant="outline"
+                className="border-orange-200 text-orange-600 hover:bg-orange-50"
+              >
+                Continuar Comprando
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Popup de Avaliação */}
+      <Dialog open={showRatingDialog} onOpenChange={setShowRatingDialog}>
+        <DialogContent className="sm:max-w-md text-center">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-orange-600 mb-4">
+              ⭐ Avalie Sua Experiência
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-4xl mb-4">🌟</div>
+            <p className="text-gray-700">
+              Sua opinião é muito importante para nós! 
+              Ajude-nos a melhorar nossos serviços.
+            </p>
+            <div className="flex justify-center space-x-2 text-3xl">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => {
+                    // Aqui você pode adicionar lógica para salvar a avaliação
+                    setShowRatingDialog(false)
+                    router.push('/feedback')
+                  }}
+                  className="hover:scale-110 transition-transform"
+                >
+                  ⭐
+                </button>
+              ))}
+            </div>
+            <p className="text-sm text-gray-500">
+              Clique em uma estrela para avaliar
+            </p>
+            <div className="flex flex-col gap-3 pt-4">
+              <Button 
+                onClick={() => {
+                  setShowRatingDialog(false)
+                  router.push('/feedback')
+                }}
+                className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"
+              >
+                <Heart className="w-4 h-4 mr-2" />
+                Deixar Feedback Detalhado
+              </Button>
+              <Button 
+                onClick={() => {
+                  setShowRatingDialog(false)
+                  router.push('/')
+                }}
+                variant="outline"
+                className="border-orange-200 text-orange-600 hover:bg-orange-50"
+              >
+                Pular Avaliação
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Footer />
       {/* Animations */}
       <style jsx>{`
@@ -506,8 +726,49 @@ function FormCart({ user }: { user: any }) {
   const [complement, setComplement] = useState('')
   const [neighborhood, setNeighborhood] = useState('')
   const [city, setCity] = useState('')
-  const [state, setState] = useState('')
+  const [state, setState] = useState('Ceará')
   const [reference, setReference] = useState('')
+
+  // Salvar dados no localStorage quando mudar
+  useEffect(() => {
+    const formData = {
+      name,
+      phone,
+      email,
+      street,
+      number,
+      complement,
+      neighborhood,
+      city,
+      state,
+      zipCode,
+      reference
+    }
+    localStorage.setItem('cartFormData', JSON.stringify(formData))
+  }, [name, phone, email, street, number, complement, neighborhood, city, state, zipCode, reference])
+
+  // Carregar dados do localStorage ao montar
+  useEffect(() => {
+    const savedData = localStorage.getItem('cartFormData')
+    if (savedData) {
+      try {
+        const formData = JSON.parse(savedData)
+        setName(formData.name || user?.name || '')
+        setPhone(formData.phone || user?.phone || '')
+        setEmail(formData.email || user?.email || '')
+        setStreet(formData.street || '')
+        setNumber(formData.number || '')
+        setComplement(formData.complement || '')
+        setNeighborhood(formData.neighborhood || '')
+        setCity(formData.city || '')
+        setState(formData.state || '')
+        setZipCode(formData.zipCode || '')
+        setReference(formData.reference || '')
+      } catch (error) {
+        console.error('Erro ao carregar dados do formulário:', error)
+      }
+    }
+  }, [user])
   
   // Máscara telefone
   function formatPhone(value: string) {
@@ -664,45 +925,20 @@ function FormCart({ user }: { user: any }) {
             required
           />
         </div>
-        <div className="flex flex-col gap-2">
-          <label className="font-semibold text-blue-900 text-sm">Estado *</label>
-          <select
+
+        <div className="flex flex-col gap-2 md:col-span-2">
+          <label htmlFor="state" className="font-semibold text-blue-900 text-sm">
+            Estado
+          </label>
+          <input
+            type="text"
             name="state"
-            value={state}
-            onChange={e => setState(e.target.value)}
-            className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base"
-            required
-          >
-            <option value="">Selecione o estado</option>
-            <option value="AC">Acre</option>
-            <option value="AL">Alagoas</option>
-            <option value="AP">Amapá</option>
-            <option value="AM">Amazonas</option>
-            <option value="BA">Bahia</option>
-            <option value="CE">Ceará</option>
-            <option value="DF">Distrito Federal</option>
-            <option value="ES">Espírito Santo</option>
-            <option value="GO">Goiás</option>
-            <option value="MA">Maranhão</option>
-            <option value="MT">Mato Grosso</option>
-            <option value="MS">Mato Grosso do Sul</option>
-            <option value="MG">Minas Gerais</option>
-            <option value="PA">Pará</option>
-            <option value="PB">Paraíba</option>
-            <option value="PR">Paraná</option>
-            <option value="PE">Pernambuco</option>
-            <option value="PI">Piauí</option>
-            <option value="RJ">Rio de Janeiro</option>
-            <option value="RN">Rio Grande do Norte</option>
-            <option value="RS">Rio Grande do Sul</option>
-            <option value="RO">Rondônia</option>
-            <option value="RR">Roraima</option>
-            <option value="SC">Santa Catarina</option>
-            <option value="SP">São Paulo</option>
-            <option value="SE">Sergipe</option>
-            <option value="TO">Tocantins</option>
-          </select>
+            value="Ceará"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 bg-gray-100"
+            readOnly
+          />
         </div>
+
         <div className="flex flex-col gap-2 md:col-span-2">
           <label className="font-semibold text-blue-900 text-sm">Ponto de Referência</label>
           <input

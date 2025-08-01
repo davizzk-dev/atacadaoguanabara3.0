@@ -2,6 +2,8 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import CookieBanner from "@/components/cookie-banner"
+import OrderTrackingNotification from "@/components/order-tracking-notification"
+import VisitorTracker from "@/components/visitor-tracker"
 import { Providers } from "./providers"
 import "./globals.css"
 
@@ -23,9 +25,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body className={inter.className}>
-        {children}
-        <CookieBanner />
+      <body className={inter.className} style={{ overflow: 'visible' }}>
+                            <Providers>
+                      {children}
+                      <CookieBanner />
+                      <OrderTrackingNotification />
+                      <VisitorTracker />
+                    </Providers>
       </body>
     </html>
   )

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Heart, ShoppingCart, Minus, Plus, Zap, Check, Star } from "lucide-react"
+import { Heart, ShoppingCart, Minus, Plus, Zap, Check } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -114,13 +114,19 @@ export function ProductCard({ product }: ProductCardProps) {
 
       {/* Imagem do produto */}
       <div className="w-full flex justify-center items-center mb-4 h-32 relative">
-        {product.image && typeof product.image === 'string' && (
+        {((product as any).promotionImage || product.image) && typeof ((product as any).promotionImage || product.image) === 'string' && (
           <img
-            src={product.image}
+            src={(product as any).promotionImage || product.image}
             alt={product.name}
             className={`h-28 w-auto object-contain rounded-xl bg-white border border-gray-100 shadow transition-all duration-300 hover-scale ${
               isHovered ? 'scale-110 shadow-lg' : ''
             }`}
+            onError={(e) => {
+              // Fallback para imagem original se a imagem da promoção falhar
+              if ((product as any).promotionImage && product.image) {
+                (e.target as HTMLImageElement).src = product.image
+              }
+            }}
           />
         )}
       </div>
@@ -133,17 +139,14 @@ export function ProductCard({ product }: ProductCardProps) {
         <p className="text-xs text-gray-500 font-medium truncate">{product.brand}</p>
       </div>
 
-      {/* Avaliação */}
-      <div className="flex items-center w-full mb-2">
-        <div className="flex items-center">
-          {[...Array(5)].map((_, i) => (
-            <Star
-              key={i}
-              className={`w-3 h-3 ${i < Math.floor(product.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
-            />
-          ))}
-        </div>
-        <span className="text-xs text-gray-500 ml-1">({product.reviews})</span>
+      {/* Botão Ver mais */}
+      <div className="w-full mb-2 flex justify-end">
+        <a
+          href={`/product/${product.id}`}
+          className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg font-medium text-xs hover:bg-blue-700 transition-colors shadow"
+        >
+          Ver mais
+        </a>
       </div>
 
       {/* Preço e unidade */}

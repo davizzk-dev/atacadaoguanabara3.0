@@ -99,6 +99,10 @@
     animation: slideUp 0.4s ease-out;
   }
   
+  .animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+  }
+  
   .animate-scale-in {
     animation: scaleIn 0.3s ease-out;
   }
@@ -241,6 +245,17 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
@@ -466,4 +481,47 @@ html {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Classe para esconder scrollbar */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Safari and Chrome */
+}
+
+/* Line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Uniform image sizes for carousel */
+.category-carousel-image {
+  width: 160px !important;
+  height: 160px !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  aspect-ratio: 1/1 !important;
+}
+
+/* Floating cart animations */
+@keyframes slideInUp {
+  from {
+    transform: translateY(100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-up {
+  animation: slideInUp 0.5s ease-out;
 }

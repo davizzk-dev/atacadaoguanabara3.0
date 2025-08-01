@@ -1,63 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { promises as fs } from 'fs'
+import path from 'path'
 
 export async function GET(request: NextRequest) {
   try {
-    // Conectar com o backend Java
-    const response = await fetch('http://localhost:8080/api/admin/users', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+    // Ler dados do arquivo JSON
+    const dataDir = path.join(process.cwd(), 'data')
+    const usersData = JSON.parse(await fs.readFile(path.join(dataDir, 'users.json'), 'utf-8'))
+    const ordersData = JSON.parse(await fs.readFile(path.join(dataDir, 'orders.json'), 'utf-8'))
+    
+    // Calcular estatísticas para cada usuário
+    const usersWithStats = usersData.map((user: any) => {
+      const userOrders = ordersData.filter((order: any) => order.userId === user.id)
+      const totalSpent = userOrders.reduce((sum: number, order: any) => sum + order.total, 0)
+      const lastOrder = userOrders.length > 0 ? 
+        userOrders.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0].createdAt : 
+        null
+      
+      return {
+        ...user,
+        orders: userOrders.length,
+        totalSpent,
+        lastOrder,
+        isClient: user.role === 'client'
+      }
     })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return NextResponse.json(data)
+    
+    return NextResponse.json(usersWithStats)
   } catch (error) {
     console.error('Erro ao buscar usuários:', error)
     
     // Dados mockados em caso de erro
-    return NextResponse.json([
-      {
-        id: '1',
-        name: 'João Silva',
-        email: 'joao@email.com',
-        phone: '(11) 99999-9999',
-        role: 'client',
-        createdAt: '2024-01-15T10:30:00Z',
-        orders: 5,
-        totalSpent: 1250.00,
-        lastOrder: '2024-06-15T14:20:00Z',
-        isClient: true
-      },
-      {
-        id: '2',
-        name: 'Maria Santos',
-        email: 'maria@email.com',
-        phone: '(11) 88888-8888',
-        role: 'client',
-        createdAt: '2024-02-20T09:15:00Z',
-        orders: 3,
-        totalSpent: 890.50,
-        lastOrder: '2024-06-10T16:45:00Z',
-        isClient: true
-      },
-      {
-        id: '3',
-        name: 'Pedro Costa',
-        email: 'pedro@email.com',
-        phone: '(11) 77777-7777',
-        role: 'admin',
-        createdAt: '2024-01-10T08:00:00Z',
-        orders: 0,
-        totalSpent: 0,
-        lastOrder: null,
-        isClient: false
-      }
-    ])
+    return NextResponse.json([])
   }
 }
 

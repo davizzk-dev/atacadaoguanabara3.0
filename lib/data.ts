@@ -1,4 +1,6 @@
 import type { Product, Promotion, ProductPromotion } from "./types"
+import fs from 'fs/promises'
+import path from 'path'
 
 // Logo da loja (altere o caminho ou link para a logo desejada)
 export const LOGO_URL = "https://i.ibb.co/fGSnH3hd/logoatacad-o.jpg" // Logo principal da loja
@@ -8,13 +10,13 @@ export const ENTRADA_URL = "/imagens/entrada-loja.jpg" // Foto da entrada da loj
 
 export const products = [
   {
-    id: "1",
-    name: "ÁGUA MINERAL NATURAGUA 1,5L",
+    id: "50",
+    name: "Água Mineral Naturagua 1,5L",
     price: 2.99,
     originalPrice: 2.30,
-    image: "https://i.ibb.co/N65dsgfh/aguanaturagua1-5l.jpg ", // Água mineral
-    category: "Bebidas",
-    description: "Água mineral natural 1,5 litros",
+    image: "https://i.ibb.co/N65dsgfh/aguanaturagua1-5l.jpg",
+    category: "REFIGERANTES E OUTROS LIQUIDOS",
+    description: "Água mineral natural de fonte cristalina, rica em minerais essenciais. Ideal para hidratação diária e preparo de bebidas. Garrafa de 1,5 litros com tampa de segurança.",
     stock: 6,
     rating: 4.5,
     reviews: 12,
@@ -23,13 +25,13 @@ export const products = [
     tags: ["bebida", "água", "mineral"],
   },
   {
-    id: "2",
-    name: "ÁGUA MINERAL NATURAGUA 500ML C/ GÁS",
+    id: "51",
+    name: "Água Mineral Naturagua 500ml com Gás",
     price: 1.99,
     originalPrice: 1.44,
-    image: "https://i.ibb.co/p6WM3mnK/aguacomg-s.jpg", // Água com gás
-    category: "Bebidas",
-    description: "Água mineral com C/GÁS 500ml",
+    image: "https://i.ibb.co/p6WM3mnK/aguacomg-s.jpg",
+    category: "REFIGERANTES E OUTROS LIQUIDOS",
+    description: "Água mineral com gás 500ml",
     stock: 12,
     rating: 4.3,
     reviews: 8,
@@ -38,12 +40,12 @@ export const products = [
     tags: ["bebida", "água", "gás"],
   },
   {
-    id: "3",
-    name: "ÁGUA MINERAL NATURAGUA 500ML S/ GÁS",
+    id: "52",
+    name: "Água Mineral Naturagua 500ml sem Gás",
     price: 1.49,
     originalPrice: 1.08,
-    image: "https://i.ibb.co/4gVp5kbz/aguasemg-s.jpg", // Água sem gás
-    category: "Bebidas",
+    image: "https://i.ibb.co/4gVp5kbz/aguasemg-s.jpg",
+    category: "REFIGERANTES E OUTROS LIQUIDOS",
     description: "Água mineral sem gás 500ml",
     stock: 12,
     rating: 4.4,
@@ -53,13 +55,13 @@ export const products = [
     tags: ["bebida", "água"],
   },
   {
-    id: "4",
-    name: "AMENDOIM EM BANDA CASTRO 1KG",
+    id: "53",
+    name: "Amendoim em Banda Castro 1kg",
     price: 13.99,
     originalPrice: 13.49,
-    image: "https://i.ibb.co/PZ9HLZrg/amendoimembanda.jpg", // Amendoim
-    category: "Snacks",
-    description: "Amendoim em banda tradicional 1kg",
+    image: "https://i.ibb.co/PZ9HLZrg/amendoimembanda.jpg",
+    category: "MERCEARIA",
+    description: "Amendoim em banda tradicional, torrado e salgado. Rico em proteínas e gorduras boas. Perfeito para lanches, festas e receitas. Embalagem de 1kg com amendoins selecionados.",
     stock: 4,
     rating: 4.7,
     reviews: 25,
@@ -68,13 +70,13 @@ export const products = [
     tags: ["snack", "amendoim", "natural"],
   },
   {
-    id: "5",
-    name: "ARROZ BRANCO NAMORADO 1KG",
+    id: "54",
+    name: "Arroz Branco Namorado 1kg",
     price: 5.69,
     originalPrice: 5.29,
-    image: "https://i.ibb.co/V0rGtJcP/arroznamorado.jpg", // Arroz branco
-    category: "Grãos",
-    description: "Arroz branco tipo 1 1kg",
+    image: "https://i.ibb.co/V0rGtJcP/arroznamorado.jpg",
+    category: "MERCEARIA",
+    description: "Arroz branco tipo 1 de alta qualidade, grãos selecionados e polidos. Ideal para o dia a dia, soltinho e saboroso. Embalagem de 1kg para toda a família.",
     stock: 10,
     rating: 4.6,
     reviews: 45,
@@ -83,13 +85,12 @@ export const products = [
     tags: ["arroz", "básico", "alimento"],
   },
   {
-    id: "6",
-    name: "ARROZ BRANCO PAI JOÃO 1KG",
+    id: "55",
+    name: "Arroz Branco Pai João 1kg",
     price: 5.49,
     originalPrice: 5.39,
-    // Foto do produto: Arroz branco Pai João 1kg
-    image: "https://i.ibb.co/gbzsG1wc/arrozbrancopaijo-o.jpg", // Arroz branco
-    category: "Grãos",
+    image: "https://i.ibb.co/gbzsG1wc/arrozbrancopaijo-o.jpg",
+    category: "MERCEARIA",
     description: "Arroz branco tipo 1 1kg",
     stock: 10,
     rating: 4.5,
@@ -99,13 +100,12 @@ export const products = [
     tags: ["arroz", "básico", "alimento"],
   },
   {
-    id: "7",
-    name: "ARROZ BRANCO POP 1KG",
+    id: "56",
+    name: "Arroz Branco Pop 1kg",
     price: 4.99,
     originalPrice: 4.99,
-    // Foto do produto: Arroz branco Pop 1kg
-    image: "https://i.ibb.co/8gc360YT/arrozbrancopop.jpg", // Arroz branco
-    category: "Grãos",
+    image: "https://i.ibb.co/8gc360YT/arrozbrancopop.jpg",
+    category: "MERCEARIA",
     description: "Arroz branco tipo 1 1kg",
     stock: 10,
     rating: 4.4,
@@ -115,13 +115,12 @@ export const products = [
     tags: ["arroz", "básico", "alimento"],
   },
   {
-    id: "8",
-    name: "ARROZ PARBOILIZADO CAMIL 1KG",
+    id: "57",
+    name: "Arroz Parboilizado Camil 1kg",
     price: 6.29,
     originalPrice: 5.99,
-    // Foto do produto: Arroz parboilizado Camil 1kg
-    image: "https://i.ibb.co/V8hkx53/arrozparboilizadocamil.jpg", // Arroz parboilizado
-    category: "Grãos",
+    image: "https://i.ibb.co/V8hkx53/arrozparboilizadocamil.jpg",
+    category: "MERCEARIA",
     description: "Arroz parboilizado 1kg",
     stock: 10,
     rating: 4.8,
@@ -131,13 +130,12 @@ export const products = [
     tags: ["arroz", "parboilizado", "nutritivo"],
   },
   {
-    id: "9",
-    name: "ARROZ PARBOILIZADO EMOÇÕES 1KG",
+    id: "58",
+    name: "Arroz Parboilizado Emoções 1kg",
     price: 5.99,
     originalPrice: 5.99,
-    // Foto do produto: Arroz parboilizado Emoções 1kg
-    image: "https://i.ibb.co/VpqNb9t9/arrozparboilizadoemo-es.jpg", // Troque para o link da foto real do produto
-    category: "Grãos",
+    image: "https://i.ibb.co/VpqNb9t9/arrozparboilizadoemo-es.jpg",
+    category: "MERCEARIA",
     description: "Arroz parboilizado 1kg",
     stock: 10,
     rating: 4.6,
@@ -147,13 +145,12 @@ export const products = [
     tags: ["arroz", "parboilizado", "nutritivo"],
   },
   {
-    id: "10",
-    name: "ARROZ PARBOILIZADO POP 1KG",
+    id: "59",
+    name: "Arroz Parboilizado Pop 1kg",
     price: 4.50,
     originalPrice: 4.30,
-    // Foto do produto: Arroz parboilizado Pop 1kg
-    image: "https://i.ibb.co/vCq3CkSx/arrozparboilizadopop.jpg", // Troque para o link da foto real do produto
-    category: "Grãos",
+    image: "https://i.ibb.co/vCq3CkSx/arrozparboilizadopop.jpg",
+    category: "MERCEARIA",
     description: "Arroz parboilizado 1kg",
     stock: 30,
     rating: 4.5,
@@ -163,13 +160,12 @@ export const products = [
     tags: ["arroz", "parboilizado", "nutritivo"],
   },
   {
-    id: "11",
-    name: "AZEITE DE OLIVA EXTRA VIRGEM COCINERO 250ML",
+    id: "60",
+    name: "Azeite de Oliva Extra Virgem Cocinero 250ml",
     price: 21.49,
     originalPrice: 21.49,
-    // Foto do produto: Azeite de oliva extra virgem Cocinero 250ml
-    image: "https://i.ibb.co/KxFd3J1C/azeitedeolivacocinero.jpg", // Azeite de oliva
-    category: "Óleos",
+    image: "https://i.ibb.co/KxFd3J1C/azeitedeolivacocinero.jpg",
+    category: "MOLHOS",
     description: "Azeite de oliva extra virgem 250ml",
     stock: 5,
     rating: 4.9,
@@ -179,13 +175,12 @@ export const products = [
     tags: ["azeite", "oliva", "extra virgem"],
   },
   {
-    id: "12",
-    name: "AZEITE DE OLIVA EXTRA VIRGEM COCINERO 500ML",
+    id: "61",
+    name: "Azeite de Oliva Extra Virgem Cocinero 500ml",
     price: 37.90,
     originalPrice: 36.90,
-    // Foto do produto: Azeite de oliva extra virgem Cocinero 500ml
-    image: "https://i.ibb.co/k2hKnsnX/azeitedeolivacocinero500ml.jpg", // Troque para o link da foto real do produto
-    category: "Óleos",
+    image: "https://i.ibb.co/k2hKnsnX/azeitedeolivacocinero500ml.jpg",
+    category: "MOLHOS",
     description: "Azeite de oliva extra virgem 500ml",
     stock: 10,
     rating: 4.9,
@@ -195,13 +190,12 @@ export const products = [
     tags: ["azeite", "oliva", "extra virgem"],
   },
   {
-    id: "13",
-    name: "AZEITE DENDÊ MARIZA 200ML",
+    id: "62",
+    name: "Azeite Dendê Mariza 200ml",
     price: 7.49,
     originalPrice: 6.49,
-    // Foto do produto: Azeite de dendê Mariza 200ml
-    image: "https://i.ibb.co/wZf7nKSB/azeitedendemariza200ml.jpg", // Troque para o link da foto real do produto
-    category: "Óleos",
+    image: "https://i.ibb.co/wZf7nKSB/azeitedendemariza200ml.jpg",
+    category: "MOLHOS",
     description: "Azeite de dendê 200ml",
     stock: 12,
     rating: 4.3,
@@ -211,13 +205,12 @@ export const products = [
     tags: ["azeite", "dendê", "tradicional"],
   },
   {
-    id: "14",
-    name: "BACON EM CUBO KG",
+    id: "63",
+    name: "Bacon em Cubo kg",
     price: 29.90,
     originalPrice: 29.90,
-    // Foto do produto: Bacon em cubo por kg
-    image: "https://i.ibb.co/pvdqLP9d/baconemcubo.jpg", // Troque para o link da foto real do produto
-    category: "Carnes",
+    image: "https://i.ibb.co/pvdqLP9d/baconemcubo.jpg",
+    category: "RESFRIADOS",
     description: "Bacon em cubo por kg",
     stock: 8,
     rating: 4.7,
@@ -227,13 +220,12 @@ export const products = [
     tags: ["bacon", "carne", "cubo"],
   },
   {
-    id: "15",
-    name: "BACON MANTA KG",
+    id: "64",
+    name: "Bacon Manta kg",
     price: 28.90,
     originalPrice: 28.90,
-    // Foto do produto: Bacon em manta por kg
-    image: "https://i.ibb.co/vvcYLN4g/baconmantakgjpeg.jpg", // Troque para o link da foto real do produto
-    category: "Carnes",
+    image: "https://i.ibb.co/vvcYLN4g/baconmantakgjpeg.jpg",
+    category: "RESFRIADOS",
     description: "Bacon em manta por kg",
     stock: 6,
     rating: 4.6,
@@ -243,13 +235,12 @@ export const products = [
     tags: ["bacon", "carne", "manta"],
   },
   {
-    id: "16",
-    name: "BANDEJA DE MORANGO",
+    id: "65",
+    name: "Bandeja de Morango",
     price: 9.99,
     originalPrice: 9.49,
-    // Foto do produto: Bandeja de morango fresco
-    image: "https://i.ibb.co/yBMJSp0t/bandejademorangofresco.jpg", // Troque para o link da foto real do produto
-    category: "Frutas",
+    image: "https://i.ibb.co/yBMJSp0t/bandejademorangofresco.jpg",
+    category: "RESFRIADOS",
     description: "Bandeja de morango fresco",
     stock: 4,
     rating: 4.8,
@@ -259,13 +250,12 @@ export const products = [
     tags: ["fruta", "morango", "fresco"],
   },
   {
-    id: "17",
-    name: "BANDEJA DE OVOS BRANCOS COM 30 UNIDADES",
+    id: "66",
+    name: "Bandeja de Ovos Brancos com 30 Unidades",
     price: 15.99,
     originalPrice: 15.49,
-    // Foto do produto: Bandeja com 30 ovos brancos
-    image: "https://i.ibb.co/MwJrmqg/bandejadeovosbrancos.jpg", // Troque para o link da foto real do produto
-    category: "Laticínios",
+    image: "https://i.ibb.co/MwJrmqg/bandejadeovosbrancos.jpg",
+    category: "RESFRIADOS",
     description: "Bandeja com 30 ovos brancos",
     stock: 10,
     rating: 4.5,
@@ -275,13 +265,12 @@ export const products = [
     tags: ["ovos", "brancos", "frescos"],
   },
   {
-    id: "18",
-    name: "BARRA DE CHOCOLATE COBERTURA CONFEITEIRO BLEND MAVALERIO 1,01KG",
+    id: "67",
+    name: "Barra de Chocolate Cobertura Confeiteiro Blend Mavalério 1,01kg",
     price: 22.90,
     originalPrice: 22.90,
-    // Foto do produto: Barra de chocolate para confeitaria Mavalério 1,01kg
-    image: "https://i.ibb.co/b5f4PzPM/malaveirobarrachocolate.webp", // Troque para o link da foto real do produto
-    category: "Chocolates",
+    image: "https://i.ibb.co/b5f4PzPM/malaveirobarrachocolate.webp",
+    category: "CONFEITARIA E OUTROS",
     description: "Barra de chocolate para confeitaria 1,01kg",
     stock: 6,
     rating: 4.9,
@@ -291,13 +280,12 @@ export const products = [
     tags: ["chocolate", "confeitaria", "cobertura"],
   },
   {
-    id: "19",
-    name: "BARRA DE CHOCOLATE CONFEITEIRO AO LEITE HARALD 1,01KG",
+    id: "68",
+    name: "Barra de Chocolate Confeiteiro ao Leite Harald 1,01kg",
     price: 23.90,
     originalPrice: 22.99,
-    // Foto do produto: Barra de chocolate ao leite para confeitaria Harald 1,01kg
-    image: "https://i.ibb.co/FbWBb4mZ/barradechocolateaoleiteharald.webp", // Troque para o link da foto real do produto
-    category: "Chocolates",
+    image: "https://i.ibb.co/FbWBb4mZ/barradechocolateaoleiteharald.webp",
+    category: "CONFEITARIA E OUTROS",
     description: "Barra de chocolate ao leite para confeitaria 1,01kg",
     stock: 5,
     rating: 4.8,
@@ -307,13 +295,12 @@ export const products = [
     tags: ["chocolate", "confeitaria", "leite"],
   },
   {
-    id: "20",
-    name: "BARRA DE CHOCOLATE CONFEITEIRO BLEND HARALD 1,01KG",
+    id: "69",
+    name: "Barra de Chocolate Confeiteiro Blend Harald 1,01kg",
     price: 20.99,
     originalPrice: 19.99,
-    // Foto do produto: Barra de chocolate blend para confeitaria Harald 1,01kg
-    image: "https://i.ibb.co/FLFp5tB9/barrachocolateharald.webp", // Troque para o link da foto real do produto
-    category: "Chocolates",
+    image: "https://i.ibb.co/FLFp5tB9/barrachocolateharald.webp",
+    category: "CONFEITARIA E OUTROS",
     description: "Barra de chocolate blend para confeitaria 1,01kg",
     stock: 5,
     rating: 4.7,
@@ -323,13 +310,12 @@ export const products = [
     tags: ["chocolate", "confeitaria", "blend"],
   },
   {
-    id: "21",
-    name: "BARRA DE CHOCOLATE CONFEITEIRO CHOCOLATE BRANCO HARALD 1,010KG",
+    id: "70",
+    name: "Barra de Chocolate Confeiteiro Chocolate Branco Harald 1,010kg",
     price: 24.99,
     originalPrice: 23.90,
-    // Foto do produto: Barra de chocolate branco para confeitaria Harald 1,01kg
-    image: "https://i.ibb.co/G4fH6Zz4/BARRADECHOCOLATEBRANCOHARALD.webp", // Troque para o link da foto real do produto
-    category: "Chocolates",
+    image: "https://i.ibb.co/G4fH6Zz4/BARRADECHOCOLATEBRANCOHARALD.webp",
+    category: "CONFEITARIA E OUTROS",
     description: "Barra de chocolate branco para confeitaria 1,01kg",
     stock: 5,
     rating: 4.6,
@@ -339,13 +325,12 @@ export const products = [
     tags: ["chocolate", "confeitaria", "branco"],
   },
   {
-    id: "22",
-    name: "BARRA DE CHOCOLATE CONFEITEIRO MEIO AMARGO HARALD 1,01KG",
+    id: "71",
+    name: "Barra de Chocolate Confeiteiro Meio Amargo Harald 1,01kg",
     price: 23.90,
     originalPrice: 22.99,
-    // Foto do produto: Barra de chocolate meio amargo para confeitaria Harald 1,01kg
-    image: "https://i.ibb.co/xqX2rkNZ/BARRADECHOCOLATEMEIOAMARGOHARALD.webp", // Troque para o link da foto real do produto
-    category: "Chocolates",
+    image: "https://i.ibb.co/xqX2rkNZ/BARRADECHOCOLATEMEIOAMARGOHARALD.webp",
+    category: "CONFEITARIA E OUTROS",
     description: "Barra de chocolate meio amargo para confeitaria 1,01kg",
     stock: 5,
     rating: 4.8,
@@ -355,13 +340,12 @@ export const products = [
     tags: ["chocolate", "confeitaria", "meio amargo"],
   },
   {
-    id: "23",
-    name: "BATATA BEM BRASIL MAIS BATATA 2KG",
+    id: "72",
+    name: "Batata Bem Brasil Mais Batata 2kg",
     price: 29.90,
     originalPrice: 28.90,
-    // Foto do produto: Batata especial Bem Brasil 2kg
-    image: "https://i.ibb.co/C3g2fsXH/BATATABEMBRASIL2-KG.jpg", // Troque para o link da foto real do produto
-    category: "Hortifruti",
+    image: "https://i.ibb.co/C3g2fsXH/BATATABEMBRASIL2-KG.jpg",
+    category: "RESFRIADOS",
     description: "Batata especial 2kg",
     stock: 7,
     rating: 4.6,
@@ -371,13 +355,12 @@ export const products = [
     tags: ["batata", "hortifruti", "especial"],
   },
   {
-    id: "24",
-    name: "BATATA PALHA AGUA NA BOCA 140G",
+    id: "73",
+    name: "Batata Palha Água na Boca 140g",
     price: 4.49,
     originalPrice: 3.99,
-    // Foto do produto: Batata palha Água na Boca 140g
-    image: "https://i.ibb.co/hJc6Wzy5/BATATAPALHAAGUANABOCA.jpg", // Troque para o link da foto real do produto
-    category: "Snacks",
+    image: "https://i.ibb.co/hJc6Wzy5/BATATAPALHAAGUANABOCA.jpg",
+    category: "BISCOITOS",
     description: "Batata palha 140g",
     stock: 10,
     rating: 4.4,
@@ -387,13 +370,12 @@ export const products = [
     tags: ["batata", "palha", "snack"],
   },
   {
-    id: "25",
-    name: "BATATA PALHA AGUA NA BOCA 1KG",
+    id: "74",
+    name: "Batata Palha Água na Boca 1kg",
     price: 23.90,
     originalPrice: 23.90,
-    // Foto do produto: Batata palha Água na Boca 1kg
-    image: "https://i.ibb.co/hJc6Wzy5/BATATAPALHAAGUANABOCA.jpg", // Troque para o link da foto real do produto
-    category: "Snacks",
+    image: "https://i.ibb.co/hJc6Wzy5/BATATAPALHAAGUANABOCA.jpg",
+    category: "BISCOITOS",
     description: "Batata palha 1kg",
     stock: 5,
     rating: 4.5,
@@ -403,13 +385,12 @@ export const products = [
     tags: ["batata", "palha", "snack"],
   },
   {
-    id: "26",
-    name: "BATATA PALHA AGUA NA BOCA 400G",
+    id: "75",
+    name: "Batata Palha Água na Boca 400g",
     price: 9.75,
     originalPrice: 8.99,
-    // Foto do produto: Batata palha Água na Boca 400g
-    image: "https://i.ibb.co/hJc6Wzy5/BATATAPALHAAGUANABOCA.jpg", // Troque para o link da foto real do produto
-    category: "Snacks",
+    image: "https://i.ibb.co/hJc6Wzy5/BATATAPALHAAGUANABOCA.jpg",
+    category: "BISCOITOS",
     description: "Batata palha 400g",
     stock: 10,
     rating: 4.3,
@@ -419,13 +400,12 @@ export const products = [
     tags: ["batata", "palha", "snack"],
   },
   {
-    id: "27",
-    name: "BATATA PALHA FEULEN 400G TRAD",
+    id: "76",
+    name: "Batata Palha Feulen 400g Trad",
     price: 15.99,
     originalPrice: 14.99,
-    // Foto do produto: Batata palha tradicional Feulen 400g
-    image: "https://i.ibb.co/1fjTMgdd/batatapalhafeulen500g.jpg", // Troque para o link da foto real do produto
-    category: "Snacks",
+    image: "https://i.ibb.co/1fjTMgdd/batatapalhafeulen500g.jpg",
+    category: "BISCOITOS",
     description: "Batata palha tradicional 400g",
     stock: 6,
     rating: 4.7,
@@ -435,13 +415,12 @@ export const products = [
     tags: ["batata", "palha", "tradicional"],
   },
   {
-    id: "28",
-    name: "BISNAGA CREAM CHEESE TRADICIONAL SABOR E VIDA 1.5KG",
+    id: "77",
+    name: "Bisnaga Cream Cheese Tradicional Sabor e Vida 1.5kg",
     price: 59.90,
     originalPrice: 57.90,
-    // Foto do produto: Cream cheese tradicional em bisnaga Sabor e Vida 1,5kg
-    image: "https://exemplo.com/imagens/bisnaga-cream-cheese-tradicional-sabor-e-vida-1-5kg.jpg", // Troque para o link da foto real do produto
-    category: "Laticínios",
+    image: "https://i.ibb.co/placeholder/cream-cheese-bisnaga.jpg",
+    category: "FRIOS Á GRANEL E PACOTES",
     description: "Cream cheese tradicional em bisnaga 1,5kg",
     stock: 4,
     rating: 4.8,
@@ -451,13 +430,12 @@ export const products = [
     tags: ["cream cheese", "laticínio", "bisnaga"],
   },
   {
-    id: "29",
-    name: "BISNAGA CREME DE AVELLA COM CACAU 1,01 KG BOM PRINCIPIO",
+    id: "78",
+    name: "Bisnaga Creme de Avelã com Cacau 1,01 kg Bom Princípio",
     price: 39.90,
     originalPrice: 39.90,
-    // Foto do produto: Creme de avelã com cacau em bisnaga Bom Princípio 1,01kg
-    image: "https://i.ibb.co/0pWDmM31/bisnagacremedeavelacomcacaubompricipio1-01kg.webp", // Troque para o link da foto real do produto
-    category: "Chocolates",
+    image: "https://i.ibb.co/0pWDmM31/bisnagacremedeavelacomcacaubompricipio1-01kg.webp",
+    category: "CONFEITARIA E OUTROS",
     description: "Creme de avelã com cacau em bisnaga 1,01kg",
     stock: 6,
     rating: 4.9,
@@ -467,13 +445,12 @@ export const products = [
     tags: ["creme", "avelã", "cacau", "chocolate"],
   },
   {
-    id: "30",
-    name: "BISNAGA DE REQUEIJÃO JANGADA 1,5KG",
+    id: "79",
+    name: "Bisnaga de Requeijão Jangada 1,5kg",
     price: 11.99,
     originalPrice: 10.99,
-    // Foto do produto: Requeijão em bisnaga Jangada 1,5kg
-    image: "https://exemplo.com/imagens/bisnaga-de-requeijão-jangada-1-5kg.jpg", // Troque para o link da foto real do produto
-    category: "Laticínios",
+    image: "https://i.ibb.co/placeholder/requeijao-bisnaga.jpg",
+    category: "FRIOS Á GRANEL E PACOTES",
     description: "Requeijão em bisnaga 1,5kg",
     stock: 6,
     rating: 4.5,
@@ -482,15 +459,13 @@ export const products = [
     unit: "1,5kg",
     tags: ["requeijão", "laticínio", "bisnaga"],
   },
-  // Adicionando mais produtos
   {
-    id: "31",
-    name: "FEIJÃO PRETO CAMIL 1KG",
+    id: "80",
+    name: "Feijão Preto Camil 1kg",
     price: 8.99,
     originalPrice: 8.49,
-    // Foto do produto: Feijão preto Camil 1kg
-    image: "https://i.ibb.co/nNmVhVZ9/feijaopretocamil1kg.jpg", // Troque para o link da foto real do produto
-    category: "Grãos",
+    image: "https://i.ibb.co/nNmVhVZ9/feijaopretocamil1kg.jpg",
+    category: "MERCEARIA",
     description: "Feijão preto tipo 1 1kg",
     stock: 15,
     rating: 4.7,
@@ -500,13 +475,12 @@ export const products = [
     tags: ["feijão", "preto", "básico"],
   },
   {
-    id: "32",
-    name: "FEIJÃO CARIOCA CAMIL 1KG",
+    id: "81",
+    name: "Feijão Carioca Camil 1kg",
     price: 7.99,
     originalPrice: 7.49,
-    // Foto do produto: Feijão carioca Camil 1kg
-    image: "https://i.ibb.co/cKCwW65J/feijaocamil1kg.jpg", // Troque para o link da foto real do produto
-    category: "Grãos",
+    image: "https://i.ibb.co/cKCwW65J/feijaocamil1kg.jpg",
+    category: "MERCEARIA",
     description: "Feijão carioca tipo 1 1kg",
     stock: 20,
     rating: 4.6,
@@ -516,13 +490,12 @@ export const products = [
     tags: ["feijão", "carioca", "básico"],
   },
   {
-    id: "33",
-    name: "AÇÚCAR REFINADO UNIÃO 1KG",
+    id: "82",
+    name: "Açúcar Refinado União 1kg",
     price: 4.99,
     originalPrice: 4.79,
-    // Foto do produto: Açúcar refinado União 1kg
-    image: "https://i.ibb.co/Mydd3Pqk/a-ucarrefinadouniao.jpeg", // Troque para o link da foto real do produto
-    category: "Açúcar e Adoçantes",
+    image: "https://i.ibb.co/Mydd3Pqk/a-ucarrefinadouniao.jpeg",
+    category: "MERCEARIA",
     description: "Açúcar refinado 1kg",
     stock: 25,
     rating: 4.5,
@@ -532,13 +505,12 @@ export const products = [
     tags: ["açúcar", "refinado", "básico"],
   },
   {
-    id: "34",
-    name: "AÇÚCAR CRISTAL UNIÃO 1KG",
+    id: "83",
+    name: "Açúcar Cristal União 1kg",
     price: 4.49,
     originalPrice: 4.29,
-    // Foto do produto: Açúcar cristal União 1kg
-    image: "https://i.ibb.co/RTymz66W/a-ucarcristaluniao.jpg", // Troque para o link da foto real do produto
-    category: "Açúcar e Adoçantes",
+    image: "https://i.ibb.co/RTymz66W/a-ucarcristaluniao.jpg",
+    category: "MERCEARIA",
     description: "Açúcar cristal 1kg",
     stock: 18,
     rating: 4.4,
@@ -548,13 +520,12 @@ export const products = [
     tags: ["açúcar", "cristal", "básico"],
   },
   {
-    id: "35",
-    name: "LEITE INTEGRAL ITAMBÉ 1L",
+    id: "84",
+    name: "Leite Integral Itambé 1L",
     price: 5.99,
     originalPrice: 5.79,
-    // Foto do produto: Leite integral Itambé 1L
-    image: "https://i.ibb.co/50gjhC0/leiteintegralitamb.png", // Troque para o link da foto real do produto
-    category: "Laticínios",
+    image: "https://i.ibb.co/50gjhC0/leiteintegralitamb.png",
+    category: "RESFRIADOS",
     description: "Leite integral 1 litro",
     stock: 30,
     rating: 4.6,
@@ -564,13 +535,12 @@ export const products = [
     tags: ["leite", "integral", "fresco"],
   },
   {
-    id: "36",
-    name: "PÃO DE FORMA WICKBOLD 500G",
+    id: "85",
+    name: "Pão de Forma Wickbold 500g",
     price: 8.99,
     originalPrice: 8.49,
-    // Foto do produto: Pão de forma Wickbold 500g
-    image: "https://exemplo.com/imagens/pão-de-forma-wickbold-500g.jpg", // Troque para o link da foto real do produto
-    category: "Padaria",
+    image: "https://i.ibb.co/placeholder/pao-forma-wickbold.jpg",
+    category: "PANIFICAÇÃO",
     description: "Pão de forma tradicional 500g",
     stock: 12,
     rating: 4.5,
@@ -580,13 +550,12 @@ export const products = [
     tags: ["pão", "forma", "tradicional"],
   },
   {
-    id: "37",
-    name: "MACARRÃO ESPAGUETE CAMIL 500G",
+    id: "86",
+    name: "Macarrão Espaguete Camil 500g",
     price: 3.99,
     originalPrice: 3.79,
-    // Foto do produto: Macarrão espaguete Camil 500g
-    image: "https://i.ibb.co/272Bk8zD/macarraocamilovosespaguete500g.webp", // Troque para o link da foto real do produto
-    category: "Massas",
+    image: "https://i.ibb.co/272Bk8zD/macarraocamilovosespaguete500g.webp",
+    category: "MERCEARIA",
     description: "Macarrão espaguete 500g",
     stock: 40,
     rating: 4.4,
@@ -596,13 +565,12 @@ export const products = [
     tags: ["macarrão", "espaguete", "massa"],
   },
   {
-    id: "38",
-    name: "MACARRÃO PENNE CAMIL 500G",
+    id: "87",
+    name: "Macarrão Penne Camil 500g",
     price: 4.29,
     originalPrice: 4.09,
-    // Foto do produto: Macarrão penne Camil 500g
-    image: "https://exemplo.com/imagens/macarrão-penne-camil-500g.jpg", // Troque para o link da foto real do produto
-    category: "Massas",
+    image: "https://i.ibb.co/placeholder/macarrao-penne-camil.jpg",
+    category: "MERCEARIA",
     description: "Macarrão penne 500g",
     stock: 35,
     rating: 4.5,
@@ -611,15 +579,43 @@ export const products = [
     unit: "500g",
     tags: ["macarrão", "penne", "massa"],
   },
-  
   {
-    id: "41",
-    name: "FRANGO INTEIRO KG",
+    id: "88",
+    name: "Prato Descartável 15cm",
+    price: 12.99,
+    originalPrice: 11.99,
+    image: "https://i.ibb.co/placeholder/prato-descartavel-15cm.jpg",
+    category: "DESCARTÁVEIS",
+    description: "Prato descartável 15cm - 100 unidades",
+    stock: 20,
+    rating: 4.3,
+    reviews: 45,
+    brand: "EcoPlast",
+    unit: "100 un",
+    tags: ["prato", "descartável", "festas"],
+  },
+  {
+    id: "89",
+    name: "Copo Descartável 200ml",
+    price: 8.99,
+    originalPrice: 7.99,
+    image: "https://i.ibb.co/placeholder/copo-descartavel-200ml.jpg",
+    category: "DESCARTÁVEIS",
+    description: "Copo descartável 200ml - 50 unidades",
+    stock: 25,
+    rating: 4.4,
+    reviews: 67,
+    brand: "EcoPlast",
+    unit: "50 un",
+    tags: ["copo", "descartável", "bebidas"],
+  },
+  {
+    id: "90",
+    name: "Frango Inteiro kg",
     price: 12.99,
     originalPrice: 12.49,
-    // Foto do produto: Frango inteiro por kg
-    image: "https://exemplo.com/imagens/frango-inteiro-kg.jpg", // Troque para o link da foto real do produto
-    category: "Carnes e Aves",
+    image: "https://i.ibb.co/placeholder/frango-inteiro-kg.jpg",
+    category: "RESFRIADOS",
     description: "Frango inteiro por kg",
     stock: 10,
     rating: 4.6,
@@ -629,13 +625,12 @@ export const products = [
     tags: ["frango", "inteiro", "carne"],
   },
   {
-    id: "42",
-    name: "CARNE MOÍDA KG",
+    id: "91",
+    name: "Carne Moída kg",
     price: 24.99,
     originalPrice: 24.49,
-    // Foto do produto: Carne moída por kg
-    image: "https://exemplo.com/imagens/carne-moída-kg.jpg", // Troque para o link da foto real do produto
-    category: "Carnes e Aves",
+    image: "https://i.ibb.co/placeholder/carne-moida-kg.jpg",
+    category: "RESFRIADOS",
     description: "Carne moída por kg",
     stock: 8,
     rating: 4.7,
@@ -645,13 +640,12 @@ export const products = [
     tags: ["carne", "moída", "bovina"],
   },
   {
-    id: "43",
-    name: "DETERGENTE LÍQUIDO YPE 500ML",
+    id: "92",
+    name: "Detergente Líquido Ypê 500ml",
     price: 4.99,
     originalPrice: 4.79,
-    // Foto do produto: Detergente líquido Ypê 500ml
-    image: "https://exemplo.com/imagens/detergente-líquido-ype-500ml.jpg", // Troque para o link da foto real do produto
-    category: "Limpeza",
+    image: "https://i.ibb.co/placeholder/detergente-liquido-ype.jpg",
+    category: "PRODUTOS DE LIMPEZA",
     description: "Detergente líquido 500ml",
     stock: 25,
     rating: 4.5,
@@ -661,13 +655,12 @@ export const products = [
     tags: ["detergente", "líquido", "limpeza"],
   },
   {
-    id: "44",
-    name: "SABÃO EM PÓ OMO 1KG",
+    id: "93",
+    name: "Sabão em Pó Omo 1kg",
     price: 12.99,
     originalPrice: 12.49,
-    // Foto do produto: Sabão em pó Omo 1kg
-    image: "https://exemplo.com/imagens/sabão-em-pó-omo-1kg.jpg", // Troque para o link da foto real do produto
-    category: "Limpeza",
+    image: "https://i.ibb.co/placeholder/sabao-em-po-omo.jpg",
+    category: "PRODUTOS DE LIMPEZA",
     description: "Sabão em pó 1kg",
     stock: 15,
     rating: 4.6,
@@ -677,13 +670,12 @@ export const products = [
     tags: ["sabão", "pó", "limpeza"],
   },
   {
-    id: "45",
-    name: "SHAMPOO HEAD & SHOULDERS 400ML",
+    id: "94",
+    name: "Shampoo Head & Shoulders 400ml",
     price: 18.99,
     originalPrice: 18.49,
-    // Foto do produto: Shampoo anticaspa Head & Shoulders 400ml
-    image: "https://exemplo.com/imagens/shampoo-anticaspa-head-shoulders-400ml.jpg", // Troque para o link da foto real do produto
-    category: "Higiene e Beleza",
+    image: "https://i.ibb.co/placeholder/shampoo-head-shoulders.jpg",
+    category: "CONFEITARIA E OUTROS",
     description: "Shampoo anticaspa 400ml",
     stock: 12,
     rating: 4.7,
@@ -693,199 +685,177 @@ export const products = [
     tags: ["shampoo", "anticaspa", "cabelo"],
   },
   {
-    id: "46",
-    name: "PASTA DE DENTE COLGATE 90G",
+    id: "95",
+    name: "Pasta de Dente Colgate 90g",
     price: 3.99,
     originalPrice: 3.79,
-    // Foto do produto: Pasta de dente Colgate 90g
-    image: "https://exemplo.com/imagens/pasta-de-dente-colgate-90g.jpg", // Troque para o link da foto real do produto
-    category: "Higiene e Beleza",
+    image: "https://i.ibb.co/placeholder/pasta-dente-colgate.jpg",
+    category: "CONFEITARIA E OUTROS",
     description: "Pasta de dente 90g",
     stock: 30,
-    rating: 4.5,
-    reviews: 345,
+    rating: 4.6,
+    reviews: 189,
     brand: "Colgate",
     unit: "90g",
     tags: ["pasta", "dente", "higiene"],
   },
   {
-    id: "47",
-    name: "PAPEL HIGIÊNICO FOLHA DUPLA NEVE 30M",
-    price: 6.99,
-    originalPrice: 6.49,
-    // Foto do produto: Papel higiênico folha dupla Neve 30m
-    image: "https://exemplo.com/imagens/papel-higiênico-folha-dupla-neve-30m.jpg", // Troque para o link da foto real do produto
-    category: "Higiene e Beleza",
-    description: "Papel higiênico folha dupla 30m",
+    id: "96",
+    name: "Sal Refinado Cisne 1kg",
+    price: 2.99,
+    originalPrice: 2.79,
+    image: "https://i.ibb.co/placeholder/sal-refinado-cisne.jpg",
+    category: "TEMPEROS",
+    description: "Sal refinado 1kg",
+    stock: 40,
+    rating: 4.5,
+    reviews: 156,
+    brand: "Cisne",
+    unit: "1kg",
+    tags: ["sal", "refinado", "tempero"],
+  },
+  {
+    id: "97",
+    name: "Pimenta do Reino Moída 100g",
+    price: 4.99,
+    originalPrice: 4.49,
+    image: "https://i.ibb.co/placeholder/pimenta-reino-moida.jpg",
+    category: "TEMPEROS",
+    description: "Pimenta do reino moída 100g",
     stock: 20,
-    rating: 4.4,
-    reviews: 123,
-    brand: "Neve",
-    unit: "30m",
-    tags: ["papel", "higiene", "folha dupla"],
+    rating: 4.7,
+    reviews: 78,
+    brand: "Kitano",
+    unit: "100g",
+    tags: ["pimenta", "reino", "tempero"],
   },
   {
-    id: "48",
-    name: "CAFÉ EM PÓ MELITTA 500G",
-    price: 15.99,
-    originalPrice: 15.49,
-    // Foto do produto: Café em pó Melitta 500g
-    image: "https://exemplo.com/imagens/café-em-pó-melitta-500g.jpg", // Troque para o link da foto real do produto
-    category: "Bebidas",
-    description: "Café em pó tradicional 500g",
-    stock: 18,
-    rating: 4.8,
-    reviews: 234,
-    brand: "Melitta",
-    unit: "500g",
-    tags: ["café", "pó", "tradicional"],
-  },
-  {
-    id: "49",
-    name: "SUCO DE LARANJA INTEGRAL DEL VALLE 1L",
+    id: "98",
+    name: "Atum em Conserva Gomes da Costa 170g",
     price: 8.99,
     originalPrice: 8.49,
-    // Foto do produto: Suco de laranja integral Del Valle 1L
-    image: "https://exemplo.com/imagens/suco-de-laranja-integral-del-valle-1l.jpg", // Troque para o link da foto real do produto
-    category: "Bebidas",
-    description: "Suco de laranja integral 1 litro",
+    image: "https://i.ibb.co/placeholder/atum-conserva-gomes.jpg",
+    category: "ENLATADOS E EM CONSERVA",
+    description: "Atum em conserva 170g",
     stock: 15,
     rating: 4.6,
-    reviews: 89,
-    brand: "Del Valle",
-    unit: "1L",
-    tags: ["suco", "laranja", "integral"],
+    reviews: 92,
+    brand: "Gomes da Costa",
+    unit: "170g",
+    tags: ["atum", "conserva", "proteína"],
   },
   {
-    id: "50",
-    name: "REFRIGERANTE COCA-COLA 2L",
-    price: 7.99,
-    originalPrice: 7.49,
-    // Foto do produto: Refrigerante Coca-Cola 2L
-    image: "https://exemplo.com/imagens/refrigerante-coca-cola-2l.jpg", // Troque para o link da foto real do produto
-    category: "Bebidas",
-    description: "Refrigerante Coca-Cola 2 litros",
+    id: "99",
+    name: "Sardinha em Conserva Gomes da Costa 125g",
+    price: 4.99,
+    originalPrice: 4.49,
+    image: "https://i.ibb.co/placeholder/sardinha-conserva-gomes.jpg",
+    category: "ENLATADOS E EM CONSERVA",
+    description: "Sardinha em conserva 125g",
     stock: 25,
-    rating: 4.7,
-    reviews: 456,
-    brand: "Coca-Cola",
-    unit: "2L",
-    tags: ["refrigerante", "cola", "bebida"],
-  },
-  
-
-  {
-    id: "61",
-    name: "ARROZ TIO JOÃO 5KG",
-    price: 18.0,
-    originalPrice: 22.0,
-    image: "https://i.ibb.co/99jMZbbF/arroztiojoao5kg.jpg",
-    category: "Grãos",
-    description: "Arroz branco tipo 1 5kg",
-    stock: 60,
-    rating: 4.8,
-    reviews: 45,
-    brand: "Tio João",
-    unit: "5kg",
-    tags: ["arroz", "básico", "alimento"],
-  },
-  {
-    id: "62",
-    name: "FEIJÃO CARIOCA KICALDO 1KG",
-    price: 6.8,
-    originalPrice: 8.5,
-    image: "https://images.unsplash.com/photo-1601315378994-fffb4c5044fa?auto=format&fit=crop&w=400&q=80",
-    category: "Grãos",
-    description: "Feijão carioca tradicional 1kg",
-    stock: 80,
-    rating: 4.5,
-    reviews: 32,
-    brand: "Kicaldo",
-    unit: "1kg",
-    tags: ["feijão", "básico", "alimento"],
-  },
-  {
-    id: "63",
-    name: "MACARRÃO RENATA ESPAGUETE 500G",
-    price: 2.7,
-    originalPrice: 3.5,
-    image: "https://images.unsplash.com/photo-1586528117849-bd2b76e5d353?auto=format&fit=crop&w=400&q=80",
-    category: "Massas",
-    description: "Macarrão espaguete 500g",
-    stock: 95,
-    rating: 4.6,
-    reviews: 28,
-    brand: "Renata",
-    unit: "500g",
-    tags: ["macarrão", "massa", "alimento"],
-  },
-  {
-    id: "64",
-    name: "CAFÉ PILÃO TRADICIONAL 500G",
-    price: 8.2,
-    originalPrice: 10.0,
-    image: "https://images.unsplash.com/photo-1551218372-95a4e5d1e4a1?auto=format&fit=crop&w=400&q=80",
-    category: "Bebidas",
-    description: "Café tradicional torrado e moído 500g",
-    stock: 70,
-    rating: 4.9,
-    reviews: 156,
-    brand: "Pilão",
-    unit: "500g",
-    tags: ["café", "bebida", "tradicional"],
-  },
-  {
-    id: "65",
-    name: "AÇÚCAR CRISTAL CARAVELAS 1KG",
-    price: 2.1,
-    originalPrice: 2.8,
-    image: "https://images.unsplash.com/photo-1622737132334-c38dc78e5445?auto=format&fit=crop&w=400&q=80",
-    category: "Açúcares",
-    description: "Açúcar cristal refinado 1kg",
-    stock: 105,
     rating: 4.4,
+    reviews: 67,
+    brand: "Gomes da Costa",
+    unit: "125g",
+    tags: ["sardinha", "conserva", "peixe"],
+  },
+  {
+    id: "100",
+    name: "Biscoito Recheado Trakinas 130g",
+    price: 3.99,
+    originalPrice: 3.49,
+    image: "https://i.ibb.co/placeholder/biscoito-trakinas.jpg",
+    category: "BISCOITOS",
+    description: "Biscoito recheado 130g",
+    stock: 30,
+    rating: 4.5,
+    reviews: 134,
+    brand: "Trakinas",
+    unit: "130g",
+    tags: ["biscoito", "recheado", "snack"],
+  },
+  {
+    id: "101",
+    name: "Biscoito Cream Cracker Nestlé 200g",
+    price: 4.99,
+    originalPrice: 4.49,
+    image: "https://i.ibb.co/placeholder/biscoito-cream-cracker.jpg",
+    category: "BISCOITOS",
+    description: "Biscoito cream cracker 200g",
+    stock: 25,
+    rating: 4.6,
     reviews: 89,
-    brand: "Caravelas",
-    unit: "1kg",
-    tags: ["açúcar", "cristal", "refinado"],
+    brand: "Nestlé",
+    unit: "200g",
+    tags: ["biscoito", "cream cracker", "salgado"],
   },
   {
-    id: "66",
-    name: "ÓLEO DE SOJA LIZA 900ML",
-    price: 5.0,
-    originalPrice: 6.2,
-    image: "https://images.unsplash.com/photo-1609424162173-fb3c5ec31a5a?auto=format&fit=crop&w=400&q=80",
-    category: "Óleos",
-    description: "Óleo de soja refinado 900ml",
-    stock: 130,
+    id: "102",
+    name: "Queijo Mussarela Fatiado kg",
+    price: 32.99,
+    originalPrice: 31.99,
+    image: "https://i.ibb.co/placeholder/queijo-mussarela-fatiado.jpg",
+    category: "FRIOS Á GRANEL E PACOTES",
+    description: "Queijo mussarela fatiado por kg",
+    stock: 8,
     rating: 4.7,
-    reviews: 234,
-    brand: "Liza",
-    unit: "900ml",
-    tags: ["óleo", "soja", "refinado"],
+    reviews: 156,
+    brand: "Laticínio",
+    unit: "kg",
+    tags: ["queijo", "mussarela", "fatiado"],
   },
   {
-    id: "67",
-    name: "MAIONESE HELLMANN'S 500G",
-    price: 5.5,
-    originalPrice: 6.9,
-    image: "https://images.unsplash.com/photo-1659191289270-56c36bcb7e24?auto=format&fit=crop&w=400&q=80",
-    category: "Condimentos",
-    description: "Maionese tradicional 500g",
-    stock: 85,
+    id: "103",
+    name: "Presunto Fatiado kg",
+    price: 28.99,
+    originalPrice: 27.99,
+    image: "https://i.ibb.co/placeholder/presunto-fatiado.jpg",
+    category: "FRIOS Á GRANEL E PACOTES",
+    description: "Presunto fatiado por kg",
+    stock: 10,
+    rating: 4.5,
+    reviews: 98,
+    brand: "Frigorífico",
+    unit: "kg",
+    tags: ["presunto", "fatiado", "frios"],
+  },
+  {
+    id: "104",
+    name: "Sorvete Napolitano Kibon 2L",
+    price: 18.99,
+    originalPrice: 17.99,
+    image: "https://i.ibb.co/placeholder/sorvete-napolitano-kibon.jpg",
+    category: "CONGELADOS",
+    description: "Sorvete napolitano 2 litros",
+    stock: 12,
     rating: 4.8,
-    reviews: 178,
-    brand: "Hellmann's",
-    unit: "500g",
-    tags: ["maionese", "condimento", "tradicional"],
+    reviews: 234,
+    brand: "Kibon",
+    unit: "2L",
+    tags: ["sorvete", "napolitano", "sobremesa"],
   },
   {
-    id: "68",
-    name: "REFRIGERANTE COCA-COLA 2L",
-    price: 7.2,
-    originalPrice: 9.0,
-    image: "https://images.unsplash.com/photo-1603386329225-868f9b1c13b1?auto=format&fit=crop&w=400&q=80",
-    category: "Bebidas",
+    id: "105",
+    name: "Pizza Congelada Sadia 4 Queijos 500g",
+    price: 15.99,
+    originalPrice: 14.99,
+    image: "https://i.ibb.co/placeholder/pizza-congelada-sadia.jpg",
+    category: "CONGELADOS",
+    description: "Pizza congelada 4 queijos 500g",
+    stock: 8,
+    rating: 4.4,
+    reviews: 67,
+    brand: "Sadia",
+    unit: "500g",
+    tags: ["pizza", "congelada", "4 queijos"],
+  },
+  {
+    id: "106",
+    name: "Coca-Cola 2L",
+    price: 8.99,
+    originalPrice: 8.49,
+    image: "https://i.ibb.co/placeholder/coca-cola-2l.jpg",
+    category: "REFIGERANTES E OUTROS LIQUIDOS",
     description: "Refrigerante Coca-Cola 2 litros",
     stock: 150,
     rating: 4.9,
@@ -895,12 +865,12 @@ export const products = [
     tags: ["refrigerante", "cola", "bebida"],
   },
   {
-    id: "69",
-    name: "BISCOITO NESFIT INTEGRAL 170G",
+    id: "107",
+    name: "Biscoito Nesfit Integral 170g",
     price: 3.9,
     originalPrice: 4.9,
     image: "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
-    category: "Snacks",
+    category: "BISCOITOS",
     description: "Biscoito integral Nesfit 170g",
     stock: 60,
     rating: 4.6,
@@ -909,27 +879,54 @@ export const products = [
     unit: "170g",
     tags: ["biscoito", "integral", "snack"],
   },
-
+  {
+    id: "108",
+    name: "Sushi Califórnia 8 Unidades",
+    price: 24.99,
+    originalPrice: 22.99,
+    image: "https://i.ibb.co/placeholder/sushi-california.jpg",
+    category: "SUSHITERIA",
+    description: "Sushi Califórnia 8 unidades",
+    stock: 6,
+    rating: 4.8,
+    reviews: 45,
+    brand: "Sushi Express",
+    unit: "8 un",
+    tags: ["sushi", "califórnia", "japonês"],
+  },
+  {
+    id: "109",
+    name: "Sushi Salmão 6 Unidades",
+    price: 28.99,
+    originalPrice: 26.99,
+    image: "https://i.ibb.co/placeholder/sushi-salmao.jpg",
+    category: "SUSHITERIA",
+    description: "Sushi de salmão 6 unidades",
+    stock: 4,
+    rating: 4.9,
+    reviews: 38,
+    brand: "Sushi Express",
+    unit: "6 un",
+    tags: ["sushi", "salmão", "japonês"],
+  },
 ]
 
 export const categories = [
   "Todos",
-  "Grãos",
-  "Óleos",
-  "Açúcar e Adoçantes",
-  "Bebidas",
-  "Laticínios",
-  "Padaria",
-  "Massas",
-  "Frutas e Verduras",
-  "Carnes e Aves",
-  "Limpeza",
-  "Higiene e Beleza",
-  "Snacks",
-  "Chocolates",
-  "Hortifruti",
-  "Frutas",
-  "Carnes",
+  "DESCARTÁVEIS",
+  "CONFEITARIA E OUTROS",
+  "PANIFICAÇÃO",
+  "MOLHOS",
+  "SUSHITERIA",
+  "PRODUTOS DE LIMPEZA",
+  "TEMPEROS",
+  "ENLATADOS E EM CONSERVA",
+  "BISCOITOS",
+  "MERCEARIA",
+  "FRIOS Á GRANEL E PACOTES",
+  "RESFRIADOS",
+  "CONGELADOS",
+  "REFRIGERANTES E OUTROS LIQUIDOS",
 ]
 
 export const promotions: Promotion[] = [
@@ -965,7 +962,7 @@ export const promotions: Promotion[] = [
 export const productPromotions: ProductPromotion[] = [
   {
     id: "1",
-    productId: "1",
+    productId: "50",
     productName: "ÁGUA MINERAL NATURAGUA 1,5L",
     originalPrice: 2.30,
     newPrice: 1.99,
@@ -977,7 +974,7 @@ export const productPromotions: ProductPromotion[] = [
   },
   {
     id: "2",
-    productId: "4",
+    productId: "53",
     productName: "AMENDOIM EM BANDA CASTRO 1KG",
     originalPrice: 13.49,
     newPrice: 11.99,
@@ -988,3 +985,151 @@ export const productPromotions: ProductPromotion[] = [
     validUntil: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
   },
 ]
+
+// Caminho para o arquivo products.json
+const productsFilePath = path.join(process.cwd(), 'data', 'products.json')
+
+// Função para garantir que o arquivo products.json existe
+const ensureFileExists = async () => {
+  try {
+    await fs.access(productsFilePath)
+  } catch (error) {
+    // Se o arquivo não existe, criar com array vazio
+    await fs.writeFile(productsFilePath, JSON.stringify([], null, 2))
+  }
+}
+
+export const saveProductToFile = async (product: any) => {
+  try {
+    // Garantir que o arquivo existe
+    await ensureFileExists()
+    
+    // Ler produtos existentes
+    const productsData = await fs.readFile(productsFilePath, 'utf8')
+    let products = []
+    
+    try {
+      products = JSON.parse(productsData)
+    } catch (parseError) {
+      console.error('Erro ao fazer parse do JSON, criando array vazio:', parseError)
+      products = []
+    }
+    
+    // Verificar se o ID já existe
+    if (product.id && products.some((p: any) => p.id === product.id)) {
+      return { success: false, message: 'ID já existe. Escolha outro ID.' }
+    }
+    
+    // Se o produto não tem ID, gerar automaticamente
+    if (!product.id) {
+      const maxId = Math.max(...products.map((p: any) => parseInt(p.id) || 0), 0)
+      product.id = (maxId + 1).toString()
+    }
+    
+    // Adicionar novo produto
+    products.push(product)
+    
+    // Salvar no products.json
+    await fs.writeFile(productsFilePath, JSON.stringify(products, null, 2))
+    
+    return { success: true, message: 'Produto salvo com sucesso!', product }
+  } catch (error) {
+    console.error('Erro ao salvar produto:', error)
+    return { success: false, message: `Erro ao salvar produto: ${error}` }
+  }
+}
+
+export const updateProductInFile = async (productId: string, updatedProduct: any) => {
+  try {
+    // Garantir que o arquivo existe
+    await ensureFileExists()
+    
+    // Ler produtos existentes
+    const productsData = await fs.readFile(productsFilePath, 'utf8')
+    let products = []
+    
+    try {
+      products = JSON.parse(productsData)
+    } catch (parseError) {
+      console.error('Erro ao fazer parse do JSON:', parseError)
+      return { success: false, message: 'Arquivo de produtos corrompido' }
+    }
+    
+    // Encontrar e atualizar produto
+    const productIndex = products.findIndex((p: any) => p.id === productId)
+    if (productIndex === -1) {
+      return { success: false, message: 'Produto não encontrado' }
+    }
+    
+    // Preservar o ID original
+    products[productIndex] = { 
+      ...products[productIndex], 
+      ...updatedProduct,
+      id: productId // Garantir que o ID não seja alterado
+    }
+    
+    // Salvar no products.json
+    await fs.writeFile(productsFilePath, JSON.stringify(products, null, 2))
+    
+    return { success: true, message: 'Produto atualizado com sucesso!' }
+  } catch (error) {
+    console.error('Erro ao atualizar produto:', error)
+    return { success: false, message: `Erro ao atualizar produto: ${error}` }
+  }
+}
+
+export const deleteProductFromFile = async (productId: string) => {
+  try {
+    // Garantir que o arquivo existe
+    await ensureFileExists()
+    
+    // Ler produtos existentes
+    const productsData = await fs.readFile(productsFilePath, 'utf8')
+    let products = []
+    
+    try {
+      products = JSON.parse(productsData)
+    } catch (parseError) {
+      console.error('Erro ao fazer parse do JSON:', parseError)
+      return { success: false, message: 'Arquivo de produtos corrompido' }
+    }
+    
+    // Encontrar e remover produto
+    const productIndex = products.findIndex((p: any) => p.id === productId)
+    if (productIndex === -1) {
+      return { success: false, message: 'Produto não encontrado' }
+    }
+    
+    products.splice(productIndex, 1)
+    
+    // Salvar no products.json
+    await fs.writeFile(productsFilePath, JSON.stringify(products, null, 2))
+    
+    return { success: true, message: 'Produto deletado com sucesso!' }
+  } catch (error) {
+    console.error('Erro ao deletar produto:', error)
+    return { success: false, message: `Erro ao deletar produto: ${error}` }
+  }
+}
+
+export const getAllProductsFromFile = async () => {
+  try {
+    await ensureFileExists()
+    const productsData = await fs.readFile(productsFilePath, 'utf8')
+    return JSON.parse(productsData)
+  } catch (error) {
+    console.error('Erro ao ler produtos do arquivo:', error)
+    return []
+  }
+}
+
+export const syncProductsToFile = async () => {
+  try {
+    // Sincronizar produtos padrão do data.ts para o products.json
+    await fs.writeFile(productsFilePath, JSON.stringify(products, null, 2))
+    return { success: true, message: 'Produtos sincronizados com sucesso!' }
+  } catch (error) {
+    console.error('Erro ao sincronizar produtos:', error)
+    return { success: false, message: `Erro ao sincronizar produtos: ${error}` }
+  }
+}

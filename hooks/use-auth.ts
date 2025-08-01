@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSessionWrapper } from '@/hooks/use-session-wrapper'
 import { useAuthStore } from '@/lib/store'
 
 export function useAuth() {
+<<<<<<< HEAD
   let session: any = null
   let status: any = 'unauthenticated'
   
@@ -18,6 +19,9 @@ export function useAuth() {
     status = 'unauthenticated'
   }
 
+=======
+  const { data: session, status } = useSessionWrapper()
+>>>>>>> 9731986bd2ab46d7f04a58ef52f184bb4e57851a
   const { user, setUser, logout: storeLogout } = useAuthStore()
 
   useEffect(() => {

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import Header from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Mail, Phone, MapPin, Clock, Star, Target, Award, Heart, Users, Zap } from "lucide-react"

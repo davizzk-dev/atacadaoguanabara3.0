@@ -1,6 +1,12 @@
 'use client'
 
+<<<<<<< HEAD
 import { useState, useEffect, Suspense } from 'react'
+=======
+export const dynamic = 'force-dynamic'
+
+import { useState } from 'react'
+>>>>>>> 9731986bd2ab46d7f04a58ef52f184bb4e57851a
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Mail, Lock, Eye, EyeOff, ArrowLeft, User, Phone, MapPin, Home, Hash, CheckCircle } from 'lucide-react'

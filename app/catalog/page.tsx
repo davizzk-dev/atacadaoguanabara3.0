@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect } from 'react'
 import { X, Sparkles, Target, Zap } from 'lucide-react'
 import Header from '@/components/header'

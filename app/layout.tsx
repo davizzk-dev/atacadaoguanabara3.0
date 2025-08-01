@@ -26,12 +26,12 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={inter.className} style={{ overflow: 'visible' }}>
-                            <Providers>
-                      {children}
-                      <CookieBanner />
-                      <OrderTrackingNotification />
-                      <VisitorTracker />
-                    </Providers>
+        <Providers>
+          {children}
+          <CookieBanner />
+          <OrderTrackingNotification />
+          <VisitorTracker />
+        </Providers>
       </body>
     </html>
   )

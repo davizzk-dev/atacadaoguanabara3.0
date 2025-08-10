@@ -1,0 +1,6 @@
+{
+  "autoSync": false,
+  "syncInterval": 60,
+  "batchSize": 200,
+  "lastSync": null
+} 

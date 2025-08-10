@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Funcionalidades - Atacadão Guanabara</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { border: 1px solid #ccc; margin: 10px 0; padding: 15px; }
+        .result { margin-top: 10px; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        input, textarea { padding: 8px; margin: 5px; width: 300px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste de Funcionalidades - Atacadão Guanabara</h1>
+
+    <!-- Teste de Login -->
+    <div class="test-section">
+        <h2>🔐 Teste de Login</h2>
+        <input type="email" id="loginEmail" placeholder="Email" value="admin">
+        <input type="password" id="loginPassword" placeholder="Senha" value="atacadaoguanabaraadmin123secreto">
+        <button onclick="testLogin()">Testar Login</button>
+        <div id="loginResult"></div>
+    </div>
+
+    <!-- Teste de Registro -->
+    <div class="test-section">
+        <h2>📝 Teste de Registro</h2>
+        <input type="text" id="regName" placeholder="Nome" value="Teste Usuario">
+        <input type="email" id="regEmail" placeholder="Email" value="teste@teste.com">
+        <input type="tel" id="regPhone" placeholder="Telefone" value="85999999999">
+        <input type="password" id="regPassword" placeholder="Senha" value="123456">
+        <button onclick="testRegister()">Testar Registro</button>
+        <div id="registerResult"></div>
+    </div>
+
+    <!-- Teste de Feedback -->
+    <div class="test-section">
+        <h2>📞 Teste de Feedback</h2>
+        <input type="text" id="feedName" placeholder="Nome" value="João Silva">
+        <input type="email" id="feedEmail" placeholder="Email" value="joao@teste.com">
+        <textarea id="feedMessage" placeholder="Mensagem">Teste de feedback via API</textarea>
+        <input type="number" id="feedRating" placeholder="Nota (1-5)" value="5" min="1" max="5">
+        <button onclick="testFeedback()">Testar Feedback</button>
+        <div id="feedbackResult"></div>
+    </div>
+
+    <!-- Teste de Solicitação de Câmera -->
+    <div class="test-section">
+        <h2>📷 Teste de Solicitação de Câmera</h2>
+        <input type="text" id="camName" placeholder="Nome" value="Maria Santos">
+        <input type="tel" id="camPhone" placeholder="Telefone" value="85988887777">
+        <textarea id="camCause" placeholder="Motivo">Preciso verificar o produto antes da compra</textarea>
+        <button onclick="testCameraRequest()">Testar Solicitação</button>
+        <div id="cameraResult"></div>
+    </div>
+
+    <!-- Teste de Pedido -->
+    <div class="test-section">
+        <h2>🛒 Teste de Pedido</h2>
+        <button onclick="testOrder()">Testar Criação de Pedido</button>
+        <div id="orderResult"></div>
+    </div>
+
+    <!-- Teste de Promoção -->
+    <div class="test-section">
+        <h2>🎁 Teste de Promoção</h2>
+        <input type="text" id="promoProductId" placeholder="ID do Produto" value="123">
+        <input type="text" id="promoProductName" placeholder="Nome do Produto" value="Produto Teste">
+        <input type="number" id="promoOriginalPrice" placeholder="Preço Original" value="10.00" step="0.01">
+        <input type="number" id="promoNewPrice" placeholder="Novo Preço" value="7.50" step="0.01">
+        <button onclick="testPromotion()">Testar Promoção</button>
+        <div id="promotionResult"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3005/api';
+
+        function showResult(elementId, success, message, data = null) {
+            const element = document.getElementById(elementId);
+            element.className = `result ${success ? 'success' : 'error'}`;
+            element.innerHTML = `
+                <strong>${success ? '✅ Sucesso!' : '❌ Erro!'}</strong><br>
+                ${message}
+                ${data ? `<br><pre>${JSON.stringify(data, null, 2)}</pre>` : ''}
+            `;
+        }
+
+        async function testLogin() {
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: document.getElementById('loginEmail').value,
+                        password: document.getElementById('loginPassword').value
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && (data.success || data.id)) {
+                    showResult('loginResult', true, 'Login realizado com sucesso!', data);
+                } else {
+                    showResult('loginResult', false, data.error || 'Erro no login', data);
+                }
+            } catch (error) {
+                showResult('loginResult', false, `Erro de conexão: ${error.message}`);
+            }
+        }
+
+        async function testRegister() {
+            try {
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: document.getElementById('regName').value,
+                        email: document.getElementById('regEmail').value,
+                        phone: document.getElementById('regPhone').value,
+                        password: document.getElementById('regPassword').value,
+                        address: {
+                            street: "Rua Teste",
+                            number: "123",
+                            neighborhood: "Centro",
+                            city: "Fortaleza",
+                            state: "CE",
+                            zipCode: "60000000"
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && (data.success || data.id)) {
+                    showResult('registerResult', true, 'Registro realizado com sucesso!', data);
+                } else {
+                    showResult('registerResult', false, data.error || 'Erro no registro', data);
+                }
+            } catch (error) {
+                showResult('registerResult', false, `Erro de conexão: ${error.message}`);
+            }
+        }
+
+        async function testFeedback() {
+            try {
+                const response = await fetch(`${API_BASE}/feedback`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: document.getElementById('feedName').value,
+                        email: document.getElementById('feedEmail').value,
+                        message: document.getElementById('feedMessage').value,
+                        rating: parseInt(document.getElementById('feedRating').value)
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showResult('feedbackResult', true, 'Feedback enviado com sucesso!', data);
+                } else {
+                    showResult('feedbackResult', false, data.error || 'Erro ao enviar feedback', data);
+                }
+            } catch (error) {
+                showResult('feedbackResult', false, `Erro de conexão: ${error.message}`);
+            }
+        }
+
+        async function testCameraRequest() {
+            try {
+                const response = await fetch(`${API_BASE}/camera-requests`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: document.getElementById('camName').value,
+                        phone: document.getElementById('camPhone').value,
+                        cause: document.getElementById('camCause').value
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showResult('cameraResult', true, 'Solicitação de câmera enviada com sucesso!', data);
+                } else {
+                    showResult('cameraResult', false, data.error || 'Erro ao enviar solicitação', data);
+                }
+            } catch (error) {
+                showResult('cameraResult', false, `Erro de conexão: ${error.message}`);
+            }
+        }
+
+        async function testOrder() {
+            try {
+                const response = await fetch(`${API_BASE}/orders`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        items: [
+                            {
+                                product: {
+                                    id: "123",
+                                    name: "Produto Teste",
+                                    price: 10.00
+                                },
+                                quantity: 2
+                            }
+                        ],
+                        total: 20.00,
+                        customerInfo: {
+                            name: "Cliente Teste",
+                            email: "cliente@teste.com",
+                            phone: "85999999999"
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showResult('orderResult', true, 'Pedido criado com sucesso!', data);
+                } else {
+                    showResult('orderResult', false, data.error || 'Erro ao criar pedido', data);
+                }
+            } catch (error) {
+                showResult('orderResult', false, `Erro de conexão: ${error.message}`);
+            }
+        }
+
+        async function testPromotion() {
+            try {
+                const response = await fetch(`${API_BASE}/promotions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        productId: document.getElementById('promoProductId').value,
+                        productName: document.getElementById('promoProductName').value,
+                        originalPrice: document.getElementById('promoOriginalPrice').value,
+                        newPrice: document.getElementById('promoNewPrice').value
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showResult('promotionResult', true, 'Promoção criada com sucesso!', data);
+                } else {
+                    showResult('promotionResult', false, data.error || 'Erro ao criar promoção', data);
+                }
+            } catch (error) {
+                showResult('promotionResult', false, `Erro de conexão: ${error.message}`);
+            }
+        }
+
+        // Teste de conectividade ao carregar a página
+        window.onload = function() {
+            console.log('🧪 Página de testes carregada!');
+            console.log('📡 Testando conectividade com o servidor...');
+            
+            fetch(`${API_BASE}/feedback`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('✅ Servidor conectado!', data);
+                })
+                .catch(error => {
+                    console.error('❌ Erro de conectividade:', error);
+                });
+        };
+    </script>
+</body>
+</html>

@@ -1,67 +1,122 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { promises as fs } from 'fs'
+import fs from 'fs'
 import path from 'path'
 
 export async function GET(request: NextRequest) {
   try {
-    const dataDir = path.join(process.cwd(), 'data')
-    const ordersData = JSON.parse(await fs.readFile(path.join(dataDir, 'orders.json'), 'utf-8'))
+    const dataPath = path.join(process.cwd(), 'data')
+    const ordersData = JSON.parse(fs.readFileSync(path.join(dataPath, 'orders.json'), 'utf8'))
     
+    // Analytics de receita mensal (últimos 12 meses)
     const monthlyRevenue = []
-    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-    const currentDate = new Date()
-    
-    // Pegar todos os pedidos e agrupar por mês
-    const ordersByMonth: Record<string, { revenue: number; orders: number }> = {}
-    
-    ordersData.forEach((order: any) => {
-      const orderDate = new Date(order.createdAt)
-      const monthKey = `${orderDate.getFullYear()}-${orderDate.getMonth()}`
-      
-      if (!ordersByMonth[monthKey]) {
-        ordersByMonth[monthKey] = { revenue: 0, orders: 0 }
-      }
-      
-      ordersByMonth[monthKey].revenue += order.total
-      ordersByMonth[monthKey].orders += 1
-    })
-    
-    // Criar array dos últimos 12 meses
     for (let i = 11; i >= 0; i--) {
-      const monthDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
-      const monthKey = `${monthDate.getFullYear()}-${monthDate.getMonth()}`
-      const monthData = ordersByMonth[monthKey] || { revenue: 0, orders: 0 }
+      const date = new Date()
+      date.setMonth(date.getMonth() - i)
+      const monthStart = new Date(date.getFullYear(), date.getMonth(), 1)
+      const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 1)
+      
+      const monthOrders = ordersData.filter((order: any) => {
+        const orderDate = new Date(order.createdAt)
+        return orderDate >= monthStart && orderDate < monthEnd
+      })
+      
+      const monthRevenue = monthOrders.reduce((sum: number, order: any) => sum + (order.total || 0), 0)
+      const monthOrdersCount = monthOrders.length
       
       monthlyRevenue.push({
-        month: months[monthDate.getMonth()],
-        revenue: monthData.revenue,
-        orders: monthData.orders
+        month: date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }),
+        revenue: monthRevenue,
+        orders: monthOrdersCount,
+        averageOrder: monthOrdersCount > 0 ? monthRevenue / monthOrdersCount : 0
       })
     }
     
-    // Se todos os valores são zero, usar dados de exemplo
-    const totalRevenue = monthlyRevenue.reduce((sum, item) => sum + item.revenue, 0)
-    if (totalRevenue === 0) {
-      console.log('📊 Usando dados de exemplo para faturamento mensal')
-      return NextResponse.json([
-        { month: 'Jan', revenue: 12500, orders: 45 },
-        { month: 'Fev', revenue: 15800, orders: 52 },
-        { month: 'Mar', revenue: 14200, orders: 48 },
-        { month: 'Abr', revenue: 16800, orders: 55 },
-        { month: 'Mai', revenue: 19200, orders: 62 },
-        { month: 'Jun', revenue: 17500, orders: 58 },
-        { month: 'Jul', revenue: 20300, orders: 65 },
-        { month: 'Ago', revenue: 18900, orders: 61 },
-        { month: 'Set', revenue: 21500, orders: 68 },
-        { month: 'Out', revenue: 19800, orders: 64 },
-        { month: 'Nov', revenue: 23200, orders: 72 },
-        { month: 'Dez', revenue: 24500, orders: 78 }
-      ])
+    // Analytics de receita semanal (últimas 8 semanas)
+    const weeklyRevenue = []
+    for (let i = 7; i >= 0; i--) {
+      const date = new Date()
+      date.setDate(date.getDate() - (i * 7))
+      const weekStart = new Date(date)
+      weekStart.setDate(date.getDate() - date.getDay())
+      const weekEnd = new Date(weekStart)
+      weekEnd.setDate(weekStart.getDate() + 7)
+      
+      const weekOrders = ordersData.filter((order: any) => {
+        const orderDate = new Date(order.createdAt)
+        return orderDate >= weekStart && orderDate < weekEnd
+      })
+      
+      const weekRevenue = weekOrders.reduce((sum: number, order: any) => sum + (order.total || 0), 0)
+      
+      weeklyRevenue.push({
+        week: `Semana ${8-i}`,
+        revenue: weekRevenue,
+        orders: weekOrders.length,
+        startDate: weekStart.toISOString().split('T')[0],
+        endDate: new Date(weekEnd.getTime() - 1).toISOString().split('T')[0]
+      })
     }
     
-    return NextResponse.json(monthlyRevenue)
+    // Analytics de receita diária (últimos 30 dias)
+    const dailyRevenue = []
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date()
+      date.setDate(date.getDate() - i)
+      const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+      const dayEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1)
+      
+      const dayOrders = ordersData.filter((order: any) => {
+        const orderDate = new Date(order.createdAt)
+        return orderDate >= dayStart && orderDate < dayEnd
+      })
+      
+      const dayRevenue = dayOrders.reduce((sum: number, order: any) => sum + (order.total || 0), 0)
+      
+      dailyRevenue.push({
+        date: date.toISOString().split('T')[0],
+        revenue: dayRevenue,
+        orders: dayOrders.length,
+        dayOfWeek: date.toLocaleDateString('pt-BR', { weekday: 'short' })
+      })
+    }
+    
+    // Estatísticas gerais
+    const totalRevenue = ordersData.reduce((sum: number, order: any) => sum + (order.total || 0), 0)
+    const totalOrders = ordersData.length
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0
+    
+    // Receita do mês atual
+    const currentMonth = new Date()
+    const currentMonthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
+    const currentMonthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1)
+    
+    const currentMonthOrders = ordersData.filter((order: any) => {
+      const orderDate = new Date(order.createdAt)
+      return orderDate >= currentMonthStart && orderDate < currentMonthEnd
+    })
+    
+    const currentMonthRevenue = currentMonthOrders.reduce((sum: number, order: any) => sum + (order.total || 0), 0)
+    
+    return NextResponse.json({
+      success: true,
+      data: {
+        monthlyRevenue,
+        weeklyRevenue,
+        dailyRevenue,
+        statistics: {
+          totalRevenue,
+          totalOrders,
+          averageOrderValue,
+          currentMonthRevenue,
+          currentMonthOrders: currentMonthOrders.length
+        }
+      }
+    })
   } catch (error) {
-    console.error('Erro ao buscar faturamento mensal:', error)
-    return NextResponse.json([])
+    console.error('Erro ao carregar analytics de receita:', error)
+    return NextResponse.json({
+      success: false,
+      error: 'Erro ao carregar dados de receita'
+    }, { status: 500 })
   }
 } 

@@ -119,9 +119,17 @@ export const useAuthStore = create<AuthStore>()(
           })
           
           if (response.ok) {
-            const user = await response.json()
-            set({ user })
-            return true
+            const result = await response.json()
+            // Verificar se a resposta tem sucesso e dados
+            if (result.success && result.data) {
+              set({ user: result.data })
+              return true
+            }
+            // Compatibilidade com resposta antiga
+            if (result.id) {
+              set({ user: result })
+              return true
+            }
           }
           return false
         } catch (error) {
@@ -144,9 +152,17 @@ export const useAuthStore = create<AuthStore>()(
           })
           
           if (response.ok) {
-            const user = await response.json()
-            set({ user })
-            return true
+            const result = await response.json()
+            // Verificar se a resposta tem sucesso e dados
+            if (result.success && result.data) {
+              set({ user: result.data })
+              return true
+            }
+            // Compatibilidade com resposta antiga
+            if (result.id) {
+              set({ user: result })
+              return true
+            }
           }
           return false
         } catch (error) {

@@ -1,0 +1,24 @@
+[
+	{
+		"id": "1754800000001",
+		"orderId": "123456",
+		"userName": "Cliente Teste",
+		"reason": "Produto com defeito",
+		"createdAt": "2025-08-10T10:00:00.000Z",
+		"status": "pending",
+		"messages": [
+			{
+				"id": "1",
+				"sender": "user",
+				"message": "Gostaria de devolver o produto, está com defeito.",
+				"timestamp": "2025-08-10T10:01:00.000Z"
+			},
+			{
+				"id": "2",
+				"sender": "admin",
+				"message": "Recebemos sua solicitação, vamos analisar.",
+				"timestamp": "2025-08-10T10:02:00.000Z"
+			}
+		]
+	}
+]

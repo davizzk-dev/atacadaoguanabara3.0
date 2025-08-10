@@ -1,8 +1,18 @@
 [
   {
-    "id": "admin",
+    "id": "admin-user",
     "name": "Administrador",
     "email": "admin",
+    "phone": "",
+    "password": "Arrozbasico123",
+    "role": "admin",
+    "createdAt": "2025-01-27T10:00:00.000Z",
+    "orders": 0
+  },
+  {
+    "id": "admin",
+    "name": "Administrador",
+    "email": "adminn",
     "phone": "85985147067",
     "password": "atacadaoguanabaraadmin123secreto",
     "role": "admin",
@@ -36,7 +46,7 @@
     "email": "guilhermevasconcelosfort@gmail.com",
     "phone": "8500058408",
     "password": "8c8b2b0e0ac739f3e48e83fb9c357fbd808b808220acf7c69a72e940e836a72f",
-    "role": "admin",
+    "role": "user",
     "createdAt": "2025-07-26T17:04:33.196Z",
     "orders": 0
   },
@@ -68,5 +78,25 @@
     "createdAt": "2025-07-29T12:47:38.000Z",
     "image": "https://lh3.googleusercontent.com/a/ACg8ocLYpW_WMFmxeem6WedggvzvACI0m0APJ78AuRxZIe5VzR_pjbA=s96-c",
     "isGoogleUser": true
+  },
+  {
+    "id": "1754863783274",
+    "name": "Teste",
+    "email": "teste@gmail.com",
+    "phone": "8888888888",
+    "password": "teste123",
+    "address": {
+      "street": "Rua Coronel Luiz David de Souza",
+      "number": "72",
+      "complement": "Apto",
+      "neighborhood": "Presidente Kennedy",
+      "city": "Fortaleza",
+      "state": "CE",
+      "zipCode": "60355-337",
+      "reference": "a"
+    },
+    "role": "user",
+    "createdAt": "2025-08-10T22:09:43.275Z",
+    "orders": 0
   }
 ]

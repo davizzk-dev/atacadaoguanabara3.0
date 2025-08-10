@@ -118,10 +118,21 @@ export default function ReturnsPage() {
         formDataToSend.append('photos', photo)
       })
 
-      // Enviar para a API
-      const response = await fetch('http://localhost:8080/api/returns', {
+      // Enviar para a API Next.js
+      const response = await fetch('/api/return-requests', {
         method: 'POST',
-        body: formDataToSend
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          orderId: formData.orderId,
+          userName: formData.userName,
+          reason: formData.reason,
+          description: formData.description || '',
+          requestType: formData.requestType,
+          productName: formData.productName,
+          quantity: formData.quantity
+        })
       })
 
       if (!response.ok) {

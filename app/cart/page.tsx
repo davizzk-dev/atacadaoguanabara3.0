@@ -200,12 +200,7 @@ export default function CartPage() {
         return
       }
 
-      // Email é opcional, mas se fornecido deve ser válido
-      if (customerEmail.trim() && !customerEmail.includes('@')) {
-        setError('Email deve ser válido (contém @).')
-        setDebugInfo(`Email obtido: "${customerEmail}"`)
-        return
-      }
+      // Email é opcional - não validar formato
 
       // Validar endereço - verificar se os campos estão preenchidos
       const addressFields = { street, number, neighborhood, city, state, zipCode }

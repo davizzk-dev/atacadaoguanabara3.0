@@ -1,6 +1,6 @@
-export const dynamic = 'force-dynamic'
-
 "use client"
+
+export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from "react"
 import Header from "@/components/header"
@@ -9,7 +9,7 @@ import { AnimatedCounter } from "@/components/animated-counter"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { products as productsData } from "@/lib/data"
+import { getCatalogProducts } from "@/lib/data"
 import { useUIStore } from "@/lib/store"
 import { Truck, Shield, Clock, Star, Zap, Gift, ChevronRight, Sparkles, Target, Award, Heart, ShoppingCart, Eye, Minus, Plus } from "lucide-react"
 import { Footer } from "@/components/footer"
@@ -21,6 +21,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { toast } from '@/hooks/use-toast'
 import { useAuthStore } from '@/lib/store'
 import { ProductCard } from '@/components/product-card'
+import { PromotionsSection } from '@/components/promotions-section'
 
 export default function HomePage() {
   // Verificar se é a primeira visita
@@ -124,7 +125,7 @@ export default function HomePage() {
           setProductPromotions(promotionsData)
           
           // Aplicar promoções aos produtos
-          const productsWithPromotions = applyPromotionsToProducts(productsData, promotionsData)
+          const productsWithPromotions = applyPromotionsToProducts(products, promotionsData)
           setProducts(productsWithPromotions)
           
           // Produtos em destaque (primeiros 8 com promoções aplicadas)
@@ -132,9 +133,10 @@ export default function HomePage() {
         }
       } catch (error) {
         console.error('Erro ao carregar dados:', error)
-        // Fallback para dados originais
-        setProducts(productsData)
-        setFeaturedProducts(productsData.slice(0, 8))
+        // Fallback para dados do JSON
+        const jsonProducts = await getCatalogProducts()
+        setProducts(jsonProducts)
+        setFeaturedProducts(jsonProducts.slice(0, 8))
       } finally {
         setIsLoading(false)
       }
@@ -158,10 +160,11 @@ export default function HomePage() {
           console.log('Produtos carregados:', productsData.length)
         } else {
           console.error('Erro ao carregar produtos:', productsResponse.status)
-          // Usar dados locais como fallback
-          console.log('Usando produtos estáticos como fallback')
-          setProducts(productsData)
-          setFeaturedProducts(productsData.slice(0, 15))
+          // Usar dados do JSON como fallback
+          console.log('Usando produtos do JSON como fallback')
+          const jsonProducts = await getCatalogProducts()
+          setProducts(jsonProducts)
+          setFeaturedProducts(jsonProducts.slice(0, 15))
         }
 
         // Carregar promoções
@@ -182,10 +185,11 @@ export default function HomePage() {
         }
       } catch (error) {
         console.error('Erro ao carregar dados:', error)
-        // Usar dados locais como fallback
-        console.log('Erro geral - usando produtos estáticos como fallback')
-        setProducts(productsData)
-        setFeaturedProducts(productsData.slice(0, 15))
+        // Usar dados do JSON como fallback
+        console.log('Erro geral - usando produtos do JSON como fallback')
+        const jsonProducts = await getCatalogProducts()
+        setProducts(jsonProducts)
+        setFeaturedProducts(jsonProducts.slice(0, 15))
         setProductPromotions([])
       }
     }
@@ -437,6 +441,9 @@ export default function HomePage() {
       )}
 
       {/* Featured Products */}
+      {/* Promoções */}
+      <PromotionsSection />
+
       <section className="py-8 sm:py-12 lg:py-16 bg-gradient-to-br from-gray-50 to-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">

@@ -1,22 +1,74 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Menu, X, ShoppingCart, Heart, User, Home, Package, MessageSquare, Camera, FileText, HelpCircle, Settings, LogOut, Info, Search, RefreshCw } from 'lucide-react'
-import { useCartStore, useFavoritesStore } from '@/lib/store'
-import { useAuth } from '@/hooks/use-auth'
+import { useCartStore, useFavoritesStore, useAuthStore } from '@/lib/store'
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [searchResults, setSearchResults] = useState<any[]>([])
+  const [pendingOrders, setPendingOrders] = useState(0)
+  const [pendingReturns, setPendingReturns] = useState(0)
+  const [pendingCameraRequests, setPendingCameraRequests] = useState(0)
   const { getItemCount } = useCartStore()
   const { favorites } = useFavoritesStore()
-  const { user, logout } = useAuth()
+  const { user, logout } = useAuthStore()
   
   const cartItemCount = getItemCount()
   const favoritesCount = favorites.length
+
+  // Verificar pendências se o usuário estiver logado
+  useEffect(() => {
+    if (user?.email) {
+      checkPendingItems()
+    }
+  }, [user])
+
+  const checkPendingItems = async () => {
+    try {
+      // Verificar pedidos pendentes
+      const ordersResponse = await fetch('/api/orders')
+      if (ordersResponse.ok) {
+        const ordersData = await ordersResponse.json()
+        if (ordersData.success && ordersData.orders) {
+          const userOrders = ordersData.orders.filter((order: any) => 
+            order.customerInfo?.email === user?.email && 
+            ['pending', 'confirmed', 'preparing', 'delivering'].includes(order.status)
+          )
+          setPendingOrders(userOrders.length)
+        }
+      }
+
+      // Verificar solicitações de troca/devolução pendentes
+      const returnsResponse = await fetch('/api/return-requests')
+      if (returnsResponse.ok) {
+        const returnsData = await returnsResponse.json()
+        if (returnsData.success && returnsData.data) {
+          const userReturns = returnsData.data.filter((returnReq: any) => 
+            returnReq.status === 'pending' // Filtrar por usuário se necessário
+          )
+          setPendingReturns(userReturns.length)
+        }
+      }
+
+      // Verificar solicitações de câmera pendentes
+      const cameraResponse = await fetch('/api/camera-requests')
+      if (cameraResponse.ok) {
+        const cameraData = await cameraResponse.json()
+        if (cameraData.success && cameraData.data) {
+          const pendingCameras = cameraData.data.filter((camera: any) => 
+            camera.status === 'pending'
+          )
+          setPendingCameraRequests(pendingCameras.length)
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao verificar pendências:', error)
+    }
+  }
 
   const handleLogout = () => {
     logout()
@@ -70,8 +122,83 @@ export default function Header() {
               alt="Atacadão Guanabara"
               className="h-12 w-auto"
             />
-            <span className="text-xl font-bold text-white hidden sm:block">Atacadão Guanabara</span>
+            <span className="text-xl font-bold hidden sm:block">
+              <span className="text-white">Atacadão</span> <span className="text-blue-900">Guanabara</span>
+            </span>
           </Link>
+
+          {/* Barra de Pesquisa Desktop */}
+          <div className="hidden md:flex flex-1 max-w-2xl mx-8 relative">
+            <form onSubmit={handleSearch} className="w-full relative">
+              <input
+                type="text"
+                placeholder="🔍 Pesquisar produtos, marcas ou categorias..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                onFocus={() => searchQuery.length > 2 && setShowSearchResults(true)}
+                onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
+                className="w-full px-4 py-3 pl-12 pr-12 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white shadow-sm"
+              />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <button
+                type="submit"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-orange-500 hover:bg-orange-600 text-white p-2 rounded-md transition-colors"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+              
+              {/* Resultados da busca desktop */}
+              {showSearchResults && searchResults.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+                  <div className="p-4">
+                    <div className="text-sm font-semibold text-gray-700 mb-3 border-b pb-2">
+                      🔍 RESULTADOS PARA: "{searchQuery.toUpperCase()}"
+                    </div>
+                    <div className="space-y-3">
+                      {searchResults.map((product) => (
+                        <button
+                          key={product.id}
+                          onClick={() => handleProductClick(product.id)}
+                          className="w-full text-left hover:bg-orange-50 rounded-lg p-3 transition-colors border border-transparent hover:border-orange-200"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="w-12 h-12 object-cover rounded-lg shadow-sm"
+                            />
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900 text-sm line-clamp-2">{product.name}</div>
+                              <div className="text-sm text-orange-600 font-semibold">R$ {product.price.toFixed(2)}</div>
+                              {product.originalPrice && product.originalPrice > product.price && (
+                                <div className="text-xs text-gray-500 line-through">R$ {product.originalPrice.toFixed(2)}</div>
+                              )}
+                              <div className="text-xs text-gray-500">{product.category}</div>
+                            </div>
+                            <div className="text-xs text-gray-400 text-right">
+                              {product.stock > 0 ? (
+                                <span className="text-green-600">✓ Em estoque</span>
+                              ) : (
+                                <span className="text-red-600">✗ Fora de estoque</span>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <button
+                        onClick={() => window.location.href = `/catalog?search=${encodeURIComponent(searchQuery)}`}
+                        className="w-full text-center text-orange-600 hover:text-orange-700 font-medium text-sm py-2 hover:bg-orange-50 rounded-lg transition-colors"
+                      >
+                        Ver todos os resultados ({searchResults.length}+)
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </form>
+          </div>
 
 
 
@@ -303,6 +430,11 @@ export default function Header() {
                       <span className="font-medium text-gray-900">Meus Pedidos</span>
                       <p className="text-xs text-gray-500">Histórico de pedidos</p>
                     </div>
+                    {pendingOrders > 0 && (
+                      <span className="bg-orange-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center animate-bounce-in">
+                        {pendingOrders}
+                      </span>
+                    )}
                   </Link>
 
                   <Link 
@@ -359,6 +491,11 @@ export default function Header() {
                       <span className="font-medium text-gray-900">Trocas e Devoluções</span>
                       <p className="text-xs text-gray-500">Solicitar troca ou devolução</p>
                     </div>
+                    {pendingReturns > 0 && (
+                      <span className="bg-green-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center animate-bounce-in">
+                        {pendingReturns}
+                      </span>
+                    )}
                   </Link>
 
                   <Link 

@@ -1,0 +1,5 @@
+{
+  "timestamp": "2025-08-06T19:42:43.948Z",
+  "status": "error",
+  "error": "Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON"
+}

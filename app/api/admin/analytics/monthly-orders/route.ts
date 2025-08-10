@@ -1,73 +1,116 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { promises as fs } from 'fs'
+import fs from 'fs'
 import path from 'path'
 
 export async function GET(request: NextRequest) {
   try {
-    const dataDir = path.join(process.cwd(), 'data')
-    const ordersData = JSON.parse(await fs.readFile(path.join(dataDir, 'orders.json'), 'utf-8'))
+    const dataPath = path.join(process.cwd(), 'data')
+    const ordersData = JSON.parse(fs.readFileSync(path.join(dataPath, 'orders.json'), 'utf8'))
     
+    // Analytics de pedidos mensais (últimos 12 meses)
     const monthlyOrders = []
-    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-    const currentDate = new Date()
-    
-    // Pegar todos os pedidos e agrupar por mês
-    const ordersByMonth: Record<string, Record<string, number>> = {}
-    
-    ordersData.forEach((order: any) => {
-      const orderDate = new Date(order.createdAt)
-      const monthKey = `${orderDate.getFullYear()}-${orderDate.getMonth()}`
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date()
+      date.setMonth(date.getMonth() - i)
+      const monthStart = new Date(date.getFullYear(), date.getMonth(), 1)
+      const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 1)
       
-      if (!ordersByMonth[monthKey]) {
-        ordersByMonth[monthKey] = {}
+      const monthOrders = ordersData.filter((order: any) => {
+      const orderDate = new Date(order.createdAt)
+        return orderDate >= monthStart && orderDate < monthEnd
+      })
+      
+      // Agrupar por status
+      const statusCount = {
+        pending: monthOrders.filter((order: any) => order.status === 'pending').length,
+        confirmed: monthOrders.filter((order: any) => order.status === 'confirmed').length,
+        preparing: monthOrders.filter((order: any) => order.status === 'preparing').length,
+        delivering: monthOrders.filter((order: any) => order.status === 'delivering').length,
+        delivered: monthOrders.filter((order: any) => order.status === 'delivered').length,
+        cancelled: monthOrders.filter((order: any) => order.status === 'cancelled').length
       }
       
-      ordersByMonth[monthKey][order.status] = (ordersByMonth[monthKey][order.status] || 0) + 1
-    })
-    
-    // Criar array dos últimos 12 meses
-    for (let i = 11; i >= 0; i--) {
-      const monthDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
-      const monthKey = `${monthDate.getFullYear()}-${monthDate.getMonth()}`
-      const monthData = ordersByMonth[monthKey] || {}
-      
-      const total = Object.values(monthData).reduce((sum: number, count: number) => sum + count, 0)
+      const monthRevenue = monthOrders.reduce((sum: number, order: any) => sum + (order.total || 0), 0)
       
       monthlyOrders.push({
-        month: months[monthDate.getMonth()],
-        total,
-        pending: monthData['pending'] || 0,
-        confirmed: monthData['confirmed'] || 0,
-        preparing: monthData['preparing'] || 0,
-        delivering: monthData['delivering'] || 0,
-        delivered: monthData['delivered'] || 0,
-        cancelled: monthData['cancelled'] || 0
+        month: date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }),
+        total: monthOrders.length,
+        revenue: monthRevenue,
+        averageOrder: monthOrders.length > 0 ? monthRevenue / monthOrders.length : 0,
+        statusBreakdown: statusCount
       })
     }
     
-    // Se todos os valores são zero, usar dados de exemplo
-    const totalOrders = monthlyOrders.reduce((sum, item) => sum + item.total, 0)
-    if (totalOrders === 0) {
-      console.log('📊 Usando dados de exemplo para pedidos mensais')
-      return NextResponse.json([
-        { month: 'Jan', total: 45, pending: 8, confirmed: 12, preparing: 10, delivering: 8, delivered: 5, cancelled: 2 },
-        { month: 'Fev', total: 52, pending: 10, confirmed: 15, preparing: 12, delivering: 8, delivered: 5, cancelled: 2 },
-        { month: 'Mar', total: 48, pending: 7, confirmed: 13, preparing: 11, delivering: 9, delivered: 6, cancelled: 2 },
-        { month: 'Abr', total: 55, pending: 9, confirmed: 16, preparing: 13, delivering: 10, delivered: 5, cancelled: 2 },
-        { month: 'Mai', total: 62, pending: 11, confirmed: 18, preparing: 15, delivering: 11, delivered: 5, cancelled: 2 },
-        { month: 'Jun', total: 58, pending: 8, confirmed: 17, preparing: 14, delivering: 12, delivered: 5, cancelled: 2 },
-        { month: 'Jul', total: 65, pending: 12, confirmed: 19, preparing: 16, delivering: 11, delivered: 5, cancelled: 2 },
-        { month: 'Ago', total: 61, pending: 9, confirmed: 18, preparing: 15, delivering: 12, delivered: 5, cancelled: 2 },
-        { month: 'Set', total: 68, pending: 13, confirmed: 20, preparing: 17, delivering: 11, delivered: 5, cancelled: 2 },
-        { month: 'Out', total: 64, pending: 10, confirmed: 19, preparing: 16, delivering: 12, delivered: 5, cancelled: 2 },
-        { month: 'Nov', total: 72, pending: 14, confirmed: 21, preparing: 18, delivering: 12, delivered: 5, cancelled: 2 },
-        { month: 'Dez', total: 78, pending: 11, confirmed: 22, preparing: 19, delivering: 13, delivered: 11, cancelled: 2 }
-      ])
+    // Analytics de pedidos por dia da semana
+    const dayOfWeekOrders = {
+      domingo: 0,
+      segunda: 0,
+      terca: 0,
+      quarta: 0,
+      quinta: 0,
+      sexta: 0,
+      sabado: 0
     }
     
-    return NextResponse.json(monthlyOrders)
+    const dayNames = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado']
+    
+    ordersData.forEach((order: any) => {
+      const orderDate = new Date(order.createdAt)
+      const dayName = dayNames[orderDate.getDay()]
+      dayOfWeekOrders[dayName as keyof typeof dayOfWeekOrders]++
+    })
+    
+    // Analytics de pedidos por hora do dia
+    const hourlyOrders = Array(24).fill(0)
+    
+    ordersData.forEach((order: any) => {
+      const orderDate = new Date(order.createdAt)
+      const hour = orderDate.getHours()
+      hourlyOrders[hour]++
+    })
+    
+    // Analytics de crescimento de pedidos (comparação com mês anterior)
+    const currentMonth = new Date()
+    const currentMonthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
+    const currentMonthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1)
+    
+    const previousMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1)
+    const previousMonthStart = new Date(previousMonth.getFullYear(), previousMonth.getMonth(), 1)
+    const previousMonthEnd = new Date(previousMonth.getFullYear(), previousMonth.getMonth() + 1, 1)
+    
+    const currentMonthCount = ordersData.filter((order: any) => {
+      const orderDate = new Date(order.createdAt)
+      return orderDate >= currentMonthStart && orderDate < currentMonthEnd
+    }).length
+    
+    const previousMonthCount = ordersData.filter((order: any) => {
+      const orderDate = new Date(order.createdAt)
+      return orderDate >= previousMonthStart && orderDate < previousMonthEnd
+    }).length
+    
+    const growthRate = previousMonthCount > 0 
+      ? ((currentMonthCount - previousMonthCount) / previousMonthCount) * 100 
+      : 0
+    
+    return NextResponse.json({
+      success: true,
+      data: {
+        monthlyOrders,
+        dayOfWeekOrders,
+        hourlyOrders,
+        growth: {
+          currentMonth: currentMonthCount,
+          previousMonth: previousMonthCount,
+          growthRate: Math.round(growthRate * 100) / 100
+        },
+        totalOrders: ordersData.length
+      }
+    })
   } catch (error) {
-    console.error('Erro ao buscar pedidos mensais:', error)
-    return NextResponse.json([])
+    console.error('Erro ao carregar analytics de pedidos:', error)
+    return NextResponse.json({
+      success: false,
+      error: 'Erro ao carregar dados de pedidos'
+    }, { status: 500 })
   }
 } 

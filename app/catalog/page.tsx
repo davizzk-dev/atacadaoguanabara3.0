@@ -3,58 +3,99 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
-import { X, Sparkles, Target, Zap } from 'lucide-react'
+import { X, Sparkles, Target, Zap, Package } from 'lucide-react'
 import Header from '@/components/header'
 import { Footer } from '@/components/footer'
 import { ProductCard } from '@/components/product-card'
 import { Product } from '@/lib/types'
-import { products as productsData, categories } from '@/lib/data'
+
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
 import PromotionalBanner from '@/components/promotional-banner'
 import { CategoryCarousel } from '@/components/category-carousel'
-import { useAuthStore } from '@/lib/store'
+import { useAuthStore, useCartStore } from '@/lib/store'
 import Link from 'next/link'
 
 export default function CatalogPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("Todos")
-  const [products, setProducts] = useState<Product[]>(productsData)
+  const [products, setProducts] = useState<Product[]>([])
+  const [categories, setCategories] = useState<string[]>([])
   const [promotions, setPromotions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [visibleProducts, setVisibleProducts] = useState(50) // Mostrar 50 produtos inicialmente
+  const { items, getItemCount, getTotal } = useCartStore()
+
+  // Carregar produtos e categorias da API
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Carregar produtos da API
+        const productsResponse = await fetch('/api/products')
+        if (productsResponse.ok) {
+          const productsData = await productsResponse.json()
+          setProducts(productsData)
+        } else {
+          console.error('Erro ao carregar produtos:', productsResponse.status)
+        }
+
+        // Carregar categorias da API
+        const categoriesResponse = await fetch('/api/categories')
+        if (categoriesResponse.ok) {
+          const categoriesData = await categoriesResponse.json()
+          setCategories(categoriesData)
+        } else {
+          console.error('Erro ao carregar categorias:', categoriesResponse.status)
+          // Fallback para categorias padrão
+          setCategories(['Todos', 'Eletrônicos', 'Roupas', 'Casa', 'Esportes', 'Livros', 'Alimentos', 'Bebidas', 'Higiene', 'Limpeza'])
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error)
+      }
+    }
+
+    loadData()
+  }, [])
 
   // Função para aplicar promoções aos produtos
   const applyPromotionsToProducts = (products: Product[], promotions: any[]) => {
-    console.log('🔍 Aplicando promoções aos produtos...')
-    console.log('📦 Total de produtos:', products.length)
-    console.log('🎯 Promoções ativas:', promotions.length)
-    console.log('📋 Promoções:', promotions)
-    
     return products.map(product => {
-      console.log(`🔍 Verificando produto: ${product.name} (ID: ${product.id})`)
-      
+      // Encontrar promoção que inclui este produto
       const promotion = promotions.find(p => {
-        console.log(`🔍 Comparando: promoção.productId (${typeof p.productId}) "${p.productId}" === produto.id (${typeof product.id}) "${product.id}"`)
-        return p.productId === product.id && p.isActive
+        return p.products && p.products.some((pp: any) => 
+          pp.id === product.id || pp.id?.toString() === product.id?.toString()
+        )
       })
+      
       if (promotion) {
-        console.log(`✅ Promoção encontrada para ${product.name}:`, promotion)
-        console.log(`💰 Preço original: ${product.price} → Novo preço: ${promotion.newPrice}`)
+        const originalPrice = product.originalPrice || product.price
+        let discountedPrice = originalPrice
         
-        // Se há uma promoção ativa, ela tem prioridade sobre o originalPrice predefinido
+        if (promotion.discountType === 'fixed') {
+          discountedPrice = Math.max(0, originalPrice - (promotion.discountValue || promotion.discount || 0))
+        } else {
+          const discountPercent = (promotion.discountValue || promotion.discount || 0) / 100
+          discountedPrice = originalPrice * (1 - discountPercent)
+        }
+        
         return {
           ...product,
-          price: promotion.newPrice,
-          originalPrice: promotion.originalPrice, // Usa o originalPrice da promoção
-          discount: promotion.discount,
-          promotionImage: promotion.image,
-          hasActivePromotion: true // Marca que tem promoção ativa
+          originalPrice: originalPrice,
+          price: Math.round(discountedPrice * 100) / 100,
+          discount: promotion.discountValue || promotion.discount || 0,
+          discountType: promotion.discountType || 'percentage',
+          onPromotion: true,
+          promotionId: promotion.id,
+          hasActivePromotion: true
         }
-      } else {
-        console.log(`❌ Nenhuma promoção para ${product.name} (ID: ${product.id})`)
       }
-      return product
+      
+      return {
+        ...product,
+        onPromotion: false,
+        hasActivePromotion: false
+      }
     })
   }
 
@@ -62,13 +103,16 @@ export default function CatalogPage() {
   useEffect(() => {
     const loadPromotions = async () => {
       try {
-        const response = await fetch('/api/admin/product-promotions')
+        const response = await fetch('/api/admin/promotions?status=active')
         if (response.ok) {
           const promotionsData = await response.json()
-          setPromotions(promotionsData)
+          if (promotionsData.success) {
+            setPromotions(promotionsData.data || [])
+          }
           
           // Aplicar promoções aos produtos
-          const productsWithPromotions = applyPromotionsToProducts(productsData, promotionsData)
+          const activePromotions = promotionsData.data || promotionsData || []
+          const productsWithPromotions = applyPromotionsToProducts(products, activePromotions)
           setProducts(productsWithPromotions)
         }
       } catch (error) {
@@ -78,8 +122,11 @@ export default function CatalogPage() {
       }
     }
 
-    loadPromotions()
-  }, [])
+    // Só carregar promoções se já temos produtos
+    if (products.length > 0) {
+      loadPromotions()
+    }
+  }, [products])
 
   
   // Pop-up de cadastro (igual à página inicial)
@@ -156,6 +203,11 @@ export default function CatalogPage() {
   const clearFilters = () => {
     setSearchTerm("")
     setSelectedCategory("Todos")
+    setVisibleProducts(50) // Reset para 50 produtos ao limpar filtros
+  }
+
+  const loadMoreProducts = () => {
+    setVisibleProducts(prev => prev + 50) // Carregar mais 50 produtos
   }
 
   const hasActiveFilters = searchTerm || (selectedCategory !== "Todos" && selectedCategory !== "Promoções" && selectedCategory !== "Mais Vendidos" && selectedCategory !== "Novidades")
@@ -232,7 +284,94 @@ export default function CatalogPage() {
           </div>
         </div>
 
-        {/* Header Melhorado */}
+        {/* Seções Especiais - Apenas quando não há filtros ativos */}
+        {!searchTerm && selectedCategory === "Todos" && (
+          <>
+            {/* Seção DESTAQUES */}
+            <div className="mb-12 fade-in-up">
+              <div className="text-center mb-8">
+                <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 mb-4 animate-pulse">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  DESTAQUES
+                </Badge>
+                <h2 className="text-4xl font-bold text-gray-900 mb-4 bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
+                  ⭐ Produtos em Destaque
+                </h2>
+                <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+                  Os produtos mais populares e bem avaliados pelos nossos clientes
+                </p>
+              </div>
+              
+              <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {products
+                  .filter(product => (product as any).rating >= 4.5)
+                  .slice(0, 10)
+                  .map((product: Product, index: number) => (
+                    <div key={product.id} className="fade-in-up" style={{ animationDelay: `${index * 0.05}s` }}>
+                      <ProductCard product={product} />
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* Seção AURORA */}
+            <div className="mb-12 fade-in-up">
+              <div className="text-center mb-8">
+                <Badge className="bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0 mb-4 animate-pulse">
+                  <Target className="h-4 w-4 mr-2" />
+                  AURORA
+                </Badge>
+                <h2 className="text-4xl font-bold text-gray-900 mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  🌅 Produtos Aurora
+                </h2>
+                <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+                  Produtos da marca Aurora com qualidade garantida
+                </p>
+              </div>
+              
+              <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {products
+                  .filter(product => product.brand?.toLowerCase().includes('aurora'))
+                  .slice(0, 8)
+                  .map((product: Product, index: number) => (
+                    <div key={product.id} className="fade-in-up" style={{ animationDelay: `${index * 0.05}s` }}>
+                      <ProductCard product={product} />
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* Seção PROMOÇÕES */}
+            <div className="mb-12 fade-in-up">
+              <div className="text-center mb-8">
+                <Badge className="bg-gradient-to-r from-red-500 to-pink-500 text-white border-0 mb-4 animate-pulse">
+                  <Zap className="h-4 w-4 mr-2" />
+                  PROMOÇÕES
+                </Badge>
+                <h2 className="text-4xl font-bold text-gray-900 mb-4 bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
+                  🔥 Ofertas Especiais
+                </h2>
+                <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+                  Produtos com descontos imperdíveis para você economizar
+                </p>
+              </div>
+              
+              <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {products
+                  .filter(product => product.originalPrice && product.originalPrice > product.price)
+                  .slice(0, 12)
+                  .map((product: Product, index: number) => (
+                    <div key={product.id} className="fade-in-up" style={{ animationDelay: `${index * 0.05}s` }}>
+                      <ProductCard product={product} />
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Header para resultados filtrados */}
+        {(searchTerm || selectedCategory !== "Todos") && (
         <div className="text-center mb-8 fade-in-up" id="products-section">
           <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 mb-4 animate-pulse">
             <Sparkles className="h-4 w-4 mr-2" />
@@ -260,17 +399,78 @@ export default function CatalogPage() {
             }
           </p>
         </div>
+        )}
 
 
 
-        {/* Products Grid */}
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-          {filteredProducts.map((product: Product, index: number) => (
-            <div key={product.id} className="fade-in-up" style={{ animationDelay: `${index * 0.05}s` }}>
-              <ProductCard product={product} />
+        {/* Seção Todos os Produtos - Apenas quando não há filtros ativos */}
+        {!searchTerm && selectedCategory === "Todos" && (
+          <div className="mb-12 fade-in-up">
+            <div className="text-center mb-8">
+              <Badge className="bg-gradient-to-r from-green-500 to-blue-500 text-white border-0 mb-4 animate-pulse">
+                <Package className="h-4 w-4 mr-2" />
+                CATÁLOGO COMPLETO
+              </Badge>
+              <h2 className="text-4xl font-bold text-gray-900 mb-4 bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                📦 Todos os Nossos Produtos
+              </h2>
+              <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+                Explore nosso catálogo completo com milhares de produtos
+              </p>
             </div>
-          ))}
-        </div>
+            
+            <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {products.slice(0, visibleProducts).map((product: Product, index: number) => (
+                <div key={product.id} className="fade-in-up" style={{ animationDelay: `${index * 0.05}s` }}>
+                  <ProductCard product={product} />
+                </div>
+              ))}
+            </div>
+            
+            {/* Botão "Ver mais" para todos os produtos */}
+            {visibleProducts < products.length && (
+              <div className="text-center mt-8">
+                <Button
+                  onClick={loadMoreProducts}
+                  className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-8 py-3 rounded-lg font-semibold transition-all duration-300 hover:scale-105 shadow-lg"
+                >
+                  Ver Mais Produtos ({Math.min(50, products.length - visibleProducts)} produtos)
+                </Button>
+                <p className="text-gray-600 mt-2">
+                  Mostrando {visibleProducts} de {products.length} produtos
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Products Grid para resultados filtrados */}
+        {(searchTerm || selectedCategory !== "Todos") && (
+          <>
+            <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {filteredProducts.slice(0, visibleProducts).map((product: Product, index: number) => (
+                <div key={product.id} className="fade-in-up" style={{ animationDelay: `${index * 0.05}s` }}>
+                  <ProductCard product={product} />
+                </div>
+              ))}
+            </div>
+            
+            {/* Botão "Ver mais" */}
+            {visibleProducts < filteredProducts.length && (
+              <div className="text-center mt-8">
+                <Button
+                  onClick={loadMoreProducts}
+                  className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-8 py-3 rounded-lg font-semibold transition-all duration-300 hover:scale-105 shadow-lg"
+                >
+                  Ver Mais Produtos ({Math.min(50, filteredProducts.length - visibleProducts)} produtos)
+                </Button>
+                <p className="text-gray-600 mt-2">
+                  Mostrando {visibleProducts} de {filteredProducts.length} produtos
+                </p>
+              </div>
+            )}
+          </>
+        )}
 
         {/* Empty state melhorado */}
         {filteredProducts.length === 0 && (
@@ -336,30 +536,67 @@ export default function CatalogPage() {
 
       <Footer />
       
-      {/* Carrinho Flutuante */}
+      {/* Carrinho Flutuante Melhorado */}
       <div className="fixed bottom-8 right-6 md:bottom-10 md:right-8 z-50" style={{ zIndex: 9999 }}>
-        <a href="/cart">
-          <div className="relative group cursor-pointer">
+        <div className="relative group">
             {/* Botão principal do carrinho */}
-            <div className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-full p-3 md:p-4 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-              <svg className="h-5 w-5 md:h-6 md:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
+          <div 
+            className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-full p-4 md:p-5 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-110 relative cursor-pointer"
+            onClick={() => window.location.href = '/cart'}
+          >
+            {/* Ícone do carrinho melhorado */}
+            <svg className="h-6 w-6 md:h-7 md:w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
               </svg>
+            
+            {/* Badge com quantidade */}
+            {getItemCount() > 0 && (
+              <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center animate-bounce-in border-2 border-white shadow-lg">
+                {getItemCount() > 99 ? '99+' : getItemCount()}
+              </div>
+            )}
+          </div>
+          
+          {/* Aba com informações detalhadas */}
+          <div className="absolute bottom-full right-0 mb-3 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-3 md:px-5 md:py-4 rounded-xl shadow-2xl whitespace-nowrap border border-orange-400 min-w-[200px]">
+            {/* Botão X para fechar */}
+            <button 
+              className="absolute top-2 right-2 text-white hover:text-red-200 transition-colors text-lg font-bold"
+              onClick={(e) => {
+                e.stopPropagation()
+                const tooltip = e.currentTarget.parentElement
+                if (tooltip) tooltip.style.display = 'none'
+              }}
+            >
+              ×
+            </button>
+            
+            <div className="text-sm md:text-base font-bold text-center mb-1 pr-6">
+              🛒 Seu Carrinho
             </div>
             
-            {/* Aba com texto */}
-            <div className="absolute bottom-full right-0 mb-3 bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-2 md:px-4 md:py-3 rounded-lg shadow-xl whitespace-nowrap border border-orange-400">
-              <div className="text-sm md:text-base font-bold text-center">
-                Carrinho
+            {getItemCount() > 0 ? (
+              <>
+                <div className="text-xs md:text-sm opacity-90 text-center mb-2">
+                  {getItemCount()} {getItemCount() === 1 ? 'item' : 'itens'}
+                </div>
+                <div className="text-sm md:text-base font-bold text-center text-yellow-200">
+                  R$ {getTotal().toFixed(2)}
               </div>
               <div className="text-xs opacity-90 text-center mt-1">
-                Clique para ver
+                  Clique para finalizar
+                </div>
+              </>
+            ) : (
+              <div className="text-xs opacity-90 text-center">
+                Carrinho vazio
               </div>
+            )}
+            
               {/* Seta da aba */}
               <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-orange-500"></div>
             </div>
-          </div>´-hju b
-        </a>
+        </div>
       </div>
     </div>
   )

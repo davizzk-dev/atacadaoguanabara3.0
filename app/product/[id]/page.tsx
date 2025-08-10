@@ -1,369 +1,475 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
-import Header from "@/components/header"
-import { Footer } from "@/components/footer"
-import { ProductCard } from "@/components/product-card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { products } from "@/lib/data"
-import { useCartStore, useFavoritesStore } from "@/lib/store"
-import { Heart, Share2, ShoppingCart, Truck, Shield, RotateCcw, Check, ArrowLeft } from "lucide-react"
-import Image from "next/image"
+import { ArrowLeft, Heart, ShoppingCart, Minus, Plus, Share2, Star, Package, Barcode, Hash, Eye } from "lucide-react"
 import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import type { Product } from "@/lib/types"
+import { useCartStore, useFavoritesStore } from "@/lib/store"
+import { ProductCard } from "@/components/product-card"
 
 export default function ProductPage() {
   const params = useParams()
   const productId = params.id as string
-  const product = products.find((p) => p.id === productId)
-  const { addItem } = useCartStore()
-  const { addFavorite, removeFavorite, isFavorite } = useFavoritesStore()
-  const [selectedImage, setSelectedImage] = useState(0)
+  const [product, setProduct] = useState<Product | null>(null)
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
   const [quantity, setQuantity] = useState(1)
-  const [showAddAnimation, setShowAddAnimation] = useState(false)
-  const [showNotification, setShowNotification] = useState(false)
 
-  const relatedProducts = products.filter((p) => p.category === product?.category && p.id !== productId).slice(0, 4)
+  const { addItem, items } = useCartStore()
+  const { addFavorite, removeFavorite, isFavorite } = useFavoritesStore()
 
-  if (!product) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="container mx-auto px-4 py-16 text-center">
-          <div className="text-6xl mb-4">🔍</div>
-          <h1 className="text-2xl font-bold text-gray-600 mb-2">Produto não encontrado</h1>
-          <p className="text-gray-500">O produto que você está procurando não existe</p>
-        </div>
-        <Footer />
-      </div>
-    )
-  }
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        setLoading(true)
+        console.log('🔍 Buscando produto ID:', productId)
+        
+        // Buscar produtos reais da API Varejo Fácil (via API route)
+        console.log('🌐 Fazendo requisição para /api/products...')
+        const response = await fetch(`/api/products`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache'
+          }
+        })
+        console.log('📡 Status da resposta:', response.status, response.statusText)
+        
+        if (!response.ok) {
+          throw new Error(`Erro na API: ${response.status} ${response.statusText}`)
+        }
+        
+        const data = await response.json()
+        console.log('📊 Dados recebidos da API:')
+        console.log('   - Tipo de dados:', typeof data)
+        console.log('   - É array?', Array.isArray(data))
+        console.log('   - Tem products?', !!data.products)
+        console.log('   - Total de produtos:', Array.isArray(data.products) ? data.products.length : Array.isArray(data) ? data.length : 'N/A')
+        console.log('   - Product ID procurado:', productId, '(tipo:', typeof productId, ')')
+        console.log('   - Dados completos:', data)
+        
+        // A API /api/products retorna array direto de produtos
+        if (!Array.isArray(data)) {
+          console.error('❌ API não retornou array:', typeof data)
+          console.error('   - Dados recebidos:', data)
+          throw new Error('API deve retornar array de produtos')
+        }
+        
+        const products: Product[] = data
+        console.log('✅ Array de produtos recebido diretamente da API')
+        
+        if (products.length === 0) {
+          console.warn('⚠️ Array de produtos está vazio!')
+          console.warn('   - Isso pode indicar que o arquivo products.json não foi carregado corretamente')
+          console.warn('   - Ou que há um problema no cache do Next.js')
+        }
+        
+        console.log(`📦 Total de produtos carregados: ${products.length}`)
+        
+        // Buscar produto pelos dados reais do Varejo Fácil
+        console.log('🔍 Iniciando busca do produto...')
+        console.log('   - IDs dos primeiros 5 produtos:', products.slice(0, 5).map(p => `${p.id} (${typeof p.id})`))
+        
+        const foundProduct = products.find((p: Product) => {
+          const match1 = p.id.toString() === productId
+          const match2 = p.id === productId
+          const match3 = String(p.id) === String(productId)
+          
+          if (match1 || match2 || match3) {
+            console.log(`✅ PRODUTO ENCONTRADO! Produto ID ${p.id} combina com busca ${productId}`)
+            console.log(`   - Match toString: ${match1}`)
+            console.log(`   - Match direto: ${match2}`)
+            console.log(`   - Match String(): ${match3}`)
+            return true
+          }
+          return false
+        })
+        
+        console.log('🎯 Resultado da busca:', foundProduct ? 'PRODUTO ENCONTRADO' : 'PRODUTO NÃO ENCONTRADO')
+        
+        if (foundProduct) {
+          console.log('✅ Produto real encontrado:', {
+            id: foundProduct.id,
+            name: foundProduct.name,
+            price: foundProduct.price,
+            category: foundProduct.category
+          })
+          setProduct(foundProduct)
+          
+          // Buscar produtos relacionados da mesma categoria (dados reais)
+          const related = products
+            .filter((p: Product) => 
+              p.category === foundProduct.category && 
+              p.id !== foundProduct.id
+            )
+            .slice(0, 8)
+          setRelatedProducts(related)
+          console.log(`📦 Produtos relacionados encontrados: ${related.length}`)
+        } else {
+          console.log('❌ Produto não encontrado no banco de dados do Varejo Fácil')
+          // Lista os primeiros 5 IDs para debug
+          const firstFiveIds = products.slice(0, 5).map(p => p.id)
+          console.log('🔍 Primeiros 5 IDs no banco:', firstFiveIds)
+          
+          setProduct(null) // Não criar produtos fake - produto realmente não existe
+        }
+      } catch (error) {
+        console.error('❌ Erro ao buscar produto:', error)
+        setProduct(null) // Em caso de erro, não mostrar produto fake
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProduct()
+  }, [productId])
 
   const handleAddToCart = () => {
+    if (product) {
     for (let i = 0; i < quantity; i++) {
       addItem(product)
     }
-    
-    // Mostrar animação
-    setShowAddAnimation(true)
-    setShowNotification(true)
-    
-    // Esconder animação após 2 segundos
-    setTimeout(() => {
-      setShowAddAnimation(false)
-    }, 2000)
-    
-    // Esconder notificação após 3 segundos
-    setTimeout(() => {
-      setShowNotification(false)
-    }, 3000)
+    }
   }
 
   const handleToggleFavorite = () => {
+    if (product) {
     if (isFavorite(product.id)) {
       removeFavorite(product.id)
     } else {
       addFavorite(product.id)
     }
   }
+  }
 
+  const cartItem = items.find((item) => item.product.id === productId)
+  const cartQuantity = cartItem?.quantity || 0
+
+  if (loading) {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      
-      {/* Notificação flutuante */}
-      {showNotification && (
-        <div className="fixed top-20 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-slide-in">
-          <div className="flex items-center space-x-2">
-            <Check className="w-5 h-5" />
-            <span className="font-medium">Produto adicionado ao carrinho!</span>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-blue-600 font-semibold">Carregando produto do Varejo Fácil...</p>
           </div>
         </div>
-      )}
+    )
+  }
 
-      <div className="container mx-auto px-4 py-8">
-        {/* Botão Voltar ao Catálogo */}
-        <div className="mb-6">
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Produto não encontrado</h1>
+          <p className="text-gray-600 mb-6">Este produto não existe no sistema do Varejo Fácil</p>
           <Link href="/catalog">
-            <Button variant="outline" className="flex items-center gap-2">
-              <ArrowLeft className="w-4 h-4" />
-              Voltar ao Catálogo
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar ao catálogo
             </Button>
           </Link>
         </div>
+      </div>
+    )
+  }
 
-        {/* Breadcrumb */}
-        <nav className="text-sm text-gray-600 mb-8">
-          <span>Início</span> / <span>{product.category}</span> /{" "}
-          <span className="text-primary font-medium">{product.name}</span>
-        </nav>
-
-        {/* Product Details */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
-          {/* Images */}
-          <div className="space-y-4">
-            <div className="aspect-square bg-white rounded-2xl shadow-lg overflow-hidden">
-              <Image
-                src={product.image || "/placeholder.svg"}
-                alt={product.name}
-                width={600}
-                height={600}
-                className="w-full h-full object-cover"
-              />
-            </div>
-
-            {/* Thumbnail images would go here */}
-            <div className="grid grid-cols-4 gap-2">
-              {[...Array(4)].map((_, i) => (
-                <button
-                  key={i}
-                  className={`aspect-square bg-white rounded-lg overflow-hidden border-2 transition-colors ${
-                    selectedImage === i ? "border-primary" : "border-gray-200"
-                  }`}
-                  onClick={() => setSelectedImage(i)}
-                >
-                  <Image
-                    src={product.image || "/placeholder.svg"}
-                    alt={`${product.name} ${i + 1}`}
-                    width={150}
-                    height={150}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header com navegação */}
+        <div className="flex items-center justify-between mb-8">
+          <Link href="/catalog">
+            <Button variant="outline" className="border-blue-200 hover:bg-blue-50">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar ao catálogo
+            </Button>
+          </Link>
+          
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleToggleFavorite}
+              className={`border-2 ${
+                isFavorite(product.id)
+                  ? 'bg-red-500 border-red-500 text-white hover:bg-red-600'
+                  : 'border-gray-300 hover:border-red-300 hover:text-red-500'
+              }`}
+            >
+              <Heart className={`w-4 h-4 ${isFavorite(product.id) ? 'fill-current' : ''}`} />
+            </Button>
+            
+            <Button variant="outline" size="icon" className="border-blue-200">
+              <Share2 className="w-4 h-4" />
+            </Button>
             </div>
           </div>
 
-          {/* Product Info */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+          {/* Imagem do produto */}
+          <div className="flex justify-center">
+            <Card className="w-full max-w-md border-blue-200">
+              <CardContent className="p-8">
+                <div className="aspect-square flex items-center justify-center bg-white rounded-lg border-2 border-blue-100">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="max-w-full max-h-full object-contain"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Informações do produto */}
           <div className="space-y-6">
             <div>
-              <Badge variant="outline" className="mb-2">
+              <Badge className="bg-blue-100 text-blue-800 border-blue-200 mb-2">
                 {product.category}
               </Badge>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
-              {product.brand && (
-                <p className="text-lg text-gray-600">
-                  Marca: <span className="font-semibold">{product.brand}</span>
-                </p>
+              <p className="text-xl text-blue-600 font-semibold">{product.brand}</p>
+            </div>
+
+            {/* Preço */}
+            <div className="flex items-center gap-4">
+              {product.price > 0 ? (
+                <span className="text-4xl font-bold text-blue-600">
+                  R$ {product.price.toFixed(2)}
+                </span>
+              ) : (
+                <span className="text-2xl font-bold text-gray-500">
+                  Consulte o preço
+                </span>
               )}
-            </div>
-
-
-
-            {/* Price */}
-            <div className="space-y-2">
-              <div className="flex items-center space-x-4">
-                <span className="text-4xl font-bold text-primary">R$ {product.price.toFixed(2)}</span>
-                {product.originalPrice && (
-                  <span className="text-xl text-gray-500 line-through">R$ {product.originalPrice.toFixed(2)}</span>
-                )}
-                {product.originalPrice > product.price && <Badge className="bg-red-500 text-white">-{Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF</Badge>}
-              </div>
-              {product.unit && <p className="text-gray-600">por {product.unit}</p>}
-            </div>
-
-            {/* Ver mais button */}
-            <div>
-              <Button 
-                variant="outline" 
-                className="bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:border-blue-700 font-medium"
-                onClick={() => {
-                  // Scroll para as abas
-                  document.querySelector('[data-value="description"]')?.scrollIntoView({ behavior: 'smooth' })
-                  // Ativar a aba de descrição
-                  const descriptionTab = document.querySelector('[data-value="description"]') as HTMLElement
-                  if (descriptionTab) {
-                    descriptionTab.click()
-                  }
-                }}
-              >
-                Ver mais
-              </Button>
-            </div>
-
-            {/* Status de disponibilidade */}
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 rounded-full bg-green-500"></div>
-              <span className="font-medium text-green-600">
-                Sem estoque - Adicione quantos quiser
+              
+              {product.originalPrice && product.originalPrice > product.price && (
+                <>
+                  <span className="text-xl text-gray-400 line-through">
+                    R$ {product.originalPrice.toFixed(2)}
+                  </span>
+                  <Badge className="bg-red-500 text-white">
+                    {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
+                  </Badge>
+                </>
+              )}
+              <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold border border-blue-200">
+                por {product.unit}
               </span>
             </div>
 
-            {/* Quantity and Actions */}
+            {/* Descrição */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Descrição</h3>
+              <p className="text-gray-600 leading-relaxed">{product.description}</p>
+            </div>
+
+
+
+            {/* Controles de quantidade e compra */}
             <div className="space-y-4">
-              <div className="flex items-center space-x-4">
-                <label className="font-medium">Quantidade:</label>
-                <div className="flex items-center border rounded-lg">
-                  <button
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-medium text-gray-700">Quantidade:</span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="px-3 py-2 hover:bg-gray-100 transition-colors"
+                    disabled={quantity <= 1}
+                    className="w-8 h-8 p-0 border-blue-200"
                   >
-                    -
-                  </button>
-                  <span className="px-4 py-2 font-medium">{quantity}</span>
-                  <button
+                    <Minus className="w-4 h-4" />
+                  </Button>
+                  <span className="w-8 text-center font-semibold">{quantity}</span>
+              <Button 
+                variant="outline" 
+                    size="sm"
                     onClick={() => setQuantity(quantity + 1)}
-                    className="px-3 py-2 hover:bg-gray-100 transition-colors"
+                    className="w-8 h-8 p-0 border-blue-200"
                   >
-                    +
-                  </button>
-                </div>
+                    <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+                {cartQuantity > 0 && (
+                  <span className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                    {cartQuantity} no carrinho
+              </span>
+                )}
               </div>
 
-              <div className="flex space-x-4">
                 <Button
                   onClick={handleAddToCart}
-                  disabled={product.stock === 0}
-                  className={`flex-1 bg-secondary hover:bg-secondary/90 text-white font-bold py-4 text-lg relative overflow-hidden transition-all duration-300 ${
-                    showAddAnimation ? 'animate-pulse-glow' : ''
-                  }`}
-                >
-                  <ShoppingCart className="h-5 w-5 mr-2" />
-                  Adicionar ao Carrinho
-                  
-                  {/* Animação de confirmação */}
-                  {showAddAnimation && (
-                    <div className="absolute inset-0 bg-green-500 flex items-center justify-center animate-slide-in">
-                      <div className="flex items-center space-x-2 text-white">
-                        <Check className="w-6 h-6 animate-bounce" />
-                        <span className="font-bold">Adicionado!</span>
-                      </div>
-                    </div>
-                  )}
+                disabled={product.price === 0 || !product.inStock}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg font-semibold disabled:bg-gray-400"
+                size="lg"
+              >
+                <ShoppingCart className="w-5 h-5 mr-2" />
+                {!product.inStock 
+                  ? 'Produto fora de estoque'
+                  : product.price > 0 
+                    ? `Adicionar ${quantity} ao carrinho` 
+                    : 'Preço indisponível'
+                }
                 </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={handleToggleFavorite}
-                  className={`px-6 py-4 ${isFavorite(product.id) ? "text-red-600 border-red-600" : ""}`}
-                >
-                  <Heart className={`h-5 w-5 ${isFavorite(product.id) ? "fill-current" : ""}`} />
-                </Button>
-
-                <Button variant="outline" className="px-6 py-4 bg-transparent">
-                  <Share2 className="h-5 w-5" />
-                </Button>
+            </div>
               </div>
             </div>
 
-            {/* Features */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6 border-t">
-              <div className="flex items-center space-x-3">
-                <div className="bg-green-100 p-2 rounded-full">
-                  <Truck className="h-5 w-5 text-green-600" />
+        {/* Detalhes técnicos do Varejo Fácil */}
+        <Card className="mb-8 border-blue-200">
+          <CardHeader>
+            <CardTitle className="text-xl text-blue-700 flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              Detalhes do Produto - Varejo Fácil
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="flex items-center gap-2">
+                <Hash className="w-4 h-4 text-blue-500" />
+                <span className="text-sm text-gray-600">ID:</span>
+                <span className="font-semibold">{product.id}</span>
                 </div>
-                <div>
-                  <p className="font-medium text-sm">Entrega Rápida</p>
-                  <p className="text-xs text-gray-600">Em até 2 horas</p>
-                </div>
+              
+
+
+              <div className="flex items-center gap-2">
+                <Eye className="w-4 h-4 text-blue-500" />
+                <span className="text-sm text-gray-600">Categoria:</span>
+                <span className="font-semibold">{product.category}</span>
               </div>
 
-              <div className="flex items-center space-x-3">
-                <div className="bg-blue-100 p-2 rounded-full">
-                  <Shield className="h-5 w-5 text-blue-600" />
+              {(product as any).varejoFacilData?.codigoInterno && (product as any).varejoFacilData.codigoInterno.trim() && (
+                <div className="flex items-center gap-2">
+                  <Barcode className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm text-gray-600">Código Interno:</span>
+                  <span className="font-semibold">{(product as any).varejoFacilData.codigoInterno.trim()}</span>
                 </div>
-                <div>
-                  <p className="font-medium text-sm">Compra Segura</p>
-                  <p className="text-xs text-gray-600">100% protegida</p>
+              )}
+
+              {(product as any).varejoFacilData?.idExterno && (
+                <div className="flex items-center gap-2">
+                  <Hash className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm text-gray-600">ID Externo:</span>
+                  <span className="font-semibold">{(product as any).varejoFacilData.idExterno}</span>
                 </div>
+              )}
+
+                            <div className="flex items-center gap-2">
+                <Package className="w-4 h-4 text-blue-500" />
+                <span className="text-sm text-gray-600">Unidade:</span>
+                <span className="font-semibold">{product.unit}</span>
               </div>
 
-              <div className="flex items-center space-x-3">
-                <div className="bg-orange-100 p-2 rounded-full">
-                  <RotateCcw className="h-5 w-5 text-orange-600" />
+              {(product as any).varejoFacilData?.ean && (
+                <div className="flex items-center gap-2">
+                  <Barcode className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm text-gray-600">Código EAN:</span>
+                  <span className="font-semibold">{(product as any).varejoFacilData.ean}</span>
                 </div>
-                <div>
-                  <p className="font-medium text-sm">Troca Fácil</p>
-                  <p className="text-xs text-gray-600">7 dias para trocar</p>
+              )}
+
+              {(product as any).varejoFacilData?.pesoBruto && (
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm text-gray-600">Peso Bruto:</span>
+                  <span className="font-semibold">{(product as any).varejoFacilData.pesoBruto} kg</span>
                 </div>
+              )}
+
+              {(product as any).varejoFacilData?.pesoLiquido && (
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm text-gray-600">Peso Líquido:</span>
+                  <span className="font-semibold">{(product as any).varejoFacilData.pesoLiquido} kg</span>
               </div>
+              )}
+
+              {(product as any).varejoFacilData?.altura && (product as any).varejoFacilData?.largura && (product as any).varejoFacilData?.comprimento && (
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm text-gray-600">Dimensões (A x L x C):</span>
+                  <span className="font-semibold">
+                    {(product as any).varejoFacilData.altura} x {(product as any).varejoFacilData.largura} x {(product as any).varejoFacilData.comprimento} cm
+                  </span>
             </div>
+              )}
+
+              {(product as any).varejoFacilData?.unidadeDeCompra && (
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm text-gray-600">Unidade de Compra:</span>
+                  <span className="font-semibold">{(product as any).varejoFacilData.unidadeDeCompra}</span>
           </div>
+              )}
+
+              {(product as any).varejoFacilData?.unidadeDeTransferencia && (
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm text-gray-600">Unidade de Transferência:</span>
+                  <span className="font-semibold">{(product as any).varejoFacilData.unidadeDeTransferencia}</span>
         </div>
+              )}
 
-        {/* Product Details Tabs */}
-        <Card className="mb-16">
-          <CardContent className="p-0">
-            <Tabs defaultValue="description" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="description" data-value="description">Descrição</TabsTrigger>
-                <TabsTrigger value="details">Detalhes</TabsTrigger>
-                <TabsTrigger value="shipping">Entrega</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="description" className="p-6">
-                <div className="space-y-4">
-                  <h3 className="text-xl font-bold">Descrição do Produto</h3>
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <p className="text-gray-700 leading-relaxed text-lg">{product.description}</p>
-                  </div>
+              {(product as any).varejoFacilData?.secaoId && (
+                <div className="flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm text-gray-600">Seção ID:</span>
+                  <span className="font-semibold">{(product as any).varejoFacilData.secaoId}</span>
                 </div>
-              </TabsContent>
+              )}
 
-              <TabsContent value="details" className="p-6">
-                <div className="space-y-4">
-                  <h3 className="text-xl font-bold">Informações do Produto</h3>
-                  <div>
-                    <h4 className="font-semibold mb-2">Especificações</h4>
-                    <ul className="space-y-2 text-gray-700">
-                      <li>
-                        <strong>Marca:</strong> {product.brand}
-                      </li>
-                      <li>
-                        <strong>Categoria:</strong> {product.category}
-                      </li>
-                      <li>
-                        <strong>Unidade:</strong> {product.unit}
-                      </li>
-                      <li>
-                        <strong>Código:</strong> {product.id}
-                      </li>
-                    </ul>
+              {(product as any).varejoFacilData?.marcaId && (
+                <div className="flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm text-gray-600">Marca ID:</span>
+                  <span className="font-semibold">{(product as any).varejoFacilData.marcaId}</span>
                   </div>
+              )}
+
+              {(product as any).varejoFacilData?.generoId && (
+                <div className="flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm text-gray-600">Gênero ID:</span>
+                  <span className="font-semibold">{(product as any).varejoFacilData.generoId}</span>
                 </div>
-              </TabsContent>
+              )}
 
-              <TabsContent value="shipping" className="p-6">
-                <div className="space-y-6">
-                  <h3 className="text-xl font-bold">Informações de Entrega</h3>
+              {(product as any).varejoFacilData?.ativoNoEcommerce !== undefined && (
+                <div className="flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm text-gray-600">Ativo E-commerce:</span>
+                  <span className={`font-semibold ${(product as any).varejoFacilData.ativoNoEcommerce ? 'text-green-600' : 'text-red-600'}`}>
+                    {(product as any).varejoFacilData.ativoNoEcommerce ? 'Sim' : 'Não'}
+                  </span>
+                  </div>
+              )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center space-x-3 mb-3">
-                          <Truck className="h-6 w-6 text-secondary" />
-                          <h4 className="font-semibold">Entrega Expressa</h4>
+              
+
+              {(product as any).varejoFacilData?.dataAlteracao && (
+                <div className="flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm text-gray-600">Última Alteração:</span>
+                  <span className="font-semibold">
+                    {new Date((product as any).varejoFacilData.dataAlteracao).toLocaleDateString('pt-BR')}
+                  </span>
                         </div>
-                        <p className="text-gray-600 mb-2">Em até 2 horas</p>
-                        <p className="text-sm text-gray-500">Disponível para pedidos acima de R$ 50</p>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center space-x-3 mb-3">
-                          <Shield className="h-6 w-6 text-green-600" />
-                          <h4 className="font-semibold">Entrega Segura</h4>
-                        </div>
-                        <p className="text-gray-600 mb-2">Produto protegido</p>
-                        <p className="text-sm text-gray-500">Embalagem especial para preservar a qualidade</p>
-                      </CardContent>
-                    </Card>
-                  </div>
+              )}
                 </div>
-              </TabsContent>
-            </Tabs>
           </CardContent>
         </Card>
 
-        {/* Related Products */}
+        {/* Produtos relacionados */}
         {relatedProducts.length > 0 && (
-          <div className="mb-16">
-            <h2 className="text-3xl font-bold text-primary mb-8">Produtos Relacionados</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+              Produtos Relacionados da Categoria "{product.category}"
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {relatedProducts.map((relatedProduct) => (
                 <ProductCard key={relatedProduct.id} product={relatedProduct} />
               ))}
@@ -371,8 +477,6 @@ export default function ProductPage() {
           </div>
         )}
       </div>
-
-      <Footer />
     </div>
   )
 }

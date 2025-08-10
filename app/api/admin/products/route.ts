@@ -74,7 +74,8 @@ export async function POST(request: NextRequest) {
     
     let productData
     try {
-      productData = await request.json()
+      const text = await request.text()
+      productData = text ? JSON.parse(text) : {}
     } catch (parseError) {
       console.error('❌ Erro ao fazer parse do JSON:', parseError)
       return NextResponse.json({
@@ -105,11 +106,16 @@ export async function POST(request: NextRequest) {
     
     if (result.success) {
       console.log('✅ Produto criado com sucesso')
-      return NextResponse.json({
+      const response = NextResponse.json({
         message: result.message,
         product: productData,
         success: true
       })
+      
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+      response.headers.set('Pragma', 'no-cache')
+      
+      return response
     } else {
       console.log('❌ Erro ao salvar produto:', result.message)
       return NextResponse.json({
@@ -137,7 +143,8 @@ export async function PUT(request: NextRequest) {
     
     let productData
     try {
-      productData = await request.json()
+      const text = await request.text()
+      productData = text ? JSON.parse(text) : {}
     } catch (parseError) {
       console.error('❌ Erro ao fazer parse do JSON:', parseError)
       return NextResponse.json({
@@ -163,11 +170,16 @@ export async function PUT(request: NextRequest) {
     
     if (result.success) {
       console.log('✅ Produto atualizado com sucesso')
-      return NextResponse.json({
+      const response = NextResponse.json({
         message: result.message,
         product: productData,
         success: true
       })
+      
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+      response.headers.set('Pragma', 'no-cache')
+      
+      return response
     } else {
       console.log('❌ Erro ao atualizar produto:', result.message)
       return NextResponse.json({

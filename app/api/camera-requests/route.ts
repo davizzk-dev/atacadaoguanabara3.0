@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 
-const dataPath = join(__dirname, '../../../data', 'camera-requests.json')
+const dataPath = join(process.cwd(), 'data', 'camera-requests.json')
 
 // Garantir que o arquivo existe
 function ensureDataFile() {
   const fs = require('fs')
-  const dir = join(__dirname, '../../../data')
+  const dir = join(process.cwd(), 'data')
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true })
   }

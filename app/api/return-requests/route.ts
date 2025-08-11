@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 
-const dataDir = path.resolve(__dirname, '../../../data')
+const dataDir = path.join(process.cwd(), 'data')
 const returnRequestsFile = path.join(dataDir, 'return-requests.json')
 
 function safeReadReturnRequests() {
@@ -76,6 +76,8 @@ export async function POST(request: NextRequest) {
       requestType: body.requestType || '',
       productName: body.productName || '',
       quantity: body.quantity || 1,
+      userId: body.userId || null,
+      userEmail: body.userEmail || body.email || null,
       createdAt: new Date().toISOString(),
       status: 'pending',
       messages: []

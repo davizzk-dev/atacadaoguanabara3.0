@@ -1,24 +1,192 @@
 [
-	{
-		"id": "1754800000001",
-		"orderId": "123456",
-		"userName": "Cliente Teste",
-		"reason": "Produto com defeito",
-		"createdAt": "2025-08-10T10:00:00.000Z",
-		"status": "pending",
-		"messages": [
-			{
-				"id": "1",
-				"sender": "user",
-				"message": "Gostaria de devolver o produto, está com defeito.",
-				"timestamp": "2025-08-10T10:01:00.000Z"
-			},
-			{
-				"id": "2",
-				"sender": "admin",
-				"message": "Recebemos sua solicitação, vamos analisar.",
-				"timestamp": "2025-08-10T10:02:00.000Z"
-			}
-		]
-	}
+  {
+    "id": "1754800000001",
+    "orderId": "123456",
+    "userName": "Cliente Teste",
+    "reason": "Produto com defeito",
+    "createdAt": "2025-08-10T10:00:00.000Z",
+    "status": "approved",
+    "messages": [
+      {
+        "id": "1",
+        "sender": "user",
+        "message": "Gostaria de devolver o produto, está com defeito.",
+        "timestamp": "2025-08-10T10:01:00.000Z"
+      },
+      {
+        "id": "2",
+        "sender": "admin",
+        "message": "Recebemos sua solicitação, vamos analisar.",
+        "timestamp": "2025-08-10T10:02:00.000Z"
+      },
+      {
+        "id": "1754865460698",
+        "sender": "admin",
+        "message": "a",
+        "timestamp": "2025-08-10T22:37:40.698Z"
+      },
+      {
+        "id": "1754865462283",
+        "sender": "admin",
+        "message": "a",
+        "timestamp": "2025-08-10T22:37:42.283Z"
+      },
+      {
+        "id": "1754877580529",
+        "sender": "user",
+        "message": "tá",
+        "timestamp": "2025-08-11T01:59:40.529Z"
+      },
+      {
+        "id": "1754877590860",
+        "sender": "admin",
+        "message": "tá oq poxa",
+        "timestamp": "2025-08-11T01:59:50.860Z"
+      },
+      {
+        "id": "1754878151601",
+        "sender": "user",
+        "message": "a",
+        "timestamp": "2025-08-11T02:09:11.601Z"
+      },
+      {
+        "id": "1754878170916",
+        "sender": "user",
+        "message": "a",
+        "timestamp": "2025-08-11T02:09:30.916Z"
+      },
+      {
+        "id": "1754878418010",
+        "sender": "user",
+        "message": "a",
+        "timestamp": "2025-08-11T02:13:38.010Z"
+      },
+      {
+        "id": "1754878424341",
+        "sender": "user",
+        "message": "a",
+        "timestamp": "2025-08-11T02:13:44.341Z"
+      },
+      {
+        "id": "1754878433478",
+        "sender": "admin",
+        "message": "a",
+        "timestamp": "2025-08-11T02:13:53.478Z"
+      },
+      {
+        "id": "1754879372400",
+        "sender": "user",
+        "message": "Áudio enviado",
+        "timestamp": "2025-08-11T02:29:32.408Z",
+        "type": "audio",
+        "mediaUrl": "/uploads/chat/1754800000001_1754879372400.wav",
+        "mediaName": "audio.wav"
+      },
+      {
+        "id": "1754879406760",
+        "sender": "user",
+        "message": "Imagem enviada",
+        "timestamp": "2025-08-11T02:30:06.769Z",
+        "type": "image",
+        "mediaUrl": "/uploads/chat/1754800000001_1754879406760.png",
+        "mediaName": "com o.png"
+      },
+      {
+        "id": "1754879753430",
+        "sender": "user",
+        "message": "Áudio enviado",
+        "timestamp": "2025-08-11T02:35:53.446Z",
+        "type": "audio",
+        "mediaUrl": "/api/uploads/chat/1754800000001_1754879753430.wav",
+        "mediaName": "audio.wav"
+      },
+      {
+        "id": "1754880062858",
+        "sender": "admin",
+        "message": "Áudio enviado",
+        "timestamp": "2025-08-11T02:41:02.868Z",
+        "type": "audio",
+        "mediaUrl": "/api/uploads/chat/1754800000001_1754880062858.wav",
+        "mediaName": "audio.wav"
+      },
+      {
+        "id": "1754880098823",
+        "sender": "user",
+        "message": "Kkk",
+        "timestamp": "2025-08-11T02:41:38.823Z",
+        "type": "text"
+      },
+      {
+        "id": "1754880108462",
+        "sender": "user",
+        "message": "Joia",
+        "timestamp": "2025-08-11T02:41:48.462Z",
+        "type": "text"
+      },
+      {
+        "id": "1754880121459",
+        "sender": "user",
+        "message": "Imagem enviada",
+        "timestamp": "2025-08-11T02:42:01.491Z",
+        "type": "image",
+        "mediaUrl": "/api/uploads/chat/1754800000001_1754880121459.jpg",
+        "mediaName": "1000254667.jpg"
+      },
+      {
+        "id": "1754880573737",
+        "sender": "user",
+        "message": "A",
+        "timestamp": "2025-08-11T02:49:33.737Z",
+        "type": "text"
+      },
+      {
+        "id": "1754880878726",
+        "sender": "user",
+        "message": "A",
+        "timestamp": "2025-08-11T02:54:38.726Z",
+        "type": "text"
+      },
+      {
+        "id": "1754880902091",
+        "sender": "user",
+        "message": "A",
+        "timestamp": "2025-08-11T02:55:02.091Z",
+        "type": "text"
+      },
+      {
+        "id": "1754880909863",
+        "sender": "user",
+        "message": "A",
+        "timestamp": "2025-08-11T02:55:09.863Z",
+        "type": "text"
+      }
+    ],
+    "updatedAt": "2025-08-11T02:55:09.863Z"
+  },
+  {
+    "id": "1754867992414",
+    "orderId": "11111111",
+    "userName": "111111111111111",
+    "reason": "Tamanho/Modelo incorreto",
+    "description": "aaaaaaaaaa",
+    "requestType": "exchange",
+    "productName": "1111111111111111111111111111111111",
+    "quantity": 1,
+    "userId": null,
+    "userEmail": null,
+    "createdAt": "2025-08-10T23:19:52.414Z",
+    "status": "pending",
+    "messages": [
+      {
+        "id": "1754879049661",
+        "sender": "user",
+        "message": "Áudio enviado",
+        "timestamp": "2025-08-11T02:24:09.672Z",
+        "type": "audio",
+        "mediaUrl": "/uploads/chat/1754867992414_1754879049661.wav",
+        "mediaName": "audio.wav"
+      }
+    ],
+    "updatedAt": "2025-08-11T02:24:09.672Z"
+  }
 ]

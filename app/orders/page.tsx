@@ -21,9 +21,17 @@ export default function OrdersPage() {
   const { user } = useAuthStore()
   const [isLoading, setIsLoading] = useState(true)
   const [ordersData, setOrdersData] = useState<any[]>([])
+  const [mounted, setMounted] = useState(false)
+
+  // Garantir hidratação correta
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Carregar pedidos da API
   useEffect(() => {
+    if (!mounted) return
+    
     const loadOrders = async () => {
       try {
         console.log('🔍 Carregando pedidos...')
@@ -81,7 +89,23 @@ export default function OrdersPage() {
     }
 
     loadOrders()
-  }, [orders, addOrder, user])
+  }, [mounted, user])
+
+  // Se não está montado ainda, mostrar loading
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-blue-50">
+        <Header />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="flex items-center space-x-2">
+            <RefreshCw className="h-4 w-4 animate-spin" />
+            <span>Carregando...</span>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
 
   // Função para retornar produtos do pedido ao carrinho
   const handleReturnToCart = (order: any) => {

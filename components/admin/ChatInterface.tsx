@@ -1,13 +1,16 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Send, User, MessageCircle } from 'lucide-react'
+import { Send, User, MessageCircle, Camera, Mic, Play, Pause, X } from 'lucide-react'
 
 interface Message {
   id: string
   sender: 'user' | 'admin'
   message: string
   timestamp: string
+  type?: 'text' | 'image' | 'audio'
+  mediaUrl?: string
+  mediaName?: string
 }
 
 interface ChatInterfaceProps {
@@ -30,7 +33,14 @@ export default function ChatInterface({
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [chatImages, setChatImages] = useState<File[]>([])
+  const [isPlayingAudio, setIsPlayingAudio] = useState<{[key: string]: boolean}>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const chatImageInputRef = useRef<HTMLInputElement>(null)
+  const audioRef = useRef<HTMLAudioElement>(null)
 
   // Status options baseado no tipo de solicitação
   const statusOptions = requestType === 'camera' 
@@ -51,15 +61,12 @@ export default function ChatInterface({
     if (!requestId) return
     
     try {
-      const endpoint = requestType === 'camera' 
-        ? `/api/camera-requests/${requestId}/messages`
-        : `/api/return-requests/${requestId}/messages`
-      
-      const response = await fetch(endpoint)
+      const response = await fetch(`/api/return-requests`)
       if (response.ok) {
         const data = await response.json()
-        if (data.success) {
-          setMessages(data.data.messages || [])
+        const request = (data.data || data || []).find((req: any) => req.id === requestId)
+        if (request && request.messages) {
+          setMessages(request.messages)
         }
       }
     } catch (error) {
@@ -67,29 +74,136 @@ export default function ChatInterface({
     }
   }
 
+  // Funções de mídia
+  const handleChatImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || [])
+    const imageFiles = files.filter(file => file.type.startsWith('image/'))
+    setChatImages(prev => [...prev, ...imageFiles])
+  }
+
+  const removeChatImage = (index: number) => {
+    setChatImages(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream)
+      const chunks: BlobPart[] = []
+
+      recorder.ondataavailable = (e) => {
+        chunks.push(e.data)
+      }
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/wav' })
+        const url = URL.createObjectURL(blob)
+        setAudioUrl(url)
+        stream.getTracks().forEach(track => track.stop())
+      }
+
+      recorder.start()
+      setMediaRecorder(recorder)
+      setIsRecording(true)
+    } catch (error) {
+      console.error('Erro ao iniciar gravação:', error)
+    }
+  }
+
+  const stopRecording = () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop()
+      setIsRecording(false)
+      setMediaRecorder(null)
+    }
+  }
+
+  const playAudio = (messageId: string, audioUrl: string) => {
+    if (audioRef.current) {
+      if (isPlayingAudio[messageId]) {
+        audioRef.current.pause()
+        setIsPlayingAudio(prev => ({ ...prev, [messageId]: false }))
+      } else {
+        audioRef.current.src = audioUrl
+        audioRef.current.play()
+        setIsPlayingAudio(prev => ({ ...prev, [messageId]: true }))
+        
+        audioRef.current.onended = () => {
+          setIsPlayingAudio(prev => ({ ...prev, [messageId]: false }))
+        }
+      }
+    }
+  }
+
   // Enviar mensagem
   const sendMessage = async () => {
-    if (!newMessage.trim() || isLoading || !requestId) return
+    if ((!newMessage.trim() && chatImages.length === 0 && !audioUrl) || isLoading || !requestId) return
 
     setIsLoading(true)
     try {
-      const endpoint = requestType === 'camera' 
-        ? `/api/camera-requests/${requestId}/messages`
-        : `/api/return-requests/${requestId}/messages`
-      
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          message: newMessage.trim(),
-          sender: 'admin'
-        })
-      })
+      let messagesSent = false
 
-      if (response.ok) {
-        setNewMessage('')
-        // Recarregar mensagens após enviar
+      // Enviar mensagem de texto
+      if (newMessage.trim()) {
+        const endpoint = `/api/return-requests/chat`
+        
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            requestId,
+            message: newMessage.trim(),
+            sender: 'admin',
+            type: 'text'
+          })
+        })
+
+        if (response.ok) {
+          setNewMessage('')
+          messagesSent = true
+        }
+      }
+
+      // Enviar imagens
+      if (chatImages.length > 0) {
+        for (const image of chatImages) {
+          const formData = new FormData()
+          formData.append('file', image)
+          formData.append('requestId', requestId)
+          formData.append('sender', 'admin')
+          formData.append('type', 'image')
+
+          await fetch('/api/return-requests/chat', {
+            method: 'POST',
+            body: formData
+          })
+        }
+        setChatImages([])
+        messagesSent = true
+      }
+
+      // Enviar áudio
+      if (audioUrl) {
+        const response = await fetch(audioUrl)
+        const blob = await response.blob()
+        const formData = new FormData()
+        formData.append('file', blob, 'audio.wav')
+        formData.append('requestId', requestId)
+        formData.append('sender', 'admin')
+        formData.append('type', 'audio')
+
+        await fetch('/api/return-requests/chat', {
+          method: 'POST',
+          body: formData
+        })
+        
+        setAudioUrl(null)
+        messagesSent = true
+      }
+
+      if (messagesSent) {
         await loadMessages()
+        if (onMessageSent) onMessageSent()
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error)
@@ -197,7 +311,41 @@ export default function ChatInterface({
                   ? 'bg-blue-600 text-white' 
                   : 'bg-gray-200 text-gray-900'
               }`}>
-                <p className="text-sm">{message.message}</p>
+                {message.type === 'image' && message.mediaUrl && (
+                  <div className="mb-2">
+                    <img
+                      src={message.mediaUrl}
+                      alt="Imagem enviada"
+                      className="max-w-full h-auto rounded-lg cursor-pointer"
+                      onClick={() => window.open(message.mediaUrl, '_blank')}
+                    />
+                  </div>
+                )}
+                
+                {message.type === 'audio' && message.mediaUrl && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <button
+                      onClick={() => playAudio(message.id, message.mediaUrl!)}
+                      className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                        message.sender === 'admin' 
+                          ? 'bg-white bg-opacity-20 hover:bg-opacity-30' 
+                          : 'bg-gray-300 hover:bg-gray-400'
+                      }`}
+                    >
+                      {isPlayingAudio[message.id] ? (
+                        <Pause className="h-3 w-3" />
+                      ) : (
+                        <Play className="h-3 w-3" />
+                      )}
+                    </button>
+                    <span className="text-sm">Áudio</span>
+                  </div>
+                )}
+                
+                {message.message && (
+                  <p className="text-sm whitespace-pre-wrap">{message.message}</p>
+                )}
+                
                 <p className={`text-xs mt-1 ${
                   message.sender === 'admin' ? 'opacity-75' : 'text-gray-500'
                 }`}>
@@ -215,6 +363,78 @@ export default function ChatInterface({
       
       {/* Input */}
       <div className="p-4 border-t border-gray-200">
+        {/* Preview de imagens selecionadas */}
+        {chatImages.length > 0 && (
+          <div className="flex gap-2 p-3 bg-gray-100 rounded-lg mb-3 flex-wrap">
+            {chatImages.map((image, index) => (
+              <div key={index} className="relative">
+                <img
+                  src={URL.createObjectURL(image)}
+                  alt={`Preview ${index + 1}`}
+                  className="w-20 h-20 object-cover rounded-lg border-2 border-white shadow-sm"
+                />
+                <button
+                  onClick={() => removeChatImage(index)}
+                  className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        
+        {/* Preview de áudio */}
+        {audioUrl && (
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                <Mic className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <span className="text-sm font-medium text-blue-900">Áudio gravado</span>
+                <p className="text-xs text-blue-700">Pronto para enviar</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setAudioUrl(null)}
+              className="text-red-600 hover:text-red-700 p-1"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Botões de mídia */}
+        <div className="flex gap-2 mb-3">
+          <input
+            ref={chatImageInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleChatImageUpload}
+            className="hidden"
+          />
+          <button
+            onClick={() => chatImageInputRef.current?.click()}
+            className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm"
+          >
+            <Camera className="h-4 w-4" />
+            Foto
+          </button>
+          <button
+            onClick={isRecording ? stopRecording : startRecording}
+            className={`flex items-center gap-2 px-3 py-2 border rounded-md text-sm ${
+              isRecording 
+                ? 'bg-red-50 border-red-200 text-red-700' 
+                : 'border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            <Mic className={`h-4 w-4 ${isRecording ? 'animate-pulse' : ''}`} />
+            {isRecording ? 'Parar' : 'Áudio'}
+          </button>
+        </div>
+
         <div className="flex space-x-2">
           <input
             type="text"
@@ -227,7 +447,7 @@ export default function ChatInterface({
           />
           <button
             onClick={sendMessage}
-            disabled={!newMessage.trim() || isLoading}
+            disabled={(!newMessage.trim() && chatImages.length === 0 && !audioUrl) || isLoading}
             className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
           >
             <Send className="h-4 w-4" />
@@ -235,6 +455,9 @@ export default function ChatInterface({
           </button>
         </div>
       </div>
+
+      {/* Audio element para reprodução */}
+      <audio ref={audioRef} className="hidden" />
     </div>
   )
 }

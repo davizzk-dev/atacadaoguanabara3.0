@@ -47,10 +47,11 @@ export default function Header() {
       if (returnsResponse.ok) {
         const returnsData = await returnsResponse.json()
         if (returnsData.success && returnsData.data) {
-          const userReturns = returnsData.data.filter((returnReq: any) => 
-            returnReq.status === 'pending' // Filtrar por usuário se necessário
+          // Contar todas as solicitações pendentes (para mostrar no badge)
+          const pendingReturns = returnsData.data.filter((returnReq: any) => 
+            returnReq.status === 'pending'
           )
-          setPendingReturns(userReturns.length)
+          setPendingReturns(pendingReturns.length)
         }
       }
 
@@ -60,7 +61,8 @@ export default function Header() {
         const cameraData = await cameraResponse.json()
         if (cameraData.success && cameraData.data) {
           const pendingCameras = cameraData.data.filter((camera: any) => 
-            camera.status === 'pending'
+            camera.status === 'pending' && 
+            (camera.userId === user?.id || camera.userEmail === user?.email)
           )
           setPendingCameraRequests(pendingCameras.length)
         }
@@ -463,6 +465,11 @@ export default function Header() {
                       <span className="font-medium text-gray-900">Solicitar Câmera</span>
                       <p className="text-xs text-gray-500">Perdeu algo? Solicite</p>
                     </div>
+                    {pendingCameraRequests > 0 && (
+                      <span className="bg-indigo-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center animate-bounce-in">
+                        {pendingCameraRequests}
+                      </span>
+                    )}
                   </Link>
 
                   <Link 

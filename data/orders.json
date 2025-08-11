@@ -1426,5 +1426,617 @@
     "shippingCost": 17.1,
     "shippingDistance": 5.7,
     "updatedAt": "2025-08-10T22:05:48.573Z"
+  },
+  {
+    "id": "1754864390252",
+    "items": [
+      {
+        "product": {
+          "id": "4748",
+          "name": "ABACAXI PEDACOS EM CALDA MARIZA 400G",
+          "price": 11.9,
+          "originalPrice": 11.9,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "CONFEITARIA E OUTROS",
+          "description": "ABACAXI PEDA 400G",
+          "stock": 15,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 60,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "confeitaria e outros",
+            "preparações de produtos hortíc",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 2,
+            "generoId": 20,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2024-10-05T03:00:00.000+00:00",
+            "dataAlteracao": "2025-03-31T19:40:26.137+00:00",
+            "estoque": {
+              "saldo": 15,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:52.762+00:00",
+              "atualizadoEm": "2025-03-26T11:56:14.039+00:00"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 12
+      }
+    ],
+    "total": 159.9,
+    "customerInfo": {
+      "name": "Davi Kalebe de Vasconcelos Alexandre",
+      "email": "davikalebe20020602@gmail.com",
+      "phone": "85988286178",
+      "address": {
+        "street": "Rua Coronel Luiz David de Souza",
+        "number": "72",
+        "complement": "Apto",
+        "neighborhood": "Presidente Kennedy",
+        "city": "Fortaleza",
+        "state": "CE",
+        "zipCode": "60355-337",
+        "reference": "a"
+      }
+    },
+    "status": "pending",
+    "createdAt": "2025-08-10T22:19:50.252Z",
+    "estimatedDelivery": "2025-08-10T22:43:50.252Z",
+    "shippingCost": 17.1,
+    "shippingDistance": 5.7
+  },
+  {
+    "id": "1754868836252",
+    "items": [
+      {
+        "product": {
+          "id": "4748",
+          "name": "ABACAXI PEDACOS EM CALDA MARIZA 400G",
+          "price": 11.9,
+          "originalPrice": 11.9,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "CONFEITARIA E OUTROS",
+          "description": "ABACAXI PEDA 400G",
+          "stock": 15,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 81,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "confeitaria e outros",
+            "preparações de produtos hortíc",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 2,
+            "generoId": 20,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2024-10-05T03:00:00.000+00:00",
+            "dataAlteracao": "2025-03-31T19:40:26.137+00:00",
+            "estoque": {
+              "saldo": 15,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:52.762+00:00",
+              "atualizadoEm": "2025-03-26T11:56:14.039+00:00"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 10
+      }
+    ],
+    "total": 134.6,
+    "customerInfo": {
+      "name": "Administrador",
+      "email": "admin@gn",
+      "phone": "(11) 11111-111",
+      "address": {
+        "street": "Avenida Sargento Hermínio Sampaio",
+        "number": "72",
+        "complement": "Www",
+        "neighborhood": "Presidente Kennedy",
+        "city": "Fortaleza",
+        "state": "CE",
+        "zipCode": "60355-512",
+        "reference": "Fff"
+      }
+    },
+    "status": "cancelled",
+    "createdAt": "2025-08-10T23:33:56.252Z",
+    "estimatedDelivery": "2025-08-10T23:51:56.252Z",
+    "shippingCost": 15.600000000000001,
+    "shippingDistance": 5.2,
+    "updatedAt": "2025-08-10T23:35:40.452Z"
+  },
+  {
+    "id": "1754876005144",
+    "items": [
+      {
+        "product": {
+          "id": "4748",
+          "name": "ABACAXI PEDACOS EM CALDA MARIZA 400G",
+          "price": 11.9,
+          "originalPrice": 11.9,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "CONFEITARIA E OUTROS",
+          "description": "ABACAXI PEDA 400G",
+          "stock": 15,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 32,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "confeitaria e outros",
+            "preparações de produtos hortíc",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 2,
+            "generoId": 20,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2024-10-05T03:00:00.000+00:00",
+            "dataAlteracao": "2025-03-31T19:40:26.137+00:00",
+            "estoque": {
+              "saldo": 15,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:52.762+00:00",
+              "atualizadoEm": "2025-03-26T11:56:14.039+00:00"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 1
+      },
+      {
+        "product": {
+          "id": "5806",
+          "name": "ABSORVENTE INTIMUS C/ABAS C/8 ",
+          "price": 4.79,
+          "originalPrice": 4.79,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "PRODUTOS DE LIMPEZA",
+          "description": "ABSORVENTE INTIMUS C",
+          "stock": 1,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 43,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "produtos de limpeza",
+            "obras diversas",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "secaoId": 6,
+            "generoId": 96,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2025-04-28T19:42:20.936+00:00",
+            "dataAlteracao": "2025-04-28T19:42:20.936+00:00",
+            "estoque": {
+              "saldo": 1,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-04-28T19:42:20.934+00:00",
+              "atualizadoEm": "2025-07-05T11:06:30.489+00:00"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 1
+      },
+      {
+        "product": {
+          "id": "5769",
+          "name": "CALABRESA FATIADA SABOROSA 1KG",
+          "price": 23.9,
+          "originalPrice": 23.9,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "FRIOS Á GRANEL E PACOTES",
+          "description": "CALABRESA FATIADA SA",
+          "stock": 489,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 26,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "frios á granel e pacotes",
+            "preparações de carne, de peixes",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 12,
+            "generoId": 16,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2025-04-15T18:25:10.444+00:00",
+            "dataAlteracao": "2025-04-15T18:25:10.444+00:00",
+            "estoque": {
+              "saldo": 489,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-04-15T18:25:10.441+00:00",
+              "atualizadoEm": "2025-06-25T15:33:49.914+00:00"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 2
+      },
+      {
+        "product": {
+          "id": "1511",
+          "name": "BAT GUT BETANIA SACHE MORANGO 900G",
+          "price": 5.49,
+          "originalPrice": 5.49,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "RESFRIADOS",
+          "description": "BAT GUT BET MORA 900",
+          "stock": 19,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 57,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "resfriados",
+            "leite e laticinios - ovos de aves - mel",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 13,
+            "generoId": 4,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2023-07-12T03:00:00.000+00:00",
+            "dataAlteracao": "2025-02-17T03:00:00.000+00:00",
+            "estoque": {
+              "saldo": 19,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:53.221+00:00",
+              "atualizadoEm": "2025-08-09T12:52:27.274+00:00"
+            }
+          }
+        },
+        "quantity": 3
+      },
+      {
+        "product": {
+          "id": "1",
+          "name": "QUEIJO MUSSARELA SABOR DO SERRADO PECA KG",
+          "price": 31.41,
+          "originalPrice": 34.9,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "FRIOS Á GRANEL E PACOTES",
+          "description": "MUSSAR BRISALAC PÇ",
+          "stock": 35.698,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 107,
+          "brand": "Sem marca",
+          "unit": "KG",
+          "tags": [
+            "frios á granel e pacotes",
+            "leite e laticinios - ovos de aves - mel",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "secaoId": 12,
+            "generoId": 4,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2023-06-16T03:00:00.000+00:00",
+            "dataAlteracao": "2025-03-14T18:14:45.907+00:00",
+            "estoque": {
+              "saldo": 35.698,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:50.808+00:00",
+              "atualizadoEm": "2025-08-09T11:17:15.915+00:00"
+            }
+          },
+          "discount": 10,
+          "discountType": "percentage",
+          "onPromotion": true,
+          "promotionId": "test_1754783420296",
+          "hasActivePromotion": true
+        },
+        "quantity": 1
+      }
+    ],
+    "total": 128.87,
+    "customerInfo": {
+      "name": "José Arimatéa Costa Alexandre",
+      "email": "Aryalexandre430@gmail.com",
+      "phone": "(85) 98699-2962",
+      "address": {
+        "street": "Rua Coronel Correia",
+        "number": "382",
+        "neighborhood": "Parque Soledade",
+        "city": "Caucaia",
+        "state": "CE",
+        "zipCode": "61603-005"
+      }
+    },
+    "status": "delivered",
+    "createdAt": "2025-08-11T01:33:25.144Z",
+    "estimatedDelivery": "2025-08-11T01:55:25.144Z",
+    "shippingCost": 16.5,
+    "shippingDistance": 5.5,
+    "updatedAt": "2025-08-11T01:35:45.820Z"
+  },
+  {
+    "id": "1754876675029",
+    "items": [
+      {
+        "product": {
+          "id": "6198",
+          "name": "CAIXA DE CARNE DE HAMBURGUER AURORA FAROESTE 12UND",
+          "price": 17.9,
+          "originalPrice": 17.9,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "CONGELADOS",
+          "description": "CAIXA DE CARNE DE HA",
+          "stock": 16,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 103,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "congelados",
+            "preparações de carne, de peixes",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 14,
+            "generoId": 16,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2025-07-29T19:01:37.115+00:00",
+            "dataAlteracao": "2025-07-29T19:01:37.115+00:00",
+            "estoque": {
+              "saldo": 16,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-07-29T19:01:37.114+00:00",
+              "atualizadoEm": "2025-08-07T10:05:43.117+00:00"
+            }
+          }
+        },
+        "quantity": 1
+      },
+      {
+        "product": {
+          "id": "2544",
+          "name": "RICHESTER WAFER ESCURETO 80G",
+          "price": 2.39,
+          "originalPrice": 2.39,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "BISCOITOS",
+          "description": "WAFER ESCURETO 80G",
+          "stock": 1,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 101,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "biscoitos",
+            "preparações à base de cereais",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 9,
+            "generoId": 19,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2023-09-13T03:00:00.000+00:00",
+            "dataAlteracao": "2025-02-17T03:00:00.000+00:00",
+            "estoque": {
+              "saldo": 1,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:51.877+00:00",
+              "atualizadoEm": "2025-04-12T18:39:28.021+00:00"
+            }
+          }
+        },
+        "quantity": 2
+      },
+      {
+        "product": {
+          "id": "5093",
+          "name": "GOIABADA PALMEIRON 500G",
+          "price": 6.5,
+          "originalPrice": 6.5,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "CONFEITARIA E OUTROS",
+          "description": "GOIABADA PALMEIR 500",
+          "stock": 39,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 95,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "confeitaria e outros",
+            "preparações de produtos hortíc",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 2,
+            "generoId": 20,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2024-11-15T03:00:00.000+00:00",
+            "dataAlteracao": "2025-02-17T03:00:00.000+00:00",
+            "estoque": {
+              "saldo": 39,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:52.762+00:00",
+              "atualizadoEm": "2025-08-10T10:59:02.604+00:00"
+            }
+          }
+        },
+        "quantity": 2
+      },
+      {
+        "product": {
+          "id": "2148",
+          "name": "FEIJAO CARIOCA DONA DE 1KG",
+          "price": 5.49,
+          "originalPrice": 5.49,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "MERCEARIA",
+          "description": "FEIJAO CARIOCA DONA",
+          "stock": 23,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 45,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "mercearia",
+            "produtos horticolas, plantas, raizes",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 11,
+            "generoId": 7,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2023-08-14T03:00:00.000+00:00",
+            "dataAlteracao": "2025-02-17T03:00:00.000+00:00",
+            "estoque": {
+              "saldo": 23,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:51.390+00:00",
+              "atualizadoEm": "2025-07-10T12:12:18.672+00:00"
+            }
+          }
+        },
+        "quantity": 5
+      },
+      {
+        "product": {
+          "id": "4214",
+          "name": "ARROZ INTEGRAL CAMIL 1KG",
+          "price": 6.49,
+          "originalPrice": 6.49,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "MERCEARIA",
+          "description": "ARROZ INTEGRAL CAMIL",
+          "stock": 24,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 14,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "mercearia",
+            "cereais",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 11,
+            "generoId": 10,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2024-06-25T03:00:00.000+00:00",
+            "dataAlteracao": "2025-02-17T03:00:00.000+00:00",
+            "estoque": {
+              "saldo": 24,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:52.310+00:00",
+              "atualizadoEm": "2025-07-26T20:55:14.089+00:00"
+            }
+          }
+        },
+        "quantity": 5
+      },
+      {
+        "product": {
+          "id": "4460",
+          "name": "AÇUCAR CRISTAL DELTA 1KG",
+          "price": 4.29,
+          "originalPrice": 4.29,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "MERCEARIA",
+          "description": "AÇUCAR CRISTAL DELTA",
+          "stock": 4,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 93,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "mercearia",
+            "açúcares e produtos de confeit",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 11,
+            "generoId": 17,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2024-08-30T03:00:00.000+00:00",
+            "dataAlteracao": "2025-02-17T03:00:00.000+00:00",
+            "estoque": {
+              "saldo": 4,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:52.310+00:00",
+              "atualizadoEm": "2025-04-02T21:47:34.613+00:00"
+            }
+          }
+        },
+        "quantity": 5
+      }
+    ],
+    "total": 133.53000000000003,
+    "customerInfo": {
+      "name": "JOSE ARIMATEA COSTA ALEXANDRE",
+      "email": "Aryalexandre430@gmail.com",
+      "phone": "(85) 98699-2962",
+      "address": {
+        "street": "Rua Coronel Correia",
+        "number": "383",
+        "complement": "Casa",
+        "neighborhood": "Parque Soledad",
+        "city": "Caucaia",
+        "state": "CE",
+        "zipCode": "61603-005",
+        "reference": "Charlespedras"
+      }
+    },
+    "status": "delivered",
+    "createdAt": "2025-08-11T01:44:35.029Z",
+    "estimatedDelivery": "2025-08-11T02:06:35.029Z",
+    "shippingCost": 16.5,
+    "shippingDistance": 5.5,
+    "updatedAt": "2025-08-11T01:45:08.576Z"
   }
 ]

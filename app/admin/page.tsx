@@ -408,10 +408,25 @@ export default function AdminPage() {
         setReturnRequests([])
       }
 
-      // Carregar promoções do localStorage
-      const localPromotions = JSON.parse(localStorage.getItem('productPromotions') || '[]')
-      setProductPromotions(localPromotions)
-      setPromotions(localPromotions)
+      // Carregar promoções de produtos via API
+      try {
+        const promotionsResponse = await fetch('/api/admin/product-promotions')
+        console.log('Status da resposta de promoções:', promotionsResponse.status)
+        if (promotionsResponse.ok) {
+          const promotionsData = await promotionsResponse.json()
+          console.log('Promoções carregadas da API:', promotionsData)
+          setProductPromotions(promotionsData)
+          setPromotions(promotionsData)
+        } else {
+          console.error('Erro ao carregar promoções via API')
+          setProductPromotions([])
+          setPromotions([])
+        }
+      } catch (error) {
+        console.error('Erro ao buscar promoções:', error)
+        setProductPromotions([])
+        setPromotions([])
+      }
 
       // Calcular estatísticas
       await updateStats()
@@ -700,21 +715,29 @@ export default function AdminPage() {
         precoFinal: newPrice
       })
   
-      console.log('🚀 Salvando promoção localmente...')
+      console.log('🚀 Salvando promoção via API...')
       
-      // Salvar no localStorage
-      const existingPromotions = JSON.parse(localStorage.getItem('productPromotions') || '[]')
-      if (editingPromotion) {
-        const index = existingPromotions.findIndex((p: any) => p.id === editingPromotion.id)
-        if (index !== -1) {
-          existingPromotions[index] = promotionData
-        }
-      } else {
-        existingPromotions.push(promotionData)
+      // Salvar via API ao invés de localStorage
+      const method = editingPromotion ? 'PUT' : 'POST'
+      const url = editingPromotion 
+        ? `/api/admin/product-promotions?id=${editingPromotion.id}`
+        : '/api/admin/product-promotions'
+      
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(promotionData)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao salvar promoção')
       }
-      localStorage.setItem('productPromotions', JSON.stringify(existingPromotions))
-      
-      console.log('✅ Promoção salva com sucesso no localStorage!')
+
+      const result = await response.json()
+      console.log('✅ Promoção salva com sucesso via API!', result)
       
       setShowPromotionModal(false)
       setEditingPromotion(null)

@@ -119,13 +119,14 @@ export default function HomePage() {
     const loadData = async () => {
       try {
         // Carregar promoções
-        const promotionsResponse = await fetch('/api/admin/product-promotions')
+        const promotionsResponse = await fetch('/api/promotions')
         if (promotionsResponse.ok) {
           const promotionsData = await promotionsResponse.json()
-          setProductPromotions(promotionsData)
+          const promotions = promotionsData.data || promotionsData || []
+          setProductPromotions(promotions)
           
           // Aplicar promoções aos produtos
-          const productsWithPromotions = applyPromotionsToProducts(products, promotionsData)
+          const productsWithPromotions = applyPromotionsToProducts(products, promotions)
           setProducts(productsWithPromotions)
           
           // Produtos em destaque (primeiros 8 com promoções aplicadas)

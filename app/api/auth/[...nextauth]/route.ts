@@ -7,7 +7,7 @@ import path from 'path'
 console.log('🔧 Environment variables:')
 console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? '✅ Set' : '❌ Missing')
 console.log('GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? '✅ Set' : '❌ Missing')
-console.log('NEXTAUTH_URL:', process.env.NEXTAUTH_URL)
+console.log('NEXTAUTH_URL:', process.env.NEXTAUTH_URL || 'http://localhost:3005')
 console.log('NEXTAUTH_SECRET:', process.env.NEXTAUTH_SECRET ? '✅ Set' : '❌ Missing')
 
 // Função para verificar se usuário tem endereço
@@ -35,12 +35,35 @@ export const authOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      // Always show Google account chooser to avoid auto sign-in with last account
+      authorization: {
+        params: {
+          // Force Google to show the account chooser and consent screen
+          prompt: 'consent select_account',
+          // Keep defaults explicit for clarity
+          access_type: 'offline',
+          response_type: 'code',
+        },
+      },
     }),
   ],
+  secret: process.env.NEXTAUTH_SECRET || "atacadao_guanabara_secret_super_forte_2025_auth_key_123456789",
   pages: {
     signIn: '/login',
     signOut: '/',
     error: '/login',
+  },
+  basePath: '/api/auth',
+  cookies: {
+    pkceCodeVerifier: {
+      name: 'next-auth.pkce.code_verifier',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: false
+      }
+    }
   },
   callbacks: {
     async signIn({ user, account, profile }: { user?: any, account?: any, profile?: any }) {
@@ -65,6 +88,7 @@ export const authOptions = {
       if (session.user) {
         session.user.id = token.sub as string
         session.user.role = token.role as string || 'user'
+        session.user.image = token.picture
       }
       return session
     },

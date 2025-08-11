@@ -14,8 +14,9 @@ import {
 import AnalyticsDashboard from '@/components/admin/AnalyticsDashboard'
 import ChatInterface from '@/components/admin/ChatInterface'
 import { varejoFacilClient } from '@/lib/varejo-facil-client'
-import { useAuthStore } from '@/lib/store'
+import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { useAuthStore } from '@/lib/store'
 
 // Interfaces
 interface DashboardStats {
@@ -113,8 +114,10 @@ interface SyncProgress {
 }
 
 export default function AdminPage() {
-  const { user } = useAuthStore()
+  const { data: session, status } = useSession()
+  const user = session?.user
   const router = useRouter()
+  const storeUser = useAuthStore((s) => s.user)
 
   // Estados principais - DEVEM vir antes de qualquer return
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -213,18 +216,41 @@ export default function AdminPage() {
 
   // Verificação de autenticação - APÓS todos os hooks
   useEffect(() => {
-    if (!user) {
-      router.push('/login?admin=true')
+    if (status === 'loading') return // Aguardando carregar
+
+    const nextAuthEmail = user?.email || null
+    const isNextAuthAdmin = nextAuthEmail === 'davikalebe20020602@gmail.com'
+    const isStoreAdmin = !!(storeUser && (storeUser.role === 'admin' || storeUser.email === 'admin' || storeUser.email === 'davikalebe20020602@gmail.com'))
+    const isLoggedIn = status === 'authenticated' || !!storeUser
+
+    if (!isLoggedIn) {
+      router.push('/login?admin=true&callback=%2Fadmin')
       return
     }
-    if (user.role !== 'admin') {
+
+    if (!(isNextAuthAdmin || isStoreAdmin)) {
       router.push('/')
       return
     }
-  }, [user, router])
+  }, [user, status, storeUser, router])
 
   // Se não é admin, renderizar tela de acesso negado
-  if (!user || user.role !== 'admin') {
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
+  
+  // Se não atender os critérios de admin (nem sessão NextAuth admin nem store admin), bloqueia
+  const nextAuthEmail = user?.email || null
+  const isNextAuthAdmin = nextAuthEmail === 'davikalebe20020602@gmail.com'
+  const isStoreAdmin = !!(storeUser && (storeUser.role === 'admin' || storeUser.email === 'admin' || storeUser.email === 'davikalebe20020602@gmail.com'))
+  if (!(isNextAuthAdmin || isStoreAdmin)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="text-center">
@@ -328,6 +354,58 @@ export default function AdminPage() {
     const memoryCleanup = setInterval(cleanupMemory, 5 * 60 * 1000)
     return () => clearInterval(memoryCleanup)
   }, [products.length, orders.length, users.length])
+
+  // Polling contínuo para notificações de novas mensagens
+  useEffect(() => {
+    const notificationInterval = setInterval(() => {
+      // Sempre verifica por novas mensagens para mostrar notificações
+      loadChatData()
+    }, 2000) // A cada 2 segundos verifica novas mensagens
+
+    return () => clearInterval(notificationInterval)
+  }, []) // Executa sempre, independente de qualquer estado
+
+  // Polling para atualizar chat em tempo real - mais agressivo
+  useEffect(() => {
+    let pollingInterval: NodeJS.Timeout | null = null
+
+    if (activeTab === 'camera-requests' || activeTab === 'return-requests') {
+      console.log('🔄 [Admin] Iniciando polling do chat - Tab:', activeTab)
+      pollingInterval = setInterval(() => {
+        console.log('🔄 [Admin] Atualizando dados do chat...')
+        // Para chat, carregar apenas dados específicos sem throttle
+        loadChatData()
+      }, 500) // Atualiza a cada 500ms para ser mais responsivo
+    }
+
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval)
+        console.log('🔄 [Admin] Parando polling do chat')
+      }
+    }
+  }, [activeTab]) // Removendo selectedChat da dependência
+
+  // Função específica para carregar dados do chat sem throttle
+  const loadChatData = async () => {
+    try {
+      if (activeTab === 'camera-requests') {
+        const cameraRes = await fetch('/api/camera-requests')
+        if (cameraRes.ok) {
+          const cameraData = await safeJsonParse(cameraRes)
+          setCameraRequests(Array.isArray(cameraData) ? cameraData : [])
+        }
+      } else if (activeTab === 'return-requests') {
+        const returnsRes = await fetch('/api/return-requests')
+        if (returnsRes.ok) {
+          const returnsData = await safeJsonParse(returnsRes)
+          setReturnRequests(Array.isArray(returnsData) ? returnsData : [])
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados do chat:', error)
+    }
+  }
 
   const loadData = async () => {
     // Throttle: não carregar dados se foi carregado há menos de 2 segundos
@@ -1140,8 +1218,14 @@ export default function AdminPage() {
     }
   }
 
-  const handleLogout = () => {
-    window.location.href = '/login'
+  const handleLogout = async () => {
+    // Limpar localStorage manualmente
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth-storage')
+      localStorage.clear()
+    }
+    
+    await signOut({ callbackUrl: '/' })
   }
 
   // Fallback seguro para stats

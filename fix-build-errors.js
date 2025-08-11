@@ -58,7 +58,7 @@ function createEnvFile() {
   const envPath = '.env.local';
   if (!fs.existsSync(envPath)) {
     const envContent = `# NextAuth Configuration
-NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_URL=http://localhost:3005
 NEXTAUTH_SECRET=your-secret-key-here-change-this-in-production
 
 # Google OAuth (opcional - configure se quiser usar login Google)
@@ -66,7 +66,7 @@ NEXTAUTH_SECRET=your-secret-key-here-change-this-in-production
 # GOOGLE_CLIENT_SECRET=your-google-client-secret
 
 # API URLs
-NEXT_PUBLIC_API_URL=http://localhost:3000/api
+NEXT_PUBLIC_API_URL=http://localhost:3005/api
 NEXT_PUBLIC_BACKEND_URL=http://localhost:8080
 
 # Build Configuration

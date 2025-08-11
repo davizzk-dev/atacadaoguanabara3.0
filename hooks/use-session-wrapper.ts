@@ -3,8 +3,8 @@
 import { useSession } from 'next-auth/react'
 
 export function useSessionWrapper() {
-  // Verificar se estamos no servidor ou se NextAuth não está configurado
-  if (typeof window === 'undefined' || !process.env.NEXTAUTH_URL) {
+  // Evitar uso no servidor
+  if (typeof window === 'undefined') {
     return {
       data: null,
       status: 'unauthenticated' as const,
@@ -14,8 +14,7 @@ export function useSessionWrapper() {
 
   try {
     const session = useSession()
-    
-    // Verificar se session é undefined (pode acontecer durante build estático)
+
     if (!session) {
       return {
         data: null,
@@ -23,7 +22,7 @@ export function useSessionWrapper() {
         update: () => Promise.resolve(null),
       }
     }
-    
+
     return {
       data: session.data || null,
       status: session.status || 'unauthenticated',
@@ -31,11 +30,10 @@ export function useSessionWrapper() {
     }
   } catch (error) {
     console.warn('Erro ao usar useSession:', error)
-    // Fallback para build estático
     return {
       data: null,
       status: 'unauthenticated' as const,
       update: () => Promise.resolve(null),
     }
   }
-} 
+}

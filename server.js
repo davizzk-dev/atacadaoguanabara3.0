@@ -14,11 +14,20 @@ const app = express();
 
 app.use(cors());
 
-// Carregar variáveis de ambiente
+// Carregar variáveis de ambiente PRIMEIRO
 require('dotenv').config({ path: '.env.local' });
 
-// Configurar Next.js
-const nextApp = next({ dev: false, dir: __dirname });
+// Definir porta para Next.js ANTES de importar o Next
+process.env.PORT = 3005;
+process.env.NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3005';
+
+// Configurar Next.js com porta específica
+const nextApp = next({ 
+  dev: false, 
+  dir: __dirname,
+  port: 3005,
+  hostname: 'localhost'
+});
 const nextHandler = nextApp.getRequestHandler();
 
 // === Iniciar Backend Java automaticamente ===

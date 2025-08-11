@@ -123,43 +123,54 @@ export async function GET(request: NextRequest) {
     const data = await fs.readFile(ordersPath, 'utf-8')
     const orders = JSON.parse(data)
 
-    // Para o admin, retornar todos os pedidos
-    // Para usuários normais, filtrar por email se autenticado
+    // Obter parâmetros da URL
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get('userId')
+    const userEmail = searchParams.get('userEmail')
+    
+    console.log('[API/orders][GET] Parâmetros:', { userId, userEmail })
+
+    // Para o admin ou se não há filtros, retornar todos os pedidos
+    if (!userId && !userEmail) {
+      console.log('[API/orders][GET] retornando todos os pedidos:', orders.length)
+      return NextResponse.json(orders)
+    }
+
+    // Filtrar pedidos por userId ou userEmail
+    let filteredOrders = orders
+
+    if (userEmail) {
+      filteredOrders = orders.filter((order: any) => 
+        order.customerInfo?.email === userEmail
+      )
+      console.log('[API/orders][GET] pedidos filtrados por email:', filteredOrders.length)
+    } else if (userId && userId !== 'guest') {
+      // Para usuários específicos (não guest)
+      filteredOrders = orders.filter((order: any) => 
+        order.userId === userId
+      )
+      console.log('[API/orders][GET] pedidos filtrados por userId:', filteredOrders.length)
+    }
+
+    // Tentar também autenticação por session como fallback
     try {
       const session = await getServerSession(authOptions)
       
-      if (session?.user?.email) {
+      if (session?.user?.email && !userEmail) {
         // Usuário autenticado - filtrar pedidos
-        const userOrders = orders.filter((order: any) => 
+        filteredOrders = orders.filter((order: any) => 
           order.customerInfo?.email === session.user.email
         )
         
-        console.log('[API/orders][GET] pedidos filtrados para usuário:', userOrders.length)
-        return NextResponse.json({ 
-          success: true, 
-          orders: userOrders 
-        })
+        console.log('[API/orders][GET] pedidos filtrados por session:', filteredOrders.length)
       }
     } catch (authError) {
-      console.log('[API/orders][GET] Erro na autenticação, retornando todos os pedidos para admin')
+      console.log('[API/orders][GET] Erro na autenticação, usando filtros da URL')
     }
 
-    // Se não autenticado ou erro na autenticação, retornar todos os pedidos
-    console.log('[API/orders][GET] retornando todos os pedidos:', orders.length)
-    return NextResponse.json({ 
-      success: true, 
-      orders: orders 
-    })
+    return NextResponse.json(filteredOrders)
   } catch (error: any) {
     console.error('[API/orders][GET] Erro:', error, error?.stack)
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Erro interno do servidor',
-      orders: [],
-      details: error?.message,
-      stack: error?.stack,
-      errorString: String(error),
-      errorType: error?.constructor?.name
-    }, { status: 500 })
+    return NextResponse.json([], { status: 500 })
   }
 } 

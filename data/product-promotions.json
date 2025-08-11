@@ -1,14 +1,1 @@
-[
-  {
-    "id": "1754861470653",
-    "productId": "prod1",
-    "productName": "Produto Teste",
-    "originalPrice": 20,
-    "newPrice": 15,
-    "discount": 25,
-    "image": null,
-    "isActive": true,
-    "createdAt": "2025-08-10T21:31:10.653Z",
-    "validUntil": null
-  }
-]
+[]

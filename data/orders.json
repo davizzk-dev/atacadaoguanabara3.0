@@ -2038,5 +2038,604 @@
     "shippingCost": 16.5,
     "shippingDistance": 5.5,
     "updatedAt": "2025-08-11T01:45:08.576Z"
+  },
+  {
+    "id": "1754919701236",
+    "items": [
+      {
+        "product": {
+          "id": "4748",
+          "name": "ABACAXI PEDACOS EM CALDA MARIZA 400G",
+          "price": 11.9,
+          "originalPrice": 11.9,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "CONFEITARIA E OUTROS",
+          "description": "ABACAXI PEDA 400G",
+          "stock": 15,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 81,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "confeitaria e outros",
+            "preparações de produtos hortíc",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 2,
+            "generoId": 20,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2024-10-05T03:00:00.000+00:00",
+            "dataAlteracao": "2025-03-31T19:40:26.137+00:00",
+            "estoque": {
+              "saldo": 15,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:52.762+00:00",
+              "atualizadoEm": "2025-03-26T11:56:14.039+00:00"
+            }
+          }
+        },
+        "quantity": 13
+      }
+    ],
+    "total": 154.70000000000002,
+    "customerInfo": {
+      "name": "Davi Kalebe de Vasconcelos Alexandre",
+      "email": "davikalebe20020602@gmail.com",
+      "phone": "85988286178",
+      "address": {
+        "street": "Rua Coronel Correia",
+        "number": "382",
+        "complement": "Apto",
+        "neighborhood": "Parque Soledade",
+        "city": "Caucaia",
+        "state": "CE",
+        "zipCode": "61603-005",
+        "reference": "a"
+      }
+    },
+    "status": "pending",
+    "createdAt": "2025-08-11T13:41:41.236Z",
+    "estimatedDelivery": "2025-08-11T14:03:41.236Z",
+    "shippingCost": 0,
+    "shippingDistance": 5.5
+  },
+  {
+    "id": "1754920240289",
+    "items": [
+      {
+        "product": {
+          "id": "4748",
+          "name": "ABACAXI PEDACOS EM CALDA MARIZA 400G",
+          "price": 11.9,
+          "originalPrice": 11.9,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "CONFEITARIA E OUTROS",
+          "description": "ABACAXI PEDA 400G",
+          "stock": 15,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 81,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "confeitaria e outros",
+            "preparações de produtos hortíc",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 2,
+            "generoId": 20,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2024-10-05T03:00:00.000+00:00",
+            "dataAlteracao": "2025-03-31T19:40:26.137+00:00",
+            "estoque": {
+              "saldo": 15,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:52.762+00:00",
+              "atualizadoEm": "2025-03-26T11:56:14.039+00:00"
+            }
+          }
+        },
+        "quantity": 11
+      }
+    ],
+    "total": 148,
+    "customerInfo": {
+      "name": "Davi Kalebe de Vasconcelos Alexandre",
+      "email": "davikalebe20020602@gmail.com",
+      "phone": "85988286178",
+      "address": {
+        "street": "Rua Coronel Luiz David de Souza",
+        "number": "72",
+        "complement": "Apto",
+        "neighborhood": "Presidente Kennedy",
+        "city": "Fortaleza",
+        "state": "CE",
+        "zipCode": "60355-337",
+        "reference": "Charles pedras"
+      }
+    },
+    "status": "confirmed",
+    "createdAt": "2025-08-11T13:50:40.289Z",
+    "estimatedDelivery": "2025-08-11T14:14:40.289Z",
+    "shippingCost": 17.1,
+    "shippingDistance": 5.7,
+    "updatedAt": "2025-08-11T14:19:27.508Z"
+  },
+  {
+    "id": "1754922007465",
+    "items": [
+      {
+        "product": {
+          "id": "4748",
+          "name": "ABACAXI PEDACOS EM CALDA MARIZA 400G",
+          "price": 11.9,
+          "originalPrice": 11.9,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "CONFEITARIA E OUTROS",
+          "description": "ABACAXI PEDA 400G",
+          "stock": 15,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 81,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "confeitaria e outros",
+            "preparações de produtos hortíc",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 2,
+            "generoId": 20,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2024-10-05T03:00:00.000+00:00",
+            "dataAlteracao": "2025-03-31T19:40:26.137+00:00",
+            "estoque": {
+              "saldo": 15,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:52.762+00:00",
+              "atualizadoEm": "2025-03-26T11:56:14.039+00:00"
+            }
+          }
+        },
+        "quantity": 10
+      }
+    ],
+    "total": 136.1,
+    "customerInfo": {
+      "name": "Davi Kalebe de Vasconcelos Alexandre",
+      "email": "davikalebe20020602@gmail.com",
+      "phone": "85988286178",
+      "address": {
+        "street": "Rua Coronel Luiz David de Souza",
+        "number": "72",
+        "complement": "Casa",
+        "neighborhood": "Presidente Kennedy",
+        "city": "Fortaleza",
+        "state": "CE",
+        "zipCode": "60355-337"
+      }
+    },
+    "status": "pending",
+    "createdAt": "2025-08-11T14:20:07.465Z",
+    "estimatedDelivery": "2025-08-11T14:44:07.465Z",
+    "shippingCost": 17.1,
+    "shippingDistance": 5.7
+  },
+  {
+    "id": "1754935228997",
+    "items": [
+      {
+        "product": {
+          "id": "777",
+          "name": " REFRIGERANTE SPRITE 250ML",
+          "price": 1.99,
+          "originalPrice": 1.99,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "REFIGERANTES E OUTROS LIQUIDOS",
+          "description": "SPRITE 250ML",
+          "stock": 443,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 97,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "refigerantes e outros liquidos",
+            "bebidas, líquidos alcoólicos",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 15,
+            "generoId": 22,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2023-07-07T03:00:00.000+00:00",
+            "dataAlteracao": "2025-08-06T18:23:50.206+00:00",
+            "estoque": {
+              "saldo": 443,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:50.808+00:00",
+              "atualizadoEm": "2025-08-10T12:35:17.218+00:00"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 1
+      },
+      {
+        "product": {
+          "id": "4748",
+          "name": "ABACAXI PEDACOS EM CALDA MARIZA 400G",
+          "price": 11.9,
+          "originalPrice": 11.9,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "CONFEITARIA E OUTROS",
+          "description": "ABACAXI PEDA 400G",
+          "stock": 15,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 81,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "confeitaria e outros",
+            "preparações de produtos hortíc",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 2,
+            "generoId": 20,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2024-10-05T03:00:00.000+00:00",
+            "dataAlteracao": "2025-03-31T19:40:26.137+00:00",
+            "estoque": {
+              "saldo": 15,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:52.762+00:00",
+              "atualizadoEm": "2025-03-26T11:56:14.039+00:00"
+            }
+          }
+        },
+        "quantity": 11
+      }
+    ],
+    "total": 149.99,
+    "customerInfo": {
+      "name": "JOSE ARIMATEA COSTA ALEXANDRE",
+      "email": "davikalebe20020602@gmail.com",
+      "phone": "(85) 98828-6178",
+      "address": {
+        "street": "Rua Coronel Luiz David de Souza",
+        "number": "72",
+        "complement": "Apto",
+        "neighborhood": "Presidente Kennedy",
+        "city": "Fortaleza",
+        "state": "Ceará",
+        "zipCode": "60355-337"
+      }
+    },
+    "status": "pending",
+    "createdAt": "2025-08-11T18:00:28.997Z",
+    "estimatedDelivery": "2025-08-11T18:24:28.997Z",
+    "shippingCost": 17.1,
+    "shippingDistance": 5.7
+  },
+  {
+    "id": "1754937112177",
+    "items": [
+      {
+        "product": {
+          "id": "5994",
+          "name": " DEO COLONIA AMOR DE MAINHA 225 ML",
+          "price": 14.99,
+          "originalPrice": 14.99,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "PRODUTOS DE LIMPEZA",
+          "description": " D COL AMOR 225ML",
+          "stock": 1,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 36,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "produtos de limpeza",
+            "sabões, agentes orgânicos",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 6,
+            "generoId": 34,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2025-06-19T13:48:15.697+00:00",
+            "dataAlteracao": "2025-06-19T13:48:15.697+00:00",
+            "estoque": {
+              "saldo": 1,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-06-19T13:48:15.695+00:00",
+              "atualizadoEm": "2025-08-08T11:08:54.108+00:00"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 1
+      },
+      {
+        "product": {
+          "id": "777",
+          "name": " REFRIGERANTE SPRITE 250ML",
+          "price": 1.99,
+          "originalPrice": 1.99,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "REFIGERANTES E OUTROS LIQUIDOS",
+          "description": "SPRITE 250ML",
+          "stock": 443,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 97,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "refigerantes e outros liquidos",
+            "bebidas, líquidos alcoólicos",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 15,
+            "generoId": 22,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2023-07-07T03:00:00.000+00:00",
+            "dataAlteracao": "2025-08-06T18:23:50.206+00:00",
+            "estoque": {
+              "saldo": 443,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:50.808+00:00",
+              "atualizadoEm": "2025-08-10T12:35:17.218+00:00"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 1
+      },
+      {
+        "product": {
+          "id": "4748",
+          "name": "ABACAXI PEDACOS EM CALDA MARIZA 400G",
+          "price": 11.9,
+          "originalPrice": 11.9,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "CONFEITARIA E OUTROS",
+          "description": "ABACAXI PEDA 400G",
+          "stock": 15,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 81,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "confeitaria e outros",
+            "preparações de produtos hortíc",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 2,
+            "generoId": 20,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2024-10-05T03:00:00.000+00:00",
+            "dataAlteracao": "2025-03-31T19:40:26.137+00:00",
+            "estoque": {
+              "saldo": 15,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:52.762+00:00",
+              "atualizadoEm": "2025-03-26T11:56:14.039+00:00"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 1
+      },
+      {
+        "product": {
+          "id": "5806",
+          "name": "ABSORVENTE INTIMUS C/ABAS C/8 ",
+          "price": 4.79,
+          "originalPrice": 4.79,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "PRODUTOS DE LIMPEZA",
+          "description": "ABSORVENTE INTIMUS C",
+          "stock": 1,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 32,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "produtos de limpeza",
+            "obras diversas",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "secaoId": 6,
+            "generoId": 96,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2025-04-28T19:42:20.936+00:00",
+            "dataAlteracao": "2025-04-28T19:42:20.936+00:00",
+            "estoque": {
+              "saldo": 1,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-04-28T19:42:20.934+00:00",
+              "atualizadoEm": "2025-07-05T11:06:30.489+00:00"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 1
+      },
+      {
+        "product": {
+          "id": "2033",
+          "name": "ABSORVENTE INTIMOS SEM ABAS COM 8 UND TRIPLA PROTEÇAO",
+          "price": 4.79,
+          "originalPrice": 4.79,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "PRODUTOS DE LIMPEZA",
+          "description": "ABSORVENTE INTIMOS S",
+          "stock": 4,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 79,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "produtos de limpeza",
+            "obras diversas",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 6,
+            "generoId": 96,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2023-08-03T03:00:00.000+00:00",
+            "dataAlteracao": "2025-02-17T03:00:00.000+00:00",
+            "estoque": {
+              "saldo": 4,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:51.390+00:00",
+              "atualizadoEm": "2025-07-12T20:06:58.159+00:00"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 1
+      },
+      {
+        "product": {
+          "id": "4930",
+          "name": "ABSORVENTE CONFORTO NOTURNO SECA SEMPRE LIVRE C/ABAS C/8",
+          "price": 7.9,
+          "originalPrice": 7.9,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "PRODUTOS DE LIMPEZA",
+          "description": "ABS NOT SEMPLIVR C/A",
+          "stock": 1,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 25,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "produtos de limpeza",
+            "óleos essenciais e resinóides",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 6,
+            "generoId": 33,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2024-10-26T03:00:00.000+00:00",
+            "dataAlteracao": "2025-02-17T03:00:00.000+00:00",
+            "estoque": {
+              "saldo": 1,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:52.762+00:00",
+              "atualizadoEm": "2025-07-12T18:22:10.870+00:00"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 1
+      },
+      {
+        "product": {
+          "id": "3982",
+          "name": "ABSORVENTE COM ABAS C/ 8 UNID MODESS",
+          "price": 2.99,
+          "originalPrice": 2.99,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "PRODUTOS DE LIMPEZA",
+          "description": "ABSORVENTE COM ABAS",
+          "stock": 14,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 64,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "produtos de limpeza",
+            "obras diversas",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 6,
+            "generoId": 96,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2024-06-03T03:00:00.000+00:00",
+            "dataAlteracao": "2025-02-17T03:00:00.000+00:00",
+            "estoque": {
+              "saldo": 14,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:52.310+00:00",
+              "atualizadoEm": "2025-08-03T11:33:29.683+00:00"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 26
+      }
+    ],
+    "total": 139.70000000000002,
+    "customerInfo": {
+      "name": "bia",
+      "email": "biavasconcelosx@gmail.com",
+      "phone": "(85) 99723-1886",
+      "address": {
+        "street": "Av. Lineu Machado",
+        "number": "419",
+        "neighborhood": "Jóquei",
+        "city": "FORTALEZA",
+        "state": "Ceará",
+        "zipCode": "60520-102"
+      }
+    },
+    "status": "cancelled",
+    "createdAt": "2025-08-11T18:31:52.177Z",
+    "estimatedDelivery": "2025-08-11T18:49:52.177Z",
+    "shippingCost": 15.600000000000001,
+    "shippingDistance": 5.2,
+    "updatedAt": "2025-08-11T18:33:57.242Z"
   }
 ]

@@ -159,9 +159,237 @@
         "message": "A",
         "timestamp": "2025-08-11T02:55:09.863Z",
         "type": "text"
+      },
+      {
+        "id": "1754919538011",
+        "sender": "user",
+        "message": "Áudio enviado",
+        "timestamp": "2025-08-11T13:38:58.020Z",
+        "type": "audio",
+        "mediaUrl": "/api/uploads/chat/1754800000001_1754919538011.wav",
+        "mediaName": "audio.wav"
+      },
+      {
+        "id": "1754919562155",
+        "sender": "admin",
+        "message": "q",
+        "timestamp": "2025-08-11T13:39:22.155Z",
+        "type": "text"
+      },
+      {
+        "id": "1754919577660",
+        "sender": "admin",
+        "message": "como?",
+        "timestamp": "2025-08-11T13:39:37.660Z",
+        "type": "text"
+      },
+      {
+        "id": "1754919582802",
+        "sender": "user",
+        "message": "como oq loco",
+        "timestamp": "2025-08-11T13:39:42.802Z",
+        "type": "text"
+      },
+      {
+        "id": "1754919589095",
+        "sender": "admin",
+        "message": "ox",
+        "timestamp": "2025-08-11T13:39:49.095Z",
+        "type": "text"
+      },
+      {
+        "id": "1754919593922",
+        "sender": "admin",
+        "message": "nn",
+        "timestamp": "2025-08-11T13:39:53.922Z",
+        "type": "text"
+      },
+      {
+        "id": "1754919598171",
+        "sender": "user",
+        "message": "oxe",
+        "timestamp": "2025-08-11T13:39:58.171Z",
+        "type": "text"
+      },
+      {
+        "id": "1754920131819",
+        "sender": "admin",
+        "message": "a",
+        "timestamp": "2025-08-11T13:48:51.819Z",
+        "type": "text"
+      },
+      {
+        "id": "1754920136982",
+        "sender": "admin",
+        "message": "no",
+        "timestamp": "2025-08-11T13:48:56.982Z",
+        "type": "text"
+      },
+      {
+        "id": "1754920143069",
+        "sender": "user",
+        "message": "uai",
+        "timestamp": "2025-08-11T13:49:03.070Z",
+        "type": "text"
+      },
+      {
+        "id": "1754920151345",
+        "sender": "admin",
+        "message": "uai oq",
+        "timestamp": "2025-08-11T13:49:11.345Z",
+        "type": "text"
+      },
+      {
+        "id": "1754920535172",
+        "sender": "user",
+        "message": "Áudio enviado",
+        "timestamp": "2025-08-11T13:55:35.186Z",
+        "type": "audio",
+        "mediaUrl": "/api/uploads/chat/1754800000001_1754920535172.webm",
+        "mediaName": "audio.webm"
+      },
+      {
+        "id": "1754920565588",
+        "sender": "user",
+        "message": "a",
+        "timestamp": "2025-08-11T13:56:05.588Z",
+        "type": "text"
+      },
+      {
+        "id": "1754920580919",
+        "sender": "admin",
+        "message": "a oq",
+        "timestamp": "2025-08-11T13:56:20.919Z",
+        "type": "text"
+      },
+      {
+        "id": "1754920585019",
+        "sender": "user",
+        "message": "a",
+        "timestamp": "2025-08-11T13:56:25.019Z",
+        "type": "text"
+      },
+      {
+        "id": "1754920591205",
+        "sender": "admin",
+        "message": "a oq oq",
+        "timestamp": "2025-08-11T13:56:31.205Z",
+        "type": "text"
+      },
+      {
+        "id": "1754920596438",
+        "sender": "admin",
+        "message": "Áudio enviado",
+        "timestamp": "2025-08-11T13:56:36.453Z",
+        "type": "audio",
+        "mediaUrl": "/api/uploads/chat/1754800000001_1754920596438.wav",
+        "mediaName": "audio.wav"
+      },
+      {
+        "id": "1754921028084",
+        "sender": "user",
+        "message": "Imagem enviada",
+        "timestamp": "2025-08-11T14:03:48.093Z",
+        "type": "image",
+        "mediaUrl": "/api/uploads/chat/1754800000001_1754921028084.png",
+        "mediaName": "com o.png"
+      },
+      {
+        "id": "1754921047435",
+        "sender": "admin",
+        "message": "ai é",
+        "timestamp": "2025-08-11T14:04:07.435Z",
+        "type": "text"
+      },
+      {
+        "id": "1754921052236",
+        "sender": "user",
+        "message": "é",
+        "timestamp": "2025-08-11T14:04:12.236Z",
+        "type": "text"
+      },
+      {
+        "id": "1754921056026",
+        "sender": "admin",
+        "message": "e",
+        "timestamp": "2025-08-11T14:04:16.026Z",
+        "type": "text"
+      },
+      {
+        "id": "1754921457718",
+        "sender": "user",
+        "message": "a",
+        "timestamp": "2025-08-11T14:10:57.718Z",
+        "type": "text"
+      },
+      {
+        "id": "1754921468003",
+        "sender": "user",
+        "message": "e",
+        "timestamp": "2025-08-11T14:11:08.003Z",
+        "type": "text"
+      },
+      {
+        "id": "1754921473640",
+        "sender": "admin",
+        "message": "e",
+        "timestamp": "2025-08-11T14:11:13.640Z",
+        "type": "text"
+      },
+      {
+        "id": "1754922677009",
+        "sender": "user",
+        "message": "Áudio enviado",
+        "timestamp": "2025-08-11T14:31:17.038Z",
+        "type": "audio",
+        "mediaUrl": "/api/uploads/chat/1754800000001_1754922677009.webm",
+        "mediaName": "audio.webm"
+      },
+      {
+        "id": "1754922691191",
+        "sender": "user",
+        "message": "Áudio enviado",
+        "timestamp": "2025-08-11T14:31:31.209Z",
+        "type": "audio",
+        "mediaUrl": "/api/uploads/chat/1754800000001_1754922691191.webm",
+        "mediaName": "audio.webm"
+      },
+      {
+        "id": "1754922704775",
+        "sender": "user",
+        "message": "Áudio enviado",
+        "timestamp": "2025-08-11T14:31:44.787Z",
+        "type": "audio",
+        "mediaUrl": "/api/uploads/chat/1754800000001_1754922704775.webm",
+        "mediaName": "audio.webm"
+      },
+      {
+        "id": "1754922746542",
+        "sender": "admin",
+        "message": "Áudio enviado",
+        "timestamp": "2025-08-11T14:32:26.550Z",
+        "type": "audio",
+        "mediaUrl": "/api/uploads/chat/1754800000001_1754922746542.wav",
+        "mediaName": "audio.wav"
+      },
+      {
+        "id": "1754922775974",
+        "sender": "admin",
+        "message": "Áudio enviado",
+        "timestamp": "2025-08-11T14:32:55.982Z",
+        "type": "audio",
+        "mediaUrl": "/api/uploads/chat/1754800000001_1754922775974.wav",
+        "mediaName": "audio.wav"
+      },
+      {
+        "id": "1754922780177",
+        "sender": "user",
+        "message": "oxe",
+        "timestamp": "2025-08-11T14:33:00.177Z",
+        "type": "text"
       }
     ],
-    "updatedAt": "2025-08-11T02:55:09.863Z"
+    "updatedAt": "2025-08-11T14:33:00.177Z"
   },
   {
     "id": "1754867992414",
@@ -185,8 +413,15 @@
         "type": "audio",
         "mediaUrl": "/uploads/chat/1754867992414_1754879049661.wav",
         "mediaName": "audio.wav"
+      },
+      {
+        "id": "1754921479878",
+        "sender": "admin",
+        "message": "q",
+        "timestamp": "2025-08-11T14:11:19.878Z",
+        "type": "text"
       }
     ],
-    "updatedAt": "2025-08-11T02:24:09.672Z"
+    "updatedAt": "2025-08-11T14:11:19.878Z"
   }
 ]

@@ -101,6 +101,7 @@ export default function ReturnsPage() {
   const [isRecording, setIsRecording] = useState(false)
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
   const [chatImages, setChatImages] = useState<File[]>([])
   const [isPlayingAudio, setIsPlayingAudio] = useState<{[key: string]: boolean}>({})
   const chatImageInputRef = useRef<HTMLInputElement>(null)
@@ -145,22 +146,41 @@ export default function ReturnsPage() {
 
   // Polling para atualizar mensagens em tempo real APENAS quando chat está aberto
   useEffect(() => {
-    if (isChatOpen && selectedChat && !chatPolling) {
-      const interval = setInterval(() => {
-        loadReturnRequests()
-      }, 3000) // Atualiza a cada 3 segundos
-      setChatPolling(interval)
-    } else if ((!isChatOpen || !selectedChat) && chatPolling) {
+    // Limpar interval anterior se existir
+    if (chatPolling) {
       clearInterval(chatPolling)
       setChatPolling(null)
+    }
+
+    if (isChatOpen && selectedChat) {
+      console.log('🔄 Iniciando polling do chat para:', selectedChat.id)
+      const interval = setInterval(() => {
+        console.log('🔄 Atualizando chat...')
+        loadReturnRequests()
+      }, 1000) // Atualiza a cada 1 segundo para ser mais em tempo real
+      setChatPolling(interval)
     }
 
     return () => {
       if (chatPolling) {
         clearInterval(chatPolling)
+        setChatPolling(null)
       }
     }
   }, [isChatOpen, selectedChat])
+
+  // Polling geral para notificações de novas mensagens (mais leve)
+  useEffect(() => {
+    const notificationPolling = setInterval(() => {
+      // Carregar dados apenas se não estiver no chat aberto
+      if (!isChatOpen) {
+        console.log('🔔 Verificando novas mensagens...')
+        loadReturnRequests()
+      }
+    }, 5000) // A cada 5 segundos quando chat não está aberto
+
+    return () => clearInterval(notificationPolling)
+  }, [isChatOpen])
 
   // Auto-scroll para a última mensagem com delay
   useEffect(() => {
@@ -356,8 +376,12 @@ export default function ReturnsPage() {
 
   // Funções para gravação por arrastar (WhatsApp style) - Mobile Optimized
   const startDragRecording = async (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
+    try {
+      e.preventDefault?.()
+      e.stopPropagation?.()
+    } catch (err) {
+      // Ignorar erros de preventDefault em passive listeners
+    }
     
     try {
       // Solicitar permissão explicitamente no mobile
@@ -366,28 +390,39 @@ export default function ReturnsPage() {
         return
       }
 
-      // Configurações otimizadas para mobile
+      // Configurações simples para evitar OverconstrainedError
       const constraints = {
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: { ideal: 16000, min: 8000, max: 44100 },
-          channelCount: { ideal: 1 },
-          sampleSize: { ideal: 16 }
+          autoGainControl: true
         }
       }
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints)
       
-      // Detectar formato suportado no mobile
+      // Testar formatos de áudio suportados
       let mimeType = 'audio/webm;codecs=opus'
+      let fileExtension = 'webm'
+      
       if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'audio/mp4'
+        mimeType = 'audio/webm'
+        fileExtension = 'webm'
         if (!MediaRecorder.isTypeSupported(mimeType)) {
-          mimeType = 'audio/wav'
+          mimeType = 'audio/mp4'
+          fileExtension = 'mp4'
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'audio/wav'
+            fileExtension = 'wav'
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+              mimeType = 'audio/ogg'
+              fileExtension = 'ogg'
+            }
+          }
         }
       }
+      
+      console.log('🎤 Formato de áudio selecionado:', mimeType)
       
       const recorder = new MediaRecorder(stream, { mimeType })
       const chunks: BlobPart[] = []
@@ -402,6 +437,7 @@ export default function ReturnsPage() {
         const blob = new Blob(chunks, { type: mimeType })
         const url = URL.createObjectURL(blob)
         setAudioUrl(url)
+        setAudioBlob(blob) // Salvar blob para envio
         
         stream.getTracks().forEach(track => {
           track.stop()
@@ -447,8 +483,12 @@ export default function ReturnsPage() {
   const handleDragMove = (e: React.MouseEvent | React.TouchEvent) => {
     if (!isPressingMic) return
     
-    e.preventDefault()
-    e.stopPropagation()
+    try {
+      e.preventDefault?.()
+      e.stopPropagation?.()
+    } catch (err) {
+      // Ignorar erros de preventDefault em passive listeners
+    }
     
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
     const micButton = micButtonRef.current
@@ -474,8 +514,12 @@ export default function ReturnsPage() {
 
   const finishRecording = (e?: React.MouseEvent | React.TouchEvent) => {
     if (e) {
-      e.preventDefault()
-      e.stopPropagation()
+      try {
+        e.preventDefault?.()
+        e.stopPropagation?.()
+      } catch (err) {
+        // Ignorar erros de preventDefault em passive listeners
+      }
     }
     
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
@@ -499,6 +543,7 @@ export default function ReturnsPage() {
     if (recordingTime < 1) {
       toast.warning('Gravação muito curta')
       setAudioUrl(null)
+      setAudioBlob(null)
     } else {
       toast.success(`✅ Áudio gravado! ${recordingTime}s`)
     }
@@ -515,6 +560,7 @@ export default function ReturnsPage() {
     setIsRecording(false)
     setDragDistance(0)
     setAudioUrl(null)
+    setAudioBlob(null)
     
     if (recordingTimer) {
       clearInterval(recordingTimer)
@@ -557,6 +603,7 @@ export default function ReturnsPage() {
           const blob = new Blob(chunks, { type: 'audio/webm' })
           const url = URL.createObjectURL(blob)
           setAudioUrl(url)
+          setAudioBlob(blob) // Salvar blob para envio
           
           // Parar todas as tracks do stream
           stream.getTracks().forEach(track => {
@@ -574,7 +621,15 @@ export default function ReturnsPage() {
         recorder.start(100) // Capturar dados a cada 100ms
         setMediaRecorder(recorder)
         setIsRecording(true)
-        toast.success('Gravação iniciada - clique novamente para parar')
+        setRecordingTime(0)
+        
+        // Timer para mostrar tempo de gravação
+        const timer = setInterval(() => {
+          setRecordingTime(prev => prev + 1)
+        }, 1000)
+        setRecordingTimer(timer)
+        
+        toast.success('🎤 Gravação iniciada - clique novamente para parar')
       } else {
         throw new Error('getUserMedia não suportado')
       }
@@ -591,7 +646,14 @@ export default function ReturnsPage() {
       mediaRecorder.stop()
       setIsRecording(false)
       setMediaRecorder(null)
-      toast.success('Gravação finalizada')
+      
+      if (recordingTimer) {
+        clearInterval(recordingTimer)
+        setRecordingTimer(null)
+      }
+      
+      toast.success(`✅ Gravação finalizada! ${recordingTime}s`)
+      setRecordingTime(0)
     }
   }
 
@@ -647,11 +709,18 @@ export default function ReturnsPage() {
       }
 
       // Enviar áudio
-      if (audioUrl) {
-        const response = await fetch(audioUrl)
-        const blob = await response.blob()
+      if (audioBlob) {
         const formData = new FormData()
-        formData.append('file', blob, 'audio.wav')
+        
+        // Determinar extensão baseado no tipo do blob
+        let fileName = 'audio.wav'
+        if (audioBlob.type.includes('webm')) {
+          fileName = 'audio.webm'
+        } else if (audioBlob.type.includes('mp4')) {
+          fileName = 'audio.mp4'
+        }
+        
+        formData.append('file', audioBlob, fileName)
         formData.append('requestId', selectedChat.id)
         formData.append('sender', 'user')
         formData.append('type', 'audio')
@@ -662,6 +731,7 @@ export default function ReturnsPage() {
         })
         
         setAudioUrl(null)
+        setAudioBlob(null)
         messagesSent = true
       }
 
@@ -677,39 +747,68 @@ export default function ReturnsPage() {
 
   const playAudio = async (messageId: string, audioUrl: string) => {
     try {
-      if (audioRef.current) {
-        // Parar qualquer áudio que esteja tocando
-        Object.keys(isPlayingAudio).forEach(id => {
-          if (isPlayingAudio[id] && id !== messageId) {
-            setIsPlayingAudio(prev => ({ ...prev, [id]: false }))
-          }
-        })
-        
-        if (isPlayingAudio[messageId]) {
-          // Pausar o áudio atual
+      console.log('🔊 Tentando reproduzir áudio:', audioUrl)
+      
+      // Pausar qualquer áudio em reprodução
+      Object.keys(isPlayingAudio).forEach(id => {
+        if (isPlayingAudio[id] && id !== messageId) {
+          setIsPlayingAudio(prev => ({ ...prev, [id]: false }))
+        }
+      })
+      
+      if (isPlayingAudio[messageId]) {
+        // Pausar o áudio atual
+        if (audioRef.current) {
           audioRef.current.pause()
-          setIsPlayingAudio(prev => ({ ...prev, [messageId]: false }))
-        } else {
-          // Reproduzir novo áudio
-          audioRef.current.src = audioUrl
+          audioRef.current.currentTime = 0
+        }
+        setIsPlayingAudio(prev => ({ ...prev, [messageId]: false }))
+      } else {
+        try {
+          // Criar nova instância de áudio para evitar problemas de cache
+          const audio = new Audio()
+          audio.crossOrigin = 'anonymous'
+          
+          // Configurar eventos antes de definir src
+          audio.onloadstart = () => {
+            console.log('🔄 Iniciando carregamento do áudio')
+          }
+          
+          audio.oncanplay = () => {
+            console.log('✅ Áudio pronto para reproduzir')
+          }
+          
+          audio.onended = () => {
+            console.log('⏹️ Áudio finalizado')
+            setIsPlayingAudio(prev => ({ ...prev, [messageId]: false }))
+          }
+          
+          audio.onerror = (e) => {
+            console.error('❌ Erro ao reproduzir áudio:', e)
+            setIsPlayingAudio(prev => ({ ...prev, [messageId]: false }))
+            toast.error('Formato de áudio não suportado')
+          }
+          
+          // Definir src e carregar
+          audio.src = audioUrl
+          audio.load()
+          
           setIsPlayingAudio(prev => ({ ...prev, [messageId]: true }))
           
-          // Configurar eventos do áudio
-          audioRef.current.onended = () => {
-            setIsPlayingAudio(prev => ({ ...prev, [messageId]: false }))
-          }
+          // Tentar reproduzir
+          await audio.play()
           
-          audioRef.current.onerror = (e) => {
-            console.error('Erro ao reproduzir áudio:', e)
-            setIsPlayingAudio(prev => ({ ...prev, [messageId]: false }))
-            toast.error('Erro ao reproduzir áudio')
-          }
+          // Atualizar referência
+          audioRef.current = audio
           
-          await audioRef.current.play()
+        } catch (playError) {
+          console.error('❌ Erro ao iniciar reprodução:', playError)
+          setIsPlayingAudio(prev => ({ ...prev, [messageId]: false }))
+          toast.error('Erro ao reproduzir áudio')
         }
       }
     } catch (error) {
-      console.error('Erro ao reproduzir áudio:', error)
+      console.error('❌ Erro geral na reprodução de áudio:', error)
       setIsPlayingAudio(prev => ({ ...prev, [messageId]: false }))
       toast.error('Erro ao reproduzir áudio')
     }
@@ -726,6 +825,7 @@ export default function ReturnsPage() {
     setNewMessage('')
     setChatImages([])
     setAudioUrl(null)
+    setAudioBlob(null)
     if (chatPolling) {
       clearInterval(chatPolling)
       setChatPolling(null)
@@ -1219,7 +1319,7 @@ export default function ReturnsPage() {
                       </div>
                       <h3 className="text-xl font-bold mb-3 text-gray-800">🎤 Gravando</h3>
                       <div className="text-3xl font-mono text-red-600 mb-4">{recordingTime}s</div>
-                      <div className="text-sm text-gray-600 bg-gray-100 rounded-lg p-3">
+                      <div className="text-sm text-gray-600 bg-gray-100 rounded-lg p-3 mb-4">
                         {dragDistance > 80 ? (
                           <div className="text-red-600 font-bold text-base">
                             ⬆️ SOLTE PARA CANCELAR
@@ -1233,6 +1333,24 @@ export default function ReturnsPage() {
                           </div>
                         )}
                       </div>
+                      {/* Botão de parar gravação */}
+                      <button
+                        onClick={() => {
+                          if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                            mediaRecorder.stop()
+                          }
+                          setIsRecording(false)
+                          setIsPressingMic(false)
+                          if (recordingTimer) {
+                            clearInterval(recordingTimer)
+                            setRecordingTimer(null)
+                          }
+                          toast.success('Gravação finalizada!')
+                        }}
+                        className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                      >
+                        🛑 Parar Gravação
+                      </button>
                     </div>
                   </div>
                 )}
@@ -1326,7 +1444,10 @@ export default function ReturnsPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => setAudioUrl(null)}
+                            onClick={() => {
+                              setAudioUrl(null)
+                              setAudioBlob(null)
+                            }}
                             className="h-6 w-6 p-0 text-red-600 hover:text-red-700 border-red-200"
                           >
                             <X className="h-3 w-3" />
@@ -1356,49 +1477,33 @@ export default function ReturnsPage() {
                           <Camera className="h-4 w-4" />
                           Foto
                         </Button>
-                        <button
-                          ref={micButtonRef}
-                          type="button"
-                          className={`
-                            px-4 py-2 rounded-lg border-2 flex items-center gap-2 select-none 
-                            font-medium text-sm transition-all duration-200 min-w-[120px] justify-center
-                            recording-button
-                            ${isRecording 
-                              ? 'bg-red-100 border-red-300 text-red-700 shadow-lg scale-105 recording-indicator' 
-                              : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 active:scale-95'
-                            } 
-                            ${isPressingMic ? 'transform scale-110 shadow-xl' : ''}
-                          `}
-                          onMouseDown={startDragRecording}
-                          onMouseMove={handleDragMove}
-                          onMouseUp={finishRecording}
-                          onMouseLeave={finishRecording}
-                          onTouchStart={(e) => {
-                            e.preventDefault()
-                            startDragRecording(e)
-                          }}
-                          onTouchMove={(e) => {
-                            e.preventDefault()
-                            handleDragMove(e)
-                          }}
-                          onTouchEnd={(e) => {
-                            e.preventDefault()
-                            finishRecording(e)
-                          }}
-                          onTouchCancel={(e) => {
-                            e.preventDefault()
-                            cancelRecording()
-                          }}
-                          style={{
-                            transform: `translateY(-${Math.min(dragDistance, 50)}px)`,
-                            WebkitTouchCallout: 'none',
-                            WebkitUserSelect: 'none',
-                            touchAction: 'none'
-                          }}
-                        >
-                          <Mic className={`h-4 w-4 ${isRecording ? 'animate-pulse text-red-600' : ''}`} />
-                          {isRecording ? `🎤 ${recordingTime}s` : '🎤 Segurar'}
-                        </button>
+                        {/* Botão de áudio - separado para PC e Mobile */}
+                        <div className="flex items-center gap-2">
+                          {/* Botão principal de áudio */}
+                          <button
+                            type="button"
+                            className={`
+                              px-4 py-2 rounded-lg border-2 flex items-center gap-2 select-none 
+                              font-medium text-sm transition-all duration-200 min-w-[120px] justify-center
+                              ${isRecording 
+                                ? 'bg-red-100 border-red-300 text-red-700 shadow-lg' 
+                                : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
+                              }
+                            `}
+                            onClick={() => {
+                              if (isRecording) {
+                                // Parar gravação
+                                stopRecording()
+                              } else {
+                                // Iniciar gravação
+                                startRecording()
+                              }
+                            }}
+                          >
+                            <Mic className={`h-4 w-4 ${isRecording ? 'animate-pulse text-red-600' : ''}`} />
+                            {isRecording ? `🔴 Parar (${recordingTime}s)` : '🎤 Gravar Áudio'}
+                          </button>
+                        </div>
                       </div>
                       
                       {/* Input de texto e enviar */}

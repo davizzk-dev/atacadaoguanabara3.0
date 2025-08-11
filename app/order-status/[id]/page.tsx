@@ -398,14 +398,18 @@ export default function OrderStatusPage() {
              {order.items?.map((item, index) => (
                <div key={index} className="flex justify-between items-center py-3 border-b border-gray-100 last:border-b-0">
                  <div className="flex-1">
-                   <p className="font-medium text-gray-900">{item.name || 'Produto não informado'}</p>
+                   <p className="font-medium text-gray-900">
+                     {item.product?.name || item.name || 'Produto não informado'}
+                   </p>
                    <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
                      <span>📊 Qtd: {item.quantity || 0}</span>
-                     <span>💰 Preço: R$ {(item.price || 0).toFixed(2)}</span>
+                     <span>💰 Preço: R$ {(item.product?.price || item.price || 0).toFixed(2)}</span>
                    </div>
                  </div>
                  <div className="text-right">
-                   <p className="font-bold text-gray-900">R$ {((item.price || 0) * (item.quantity || 0)).toFixed(2)}</p>
+                   <p className="font-bold text-gray-900">
+                     R$ {((item.product?.price || item.price || 0) * (item.quantity || 0)).toFixed(2)}
+                   </p>
                  </div>
                </div>
              )) || (

@@ -23,14 +23,27 @@ export default function PromotionsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const loadPromotions = () => {
+    const loadPromotions = async () => {
       try {
-        // Carregar do localStorage
-        const localPromotions = JSON.parse(localStorage.getItem('productPromotions') || '[]')
-        setPromotions(localPromotions)
+        // Carregar da API
+        const response = await fetch('/api/promotions')
+        if (response.ok) {
+          const data = await response.json()
+          setPromotions(data.data || [])
+        } else {
+          // Fallback para localStorage se API falhar
+          const localPromotions = JSON.parse(localStorage.getItem('productPromotions') || '[]')
+          setPromotions(localPromotions)
+        }
       } catch (error) {
         console.error('Erro ao carregar promoções:', error)
-        setPromotions([])
+        // Fallback para localStorage
+        try {
+          const localPromotions = JSON.parse(localStorage.getItem('productPromotions') || '[]')
+          setPromotions(localPromotions)
+        } catch {
+          setPromotions([])
+        }
       } finally {
         setLoading(false)
       }

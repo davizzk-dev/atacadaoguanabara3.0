@@ -399,7 +399,9 @@ Obrigado pela preferência! 🧡`
                       <div className="flex-1 flex flex-col gap-1 min-w-0">
                         <div className="font-bold text-gray-900 text-lg md:text-xl truncate mb-1">{item.product.name}</div>
                         <div className="text-gray-500 text-sm mb-1">Qtd: <span className="font-semibold text-blue-700">{item.quantity}</span></div>
-                        <div className="text-[#FF6600] font-bold text-lg">R$ {(item.product.price * item.quantity).toFixed(2)}</div>
+                        <div className="text-[#FF6600] font-bold text-lg">
+                          R$ {((Number(item.product.price) || 0) * (Number(item.quantity) || 0)).toFixed(2)}
+                        </div>
                       </div>
                       <button onClick={() => removeItem(item.product.id)} className="text-red-500 hover:text-white hover:bg-red-500 p-3 rounded-full bg-red-50 shadow transition-all border border-red-100">
                         <Trash2 className="w-6 h-6" />

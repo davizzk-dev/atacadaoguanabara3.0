@@ -17,6 +17,10 @@ const nextConfig = {
   experimental: {
     esmExternals: 'loose',
   },
+   // Configurações experimentais
+  experimental: {
+    esmExternals: false, // Mudou de 'loose' para false para evitar erros
+  },
   webpack: (config, { isServer }) => {
     // Resolver problemas com módulos que não funcionam no servidor
     if (isServer) {
@@ -24,6 +28,15 @@ const nextConfig = {
       config.externals.push({
         'jspdf': 'commonjs jspdf',
       })
+    }
+    
+    // Resolver problemas com módulos que causam erro de length
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+      'jspdf': 'commonjs jspdf',
     }
     
     // Resolver problemas com módulos que causam erro de length

@@ -59,33 +59,18 @@ nextApp.prepare().then(() => {
   });
 
   // Rota para sincronizar produtos
+  // Nova rota: sincronizar produtos usando sync-with-formatting.js
   app.post('/api/sync-products', async (req, res) => {
     try {
-      const { direction } = req.body;
-      
-      if (direction === 'to-json') {
-        const result = await syncDataTsToJson();
-        res.json(result);
-      } else if (direction === 'to-data') {
-        const result = await syncJsonToDataTs();
-        res.json(result);
-      } else if (direction === 'both') {
-        const result1 = await syncDataTsToJson();
-        const result2 = await syncJsonToDataTs();
-        res.json({ 
-          toJson: result1, 
-          toData: result2,
-          success: result1.success && result2.success 
-        });
-      } else {
-        res.status(400).json({ 
-          error: 'Direção inválida. Use: to-json, to-data, ou both' 
-        });
-      }
+  // Executa o sync-and-format do scripts/sync-with-formatting.js
+  const syncModule = require(path.join(__dirname, 'scripts', 'sync-with-formatting.js'));
+  const result = await syncModule.syncAndFormatProducts();
+  res.json({ success: true, ...result });
     } catch (error) {
       console.error('Erro na sincronização:', error);
       res.status(500).json({ 
-        error: 'Erro interno do servidor',
+        success: false,
+        error: 'Erro ao sincronizar produtos',
         details: error.message 
       });
     }

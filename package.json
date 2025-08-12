@@ -41,6 +41,8 @@
     "@radix-ui/react-tooltip": "1.1.6",
     "autoprefixer": "^10.4.20",
     "axios": "^1.11.0",
+    "browserslist": "^4.25.2",
+    "caniuse-lite": "^1.0.30001733",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",

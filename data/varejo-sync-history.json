@@ -1,0 +1,16 @@
+[
+  {
+    "id": "1754952191434",
+    "startedAt": "2025-08-11T22:41:22.375Z",
+    "finishedAt": "2025-08-11T22:43:11.434Z",
+    "durationMs": 109059,
+    "totals": {
+      "products": 6250,
+      "sections": 15,
+      "brands": 1,
+      "genres": 100
+    },
+    "message": "Sincronização concluída",
+    "status": "success"
+  }
+]

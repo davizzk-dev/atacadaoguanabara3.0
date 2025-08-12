@@ -14,6 +14,17 @@ import {
 import AnalyticsDashboard from '@/components/admin/AnalyticsDashboard'
 import ChatInterface from '@/components/admin/ChatInterface'
 import { varejoFacilClient } from '@/lib/varejo-facil-client'
+import {
+  generateSalesReportPDF,
+  generateProductsPDF,
+  generatePromotionsPDF,
+  generateOrdersPDF,
+  generateCustomersPDF,
+  generateUsersPDF,
+  generateFeedbackPDF,
+  generateCameraRequestsPDF,
+  generateReturnsPDF
+} from '@/lib/utils'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/store'
@@ -135,6 +146,9 @@ export default function AdminPage() {
   // Estados de dados
   const [products, setProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<Order[]>([])
+  const [isRefreshingOrders, setIsRefreshingOrders] = useState(false)
+  const [newOrdersCount, setNewOrdersCount] = useState(0)
+  const [highlightOrderIds, setHighlightOrderIds] = useState<Set<string>>(new Set())
   const [users, setUsers] = useState<User[]>([])
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([])
   const [cameraRequests, setCameraRequests] = useState<CameraRequest[]>([])
@@ -166,6 +180,7 @@ export default function AdminPage() {
   })
   const [autoSync, setAutoSync] = useState(false)
   const [showSyncModal, setShowSyncModal] = useState(false)
+  const [syncHistory, setSyncHistory] = useState<any[]>([])
 
   // Estados de chat
   const [selectedChat, setSelectedChat] = useState<string | null>(null)
@@ -209,10 +224,20 @@ export default function AdminPage() {
   const [productSearchTerm, setProductSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [productsPerPage] = useState(50)
+  const [onlySoldLast2Months, setOnlySoldLast2Months] = useState(false)
   const [isDataLoading, setIsDataLoading] = useState(false)
   const [lastLoadTime, setLastLoadTime] = useState(0)
   const [isSubmittingPromotion, setIsSubmittingPromotion] = useState(false)
   const [isSubmittingProduct, setIsSubmittingProduct] = useState(false)
+  // Estados de criação de usuário
+  const [showUserModal, setShowUserModal] = useState(false)
+  const [isSubmittingUser, setIsSubmittingUser] = useState(false)
+  const [userForm, setUserForm] = useState({
+    name: '',
+    email: '',
+    role: 'user' as 'user' | 'manager' | 'admin',
+    phone: ''
+  })
 
   // Verificação de autenticação - APÓS todos os hooks
   useEffect(() => {
@@ -369,7 +394,7 @@ export default function AdminPage() {
   useEffect(() => {
     let pollingInterval: NodeJS.Timeout | null = null
 
-    if (activeTab === 'camera-requests' || activeTab === 'return-requests') {
+    if (activeTab === 'camera-requests' || activeTab === 'returns') {
       console.log('🔄 [Admin] Iniciando polling do chat - Tab:', activeTab)
       pollingInterval = setInterval(() => {
         console.log('🔄 [Admin] Atualizando dados do chat...')
@@ -390,16 +415,16 @@ export default function AdminPage() {
   const loadChatData = async () => {
     try {
       if (activeTab === 'camera-requests') {
-        const cameraRes = await fetch('/api/camera-requests')
+        const cameraRes = await fetch('/api/camera-requests', { headers: { 'x-admin': 'true' } })
         if (cameraRes.ok) {
           const cameraData = await safeJsonParse(cameraRes)
-          setCameraRequests(Array.isArray(cameraData) ? cameraData : [])
+          setCameraRequests(Array.isArray(cameraData?.data) ? cameraData.data : [])
         }
-      } else if (activeTab === 'return-requests') {
-        const returnsRes = await fetch('/api/return-requests')
+      } else if (activeTab === 'returns') {
+        const returnsRes = await fetch('/api/return-requests', { headers: { 'x-admin': 'true' } })
         if (returnsRes.ok) {
           const returnsData = await safeJsonParse(returnsRes)
-          setReturnRequests(Array.isArray(returnsData) ? returnsData : [])
+          setReturnRequests(Array.isArray(returnsData?.data) ? returnsData.data : [])
         }
       }
     } catch (error) {
@@ -425,8 +450,8 @@ export default function AdminPage() {
         fetch('/api/orders?limit=100'),   // Limitar pedidos iniciais
         fetch('/api/users?limit=50'),     // Limitar usuários iniciais
         fetch('/api/feedback?limit=50'),  // Limitar feedback inicial
-        fetch('/api/camera-requests?limit=50'),
-        fetch('/api/return-requests?limit=50')
+        fetch('/api/admin/camera-requests'),
+        fetch('/api/return-requests?limit=50', { headers: { 'x-admin': 'true' } })
       ])
 
       // Carregar dados do Varejo Fácil apenas se necessário (economizar memória)
@@ -517,6 +542,35 @@ export default function AdminPage() {
     }
   }
 
+  // Atualizar pedidos manualmente com badge de novos
+  const refreshOrders = async () => {
+    try {
+      setIsRefreshingOrders(true)
+      const prevIds = new Set((orders || []).map(o => o.id))
+      const res = await fetch('/api/orders?limit=100')
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await safeJsonParse(res)
+      const nextOrders: Order[] = data?.orders || data || []
+      setOrders(nextOrders)
+
+      // Detectar novos
+      const newOnes = nextOrders.filter(o => !prevIds.has(o.id)).map(o => o.id)
+      setNewOrdersCount(newOnes.length)
+      if (newOnes.length) {
+        const ids = new Set<string>(newOnes)
+        setHighlightOrderIds(ids)
+        // Remover destaque após 6s
+        setTimeout(() => setHighlightOrderIds(new Set()), 6000)
+      } else {
+        setHighlightOrderIds(new Set())
+      }
+    } catch (e) {
+      console.error('Erro ao atualizar pedidos:', e)
+    } finally {
+      setIsRefreshingOrders(false)
+    }
+  }
+
   const loadVarejoFacilData = async () => {
     try {
       // Carregar apenas dados essenciais para economizar memória
@@ -538,7 +592,7 @@ export default function AdminPage() {
         setVarejoFacilData(prev => ({ ...prev, sections: data }))
         setVarejoFacilSections(data?.items || [])
       }
-
+      
       if (brandsRes.ok) {
         const data = await safeJsonParse(brandsRes)
         setVarejoFacilData(prev => ({ ...prev, brands: data }))
@@ -549,6 +603,17 @@ export default function AdminPage() {
         const data = await safeJsonParse(genresRes)
         setVarejoFacilData(prev => ({ ...prev, genres: data }))
         setVarejoFacilGenres(data?.items || [])
+      }
+
+      // Carregar histórico de sincronização
+      try {
+        const histRes = await fetch('/api/varejo-facil/sync-history')
+        if (histRes.ok) {
+          const histData = await histRes.json()
+          setSyncHistory(Array.isArray(histData?.data) ? histData.data : [])
+        }
+      } catch (e) {
+        console.warn('Sem histórico de sincronização ainda')
       }
     } catch (error) {
       console.error('Erro ao carregar dados do Varejo Fácil:', error)
@@ -1031,175 +1096,106 @@ export default function AdminPage() {
     }
   }
 
-  const exportData = async (type: 'products' | 'orders' | 'users') => {
+  const createUser = async () => {
+    if (!userForm.name.trim() || !userForm.email.trim()) {
+      alert('Nome e e-mail são obrigatórios')
+      return
+    }
     try {
-      let data: any[] = []
-      let title = ''
-
-      switch (type) {
-        case 'products':
-          data = products
-          title = 'Relatório de Produtos'
-          break
-        case 'orders':
-          data = orders
-          title = 'Relatório de Pedidos'
-          break
-        case 'users':
-          data = users
-          title = 'Relatório de Usuários'
-          break
-      }
-
-      // Criar conteúdo HTML para o PDF
-      let htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <title>${title}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            h1 { color: #333; text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; font-weight: bold; }
-            tr:nth-child(even) { background-color: #f9f9f9; }
-            .header { text-align: center; margin-bottom: 20px; }
-            .date { color: #666; font-size: 14px; }
-            .total { font-weight: bold; margin-top: 20px; text-align: right; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>${title}</h1>
-            <div class="date">Gerado em: ${new Date().toLocaleString('pt-BR')}</div>
-          </div>
-      `
-
-      // Adicionar tabela baseada no tipo
-      if (type === 'products') {
-        htmlContent += `
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nome</th>
-                <th>Preço</th>
-                <th>Categoria</th>
-                <th>Descrição</th>
-                <th>Em Estoque</th>
-              </tr>
-            </thead>
-            <tbody>
-        `
-        data.forEach(product => {
-          htmlContent += `
-            <tr>
-              <td>${product.id}</td>
-              <td>${product.name}</td>
-              <td>R$ ${product.price?.toFixed(2) || '0.00'}</td>
-              <td>${product.category || '-'}</td>
-              <td>${product.description || '-'}</td>
-              <td>${product.inStock ? 'Sim' : 'Não'}</td>
-            </tr>
-          `
+      setIsSubmittingUser(true)
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: userForm.name.trim(),
+          email: userForm.email.trim(),
+          role: userForm.role
         })
-      } else if (type === 'orders') {
-        htmlContent += `
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Cliente</th>
-                <th>Itens</th>
-                <th>Total</th>
-                <th>Status</th>
-                <th>Data</th>
-              </tr>
-            </thead>
-            <tbody>
-        `
-        data.forEach(order => {
-          const itemsText = order.items?.map((item: any) => 
-            `${item.name} (${item.quantity}x)`
-          ).join(', ') || '-'
-          
-          htmlContent += `
-            <tr>
-              <td>${order.id}</td>
-              <td>${order.userName || order.customerInfo?.name || '-'}</td>
-              <td>${itemsText}</td>
-              <td>R$ ${order.total?.toFixed(2) || '0.00'}</td>
-              <td>${order.status || '-'}</td>
-              <td>${new Date(order.createdAt).toLocaleDateString('pt-BR')}</td>
-            </tr>
-          `
-        })
-      } else if (type === 'users') {
-        htmlContent += `
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nome</th>
-                <th>Email</th>
-                <th>Telefone</th>
-                <th>Função</th>
-                <th>Data de Criação</th>
-              </tr>
-            </thead>
-            <tbody>
-        `
-        data.forEach(user => {
-          htmlContent += `
-            <tr>
-              <td>${user.id}</td>
-              <td>${user.name}</td>
-              <td>${user.email}</td>
-              <td>${user.phone || '-'}</td>
-              <td>${user.role || '-'}</td>
-              <td>${new Date(user.createdAt).toLocaleDateString('pt-BR')}</td>
-            </tr>
-          `
-        })
-      }
-
-      htmlContent += `
-            </tbody>
-          </table>
-          <div class="total">Total de registros: ${data.length}</div>
-        </body>
-        </html>
-      `
-
-      // Usar jsPDF para gerar PDF
-      const { jsPDF } = await import('jspdf')
-      const pdf = new jsPDF()
-      
-      // Converter HTML para PDF
-      pdf.html(htmlContent, {
-        callback: function(pdf) {
-          pdf.save(`${type}-${new Date().toISOString().split('T')[0]}.pdf`)
-        },
-        x: 10,
-        y: 10
       })
+      if (!res.ok) {
+        const txt = await res.text()
+        throw new Error(`Erro ao criar usuário: ${res.status} ${txt}`)
+      }
+      setShowUserModal(false)
+      setUserForm({ name: '', email: '', role: 'user', phone: '' })
+      await loadData()
+      setActiveTab('users')
+    } catch (e) {
+      console.error(e)
+      alert('Falha ao criar usuário')
+    } finally {
+      setIsSubmittingUser(false)
+    }
+  }
+
+  const exportData = async (
+    type: 'products' | 'orders' | 'users' | 'feedback' | 'camera-requests' | 'returns' | 'promotions'
+  ) => {
+    try {
+      // Usar geradores padronizados para manter alinhamento
+      if (type === 'products') {
+        const selected = onlySoldLast2Months ? getProductsSoldInLast2Months() : products
+        const doc = await generateProductsPDF(selected)
+        doc.save(`products-${new Date().toISOString().split('T')[0]}.pdf`)
+        return
+      }
+      if (type === 'orders') {
+        const doc = await generateOrdersPDF(orders)
+        doc.save(`orders-${new Date().toISOString().split('T')[0]}.pdf`)
+        return
+      }
+      if (type === 'users') {
+        const doc = await generateUsersPDF(users)
+        doc.save(`users-${new Date().toISOString().split('T')[0]}.pdf`)
+        return
+      }
+      if (type === 'feedback') {
+        const doc = await generateFeedbackPDF(feedbacks)
+        doc.save(`feedback-${new Date().toISOString().split('T')[0]}.pdf`)
+        return
+      }
+      if (type === 'camera-requests') {
+        const doc = await generateCameraRequestsPDF(cameraRequests)
+        doc.save(`camera-requests-${new Date().toISOString().split('T')[0]}.pdf`)
+        return
+      }
+      if (type === 'returns') {
+        const doc = await generateReturnsPDF(returnRequests)
+        doc.save(`returns-${new Date().toISOString().split('T')[0]}.pdf`)
+        return
+      }
+      if (type === 'promotions') {
+        const doc = await generatePromotionsPDF(promotions)
+        doc.save(`promotions-${new Date().toISOString().split('T')[0]}.pdf`)
+        return
+      }
 
     } catch (error) {
-      console.error('Erro ao exportar dados:', error)
+  console.error('Erro ao exportar dados:', error)
       // Fallback para JSON se PDF falhar
       try {
         let fallbackData: any[] = []
         switch (type) {
           case 'products':
-            fallbackData = products
+            fallbackData = onlySoldLast2Months ? getProductsSoldInLast2Months() : products
             break
           case 'orders':
             fallbackData = orders
             break
           case 'users':
             fallbackData = users
+            break
+          case 'feedback':
+            fallbackData = feedbacks
+            break
+          case 'camera-requests':
+            fallbackData = cameraRequests
+            break
+          case 'returns':
+            fallbackData = returnRequests
+            break
+          case 'promotions':
+            fallbackData = promotions
             break
         }
         
@@ -1216,6 +1212,33 @@ export default function AdminPage() {
         console.error('Erro no fallback JSON:', fallbackError)
       }
     }
+  }
+
+  // Produtos vendidos nos últimos 2 meses
+  const getProductsSoldInLast2Months = () => {
+    const cutoff = new Date()
+    cutoff.setMonth(cutoff.getMonth() - 2)
+    const soldMap = new Map<string, { quantity: number; revenue: number }>()
+    orders.forEach((order) => {
+      const date = new Date(order.createdAt)
+      if (date >= cutoff) {
+        order.items?.forEach((it) => {
+          const prev = soldMap.get(it.productId) || { quantity: 0, revenue: 0 }
+          prev.quantity += it.quantity || 0
+          prev.revenue += (it.price || 0) * (it.quantity || 0)
+          soldMap.set(it.productId, prev)
+        })
+      }
+    })
+    // Enriquecer com dados dos produtos
+    const productById = new Map(products.map((p) => [p.id, p]))
+    const result = Array.from(soldMap.entries()).map(([productId, stats]) => {
+      const p = productById.get(productId) || { id: productId, name: 'Produto', price: 0, category: '-', inStock: true }
+      return { ...p, soldQuantity: stats.quantity, soldRevenue: stats.revenue }
+    })
+    // Ordenar por quantidade vendida desc
+    result.sort((a, b) => (b.soldQuantity || 0) - (a.soldQuantity || 0))
+    return result
   }
 
   const handleLogout = async () => {
@@ -1625,6 +1648,74 @@ export default function AdminPage() {
                   </div>
                 </div>
                 
+                {/* Totais consolidados */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  {[
+                    { label: 'Produtos', value: varejoFacilData.products?.total || varejoFacilProducts.length, icon: Package, color: 'text-blue-600' },
+                    { label: 'Seções', value: varejoFacilData.sections?.total || varejoFacilSections.length, icon: Globe, color: 'text-green-600' },
+                    { label: 'Marcas', value: varejoFacilData.brands?.total || varejoFacilBrands.length, icon: Store, color: 'text-purple-600' },
+                    { label: 'Gêneros', value: varejoFacilData.genres?.total || varejoFacilGenres.length, icon: Tag, color: 'text-yellow-600' },
+                  ].map((card, idx) => (
+                    <div key={idx} className="bg-white rounded-lg shadow-sm p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">{card.label}</p>
+                          <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+                          <p className="text-sm text-gray-500">Total sincronizado</p>
+                        </div>
+                        <card.icon className={`h-8 w-8 ${card.color}`} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Histórico de sincronização */}
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                  <h3 className="text-lg font-semibold mb-4">Histórico de Sincronizações</h3>
+                  {syncHistory.length === 0 ? (
+                    <p className="text-sm text-gray-500">Nenhum histórico ainda.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quando</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duração</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produtos</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seções</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marcas</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gêneros</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {syncHistory.slice(0, 15).map((h) => (
+                            <tr key={h.id}>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {new Date(h.finishedAt || h.startedAt).toLocaleString('pt-BR')}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {typeof h.durationMs === 'number' ? `${Math.round(h.durationMs / 1000)}s` : '-'}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm">{h.totals?.products ?? '-'}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm">{h.totals?.sections ?? '-'}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm">{h.totals?.brands ?? '-'}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm">{h.totals?.genres ?? '-'}</td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  h.status === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {h.status === 'success' ? 'Sucesso' : 'Erro'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+                
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   <div className="bg-white rounded-lg shadow-sm p-6">
                     <div className="flex items-center justify-between">
@@ -1800,6 +1891,12 @@ export default function AdminPage() {
                       <option value="30d">Últimos 30 dias</option>
                       <option value="90d">Últimos 90 dias</option>
                     </select>
+                    <button 
+                      onClick={() => exportData('feedback')}
+                      className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700"
+                    >
+                      Exportar PDF
+                    </button>
                   </div>
                 </div>
 
@@ -1890,7 +1987,15 @@ export default function AdminPage() {
             {/* Camera Requests */}
             {activeTab === 'camera-requests' && (
               <div className="space-y-6">
-                <h2 className="text-2xl font-bold text-gray-900">Solicitações de Câmera</h2>
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-gray-900">Solicitações de Câmera</h2>
+                  <button 
+                    onClick={() => exportData('camera-requests')}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700"
+                  >
+                    Exportar PDF
+                  </button>
+                </div>
                 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Lista de solicitações */}
@@ -1955,7 +2060,15 @@ export default function AdminPage() {
             {/* Returns */}
             {activeTab === 'returns' && (
               <div className="space-y-6">
-                <h2 className="text-2xl font-bold text-gray-900">Trocas e Devoluções</h2>
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-gray-900">Trocas e Devoluções</h2>
+                  <button 
+                    onClick={() => exportData('returns')}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700"
+                  >
+                    Exportar PDF
+                  </button>
+                </div>
                 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Lista de solicitações */}
@@ -2045,6 +2158,23 @@ export default function AdminPage() {
                       <TrendingUp className="h-4 w-4 mr-2 inline" />
                       Exportar
                     </button>
+                    <button
+                      onClick={() => setOnlySoldLast2Months((v) => !v)}
+                      className={`px-4 py-2 rounded-md text-sm font-medium ${onlySoldLast2Months ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                      title="Filtrar produtos vendidos nos últimos 2 meses"
+                    >
+                      {onlySoldLast2Months ? 'Vendidos 2 meses: ON' : 'Vendidos 2 meses: OFF'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        const prev = onlySoldLast2Months
+                        if (!prev) setOnlySoldLast2Months(true)
+                        exportData('products')
+                      }}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-md text-sm font-medium hover:bg-purple-700"
+                    >
+                      Exportar (Vendidos 2m)
+                    </button>
                     <button 
                       onClick={() => {
                         setEditingProduct(null)
@@ -2090,27 +2220,29 @@ export default function AdminPage() {
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {products
+                          {(onlySoldLast2Months ? getProductsSoldInLast2Months() : products)
                             .filter(product => 
                               product.name.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
                               product.category.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
-                              (product.description && product.description.toLowerCase().includes(productSearchTerm.toLowerCase()))
+                              (('description' in product) && (product as any).description && (product as any).description.toLowerCase().includes(productSearchTerm.toLowerCase()))
                             )
                             .slice((currentPage - 1) * productsPerPage, currentPage * productsPerPage)
                             .map((product) => (
                             <tr key={product.id}>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="flex items-center">
-                                  {product.image && (
+                                  {('image' in product) && (product as any).image && (
                                     <img 
                                       className="h-10 w-10 rounded-full object-cover mr-3" 
-                                      src={product.image} 
+                                      src={(product as any).image} 
                                       alt={product.name} 
                                     />
                                   )}
                                   <div>
                                     <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                                    <div className="text-sm text-gray-500">{product.description}</div>
+                                    {('description' in product) && (product as any).description && (
+                                      <div className="text-sm text-gray-500">{(product as any).description}</div>
+                                    )}
                                   </div>
                                 </div>
                               </td>
@@ -2170,6 +2302,20 @@ export default function AdminPage() {
                       <option value="30d">Últimos 30 dias</option>
                       <option value="90d">Últimos 90 dias</option>
                     </select>
+                    <button
+                      onClick={refreshOrders}
+                      className={`px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 border ${isRefreshingOrders ? 'bg-gray-100 text-gray-500' : 'bg-white hover:bg-gray-50 text-gray-800'} border-gray-300`}
+                      disabled={isRefreshingOrders}
+                      title="Atualizar lista de pedidos"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${isRefreshingOrders ? 'animate-spin' : ''}`} />
+                      Atualizar
+                      {newOrdersCount > 0 && (
+                        <span className="ml-1 inline-flex items-center justify-center text-xs font-semibold rounded-full bg-green-100 text-green-700 px-2 py-0.5">
+                          Novos {newOrdersCount}
+                        </span>
+                      )}
+                    </button>
                     <button 
                       onClick={() => exportData('orders')}
                       className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700"
@@ -2208,7 +2354,7 @@ export default function AdminPage() {
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                           {(orders || []).map((order) => (
-                            <tr key={order.id}>
+                            <tr key={order.id} className={`${highlightOrderIds.has(order.id) ? 'bg-green-50 animate-pulse' : ''}`}>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="text-sm font-medium text-gray-900">{order.customerInfo?.name || order.userName || 'Cliente'}</div>
                                 <div className="text-sm text-gray-500">
@@ -2291,7 +2437,10 @@ export default function AdminPage() {
                       <TrendingUp className="h-4 w-4 mr-2 inline" />
                       Exportar
                     </button>
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700">
+                    <button 
+                      onClick={() => setShowUserModal(true)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+                    >
                       <Plus className="h-4 w-4 mr-2 inline" />
                       Adicionar Usuário
                     </button>
@@ -2376,12 +2525,80 @@ export default function AdminPage() {
               </div>
             )}
 
+            {/* Modal: Adicionar Usuário */}
+            {showUserModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+                  <div className="p-4 border-b flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Novo Usuário</h3>
+                    <button className="text-gray-500 hover:text-gray-700" onClick={() => setShowUserModal(false)}>×</button>
+                  </div>
+                  <div className="p-4 space-y-3">
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Nome</label>
+                      <input 
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        value={userForm.name}
+                        onChange={(e) => setUserForm(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="Nome completo"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">E-mail</label>
+                      <input 
+                        type="email"
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        value={userForm.email}
+                        onChange={(e) => setUserForm(prev => ({ ...prev, email: e.target.value }))}
+                        placeholder="email@exemplo.com"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Função</label>
+                      <select 
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        value={userForm.role}
+                        onChange={(e) => setUserForm(prev => ({ ...prev, role: e.target.value as any }))}
+                      >
+                        <option value="user">Cliente</option>
+                        <option value="manager">Gerente</option>
+                        <option value="admin">Administrador</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="p-4 border-t flex justify-end gap-2">
+                    <button 
+                      className="px-4 py-2 rounded-md text-sm border border-gray-300"
+                      onClick={() => setShowUserModal(false)}
+                      disabled={isSubmittingUser}
+                    >
+                      Cancelar
+                    </button>
+                    <button 
+                      className="px-4 py-2 rounded-md text-sm bg-blue-600 text-white disabled:opacity-50"
+                      onClick={createUser}
+                      disabled={isSubmittingUser}
+                    >
+                      {isSubmittingUser ? 'Salvando...' : 'Salvar'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Promoções */}
             {activeTab === 'promotions' && (
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
                   <h2 className="text-2xl font-bold text-gray-900">Promoções</h2>
-                  <button
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => exportData('promotions')}
+                      className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                    >
+                      Exportar PDF
+                    </button>
+                    <button
                                           onClick={() => {
                         setEditingPromotion(null)
                         setPromotionForm({
@@ -2404,6 +2621,7 @@ export default function AdminPage() {
                     <Plus className="h-4 w-4" />
                     Nova Promoção
                   </button>
+                  </div>
                 </div>
 
                 {/* Estatísticas de Promoções */}
@@ -3242,4 +3460,4 @@ export default function AdminPage() {
       )}
     </div>
   )
-} 
+}

@@ -20,6 +20,7 @@ interface ChatInterfaceProps {
   requestStatus: string
   onStatusChange: (status: string) => void
   onMessageSent?: () => void
+  sender?: 'user' | 'admin'
 }
 
 export default function ChatInterface({
@@ -28,7 +29,8 @@ export default function ChatInterface({
   requestName,
   requestStatus,
   onStatusChange,
-  onMessageSent
+  onMessageSent,
+  sender = 'admin'
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
@@ -56,18 +58,20 @@ export default function ChatInterface({
         { value: 'completed', label: 'Concluído', color: 'bg-blue-100 text-blue-800' }
       ]
 
-  // Carregar mensagens
+  // Carregar mensagens do request selecionado
   const loadMessages = async () => {
     if (!requestId) return
-    
     try {
-      const response = await fetch(`/api/return-requests`)
+      const endpoint = requestType === 'camera'
+        ? `/api/camera-requests/${requestId}/messages`
+        : `/api/return-requests/${requestId}/messages`
+      // Evitar cache do navegador durante o chat
+      const url = `${endpoint}?t=${Date.now()}`
+      const response = await fetch(url, { cache: 'no-store' })
       if (response.ok) {
         const data = await response.json()
-        const request = (data.data || data || []).find((req: any) => req.id === requestId)
-        if (request && request.messages) {
-          setMessages(request.messages)
-        }
+        const msgs = data?.data?.messages || []
+        setMessages(Array.isArray(msgs) ? msgs : [])
       }
     } catch (error) {
       console.error('Erro ao carregar mensagens:', error)
@@ -145,15 +149,23 @@ export default function ChatInterface({
 
       // Enviar mensagem de texto
       if (newMessage.trim()) {
-        const endpoint = `/api/return-requests/chat`
-        
+        // Otimista: mostra a mensagem imediatamente
+        const optimistic: Message = {
+          id: `optimistic-${Date.now()}`,
+          sender,
+          message: newMessage.trim(),
+          timestamp: new Date().toISOString(),
+          type: 'text'
+        }
+        setMessages(prev => [...prev, optimistic])
+        const endpoint = requestType === 'camera' ? `/api/camera-requests/chat` : `/api/return-requests/chat`
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             requestId,
             message: newMessage.trim(),
-            sender: 'admin',
+            sender,
             type: 'text'
           })
         })
@@ -165,15 +177,15 @@ export default function ChatInterface({
       }
 
       // Enviar imagens
-      if (chatImages.length > 0) {
+    if (chatImages.length > 0) {
         for (const image of chatImages) {
           const formData = new FormData()
           formData.append('file', image)
           formData.append('requestId', requestId)
-          formData.append('sender', 'admin')
+          formData.append('sender', sender)
           formData.append('type', 'image')
 
-          await fetch('/api/return-requests/chat', {
+      await fetch(requestType === 'camera' ? '/api/camera-requests/chat' : '/api/return-requests/chat', {
             method: 'POST',
             body: formData
           })
@@ -189,10 +201,10 @@ export default function ChatInterface({
         const formData = new FormData()
         formData.append('file', blob, 'audio.wav')
         formData.append('requestId', requestId)
-        formData.append('sender', 'admin')
+  formData.append('sender', sender)
         formData.append('type', 'audio')
 
-        await fetch('/api/return-requests/chat', {
+        await fetch(requestType === 'camera' ? '/api/camera-requests/chat' : '/api/return-requests/chat', {
           method: 'POST',
           body: formData
         })
@@ -202,6 +214,8 @@ export default function ChatInterface({
       }
 
       if (messagesSent) {
+        // Pequeno atraso para garantir persistência no arquivo e evitar race condition
+        await new Promise(r => setTimeout(r, 120))
         await loadMessages()
         if (onMessageSent) onMessageSent()
       }
@@ -247,6 +261,15 @@ export default function ChatInterface({
     }
   }, [requestId])
 
+  // Polling leve para sincronizar mensagens de ambos os lados
+  useEffect(() => {
+    if (!requestId) return
+    const id = setInterval(() => {
+      loadMessages()
+    }, 1500)
+    return () => clearInterval(id)
+  }, [requestId])
+
   // Auto-scroll quando mensagens mudarem
   useEffect(() => {
     scrollToBottom()
@@ -276,17 +299,23 @@ export default function ChatInterface({
               </p>
             </div>
           </div>
-          <select 
-            value={requestStatus}
-            onChange={(e) => handleStatusChange(e.target.value)}
-            className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-          >
-            {statusOptions.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          {sender === 'admin' ? (
+            <select 
+              value={requestStatus}
+              onChange={(e) => handleStatusChange(e.target.value)}
+              className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+            >
+              {statusOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700">
+              {requestStatus === 'pending' ? 'Pendente' : requestStatus === 'approved' ? 'Aprovado' : requestStatus === 'rejected' ? 'Rejeitado' : requestStatus === 'completed' ? 'Concluído' : requestStatus}
+            </span>
+          )}
         </div>
       </div>
       

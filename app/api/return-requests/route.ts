@@ -22,15 +22,58 @@ function safeReadReturnRequests() {
 }
 
 // GET - Buscar todas as solicitações de devolução
-export async function GET() {
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+
+export async function GET(request: NextRequest) {
   try {
     console.log('[API/return-requests][GET] chamada recebida')
     const returnRequests = safeReadReturnRequests()
-    
+
+    // Identificar usuário/admin
+    let userEmail = null
+    let userId = null
+    let isAdmin = false
+
+    // Tenta NextAuth primeiro
+    try {
+      const session = await getServerSession(authOptions)
+      if (session?.user?.email) {
+        userEmail = session.user.email
+        userId = session.user.id || null
+        if (userEmail === 'davikalebe20020602@gmail.com') isAdmin = true
+      }
+    } catch (e) {
+      // ignora
+    }
+
+    // Permitir bypass para admin via header (suporte ao admin do painel sem NextAuth)
+    const adminHeader = request.headers.get('x-admin')
+    if (adminHeader && adminHeader.toLowerCase() === 'true') {
+      isAdmin = true
+    }
+
+    // Se não for admin, tenta pegar do header (fallback para usuário comum)
+    if (!isAdmin && !userEmail) {
+      userEmail = request.headers.get('x-user-email')
+      userId = request.headers.get('x-user-id')
+    }
+
+    let filtered = returnRequests
+    if (!isAdmin && userEmail) {
+      filtered = returnRequests.filter((r:any) =>
+        r.userEmail === userEmail || r.userId === userId || r.contactEmail === userEmail
+      )
+    }
+    if (!isAdmin && !userEmail) {
+      // Não autenticado: não retorna nada
+      filtered = []
+    }
+
     return NextResponse.json({
       success: true,
-      data: returnRequests
-    })
+      data: filtered
+    }, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } })
   } catch (error: any) {
     console.error('[API/return-requests][GET] Erro:', error, error?.stack)
     return NextResponse.json({
@@ -66,6 +109,24 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
     
+    // Identidade do usuário: prioriza sessão NextAuth, depois headers, depois body
+    let sessionEmail: string | null = null
+    let sessionUserId: string | null = null
+    try {
+      const session = await getServerSession(authOptions)
+      if (session?.user) {
+        // @ts-ignore - user.id pode não existir dependendo do provider
+        sessionUserId = (session.user.id as string) || null
+        sessionEmail = (session.user.email as string) || null
+      }
+    } catch {}
+
+    const headerEmail = request.headers.get('x-user-email')
+    const headerUserId = request.headers.get('x-user-id')
+
+    const effectiveUserEmail = sessionEmail || headerEmail || body.userEmail || body.email || null
+    const effectiveUserId = sessionUserId || headerUserId || body.userId || null
+
     const returnRequests = safeReadReturnRequests()
     const newReturnRequest = {
       id: Date.now().toString(),
@@ -76,8 +137,12 @@ export async function POST(request: NextRequest) {
       requestType: body.requestType || '',
       productName: body.productName || '',
       quantity: body.quantity || 1,
-      userId: body.userId || null,
-      userEmail: body.userEmail || body.email || null,
+      // Associar à conta autenticada quando disponível
+      userId: effectiveUserId,
+      userEmail: effectiveUserEmail,
+      // Guardar também os contatos informados no formulário (se diferirem)
+      contactEmail: body.userEmail || body.email || null,
+      contactPhone: body.userPhone || null,
       createdAt: new Date().toISOString(),
       status: 'pending',
       messages: []

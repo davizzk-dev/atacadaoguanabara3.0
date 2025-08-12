@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { X, Sparkles, Target, Zap, Package } from 'lucide-react'
 import Header from '@/components/header'
 import { Footer } from '@/components/footer'
@@ -25,6 +25,8 @@ export default function CatalogPage() {
   const [promotions, setPromotions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [visibleProducts, setVisibleProducts] = useState(50) // Mostrar 50 produtos inicialmente
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [lastVisibleCount, setLastVisibleCount] = useState(50)
   const { items, getItemCount, getTotal } = useCartStore()
 
   // Carregar produtos e categorias da API
@@ -58,60 +60,69 @@ export default function CatalogPage() {
     loadData()
   }, [])
 
-  // Função para aplicar promoções aos produtos
+  // Função para aplicar promoções aos produtos (suporta promoções por produto do product-promotions.json)
   const applyPromotionsToProducts = (products: Product[], promotions: any[]) => {
+    const now = new Date()
     return products.map(product => {
-      // Encontrar promoção que inclui este produto
-      const promotion = promotions.find(p => {
-        return p.products && p.products.some((pp: any) => 
-          pp.id === product.id || pp.id?.toString() === product.id?.toString()
-        )
+      // 1) Tentar promoção por produto (product-promotions.json)
+      let promotion = promotions.find(p => {
+        const sameProduct = p.productId && (p.productId === product.id || p.productId?.toString() === product.id?.toString())
+        const active = p.isActive !== false
+        const notExpired = !p.validUntil || new Date(p.validUntil) >= now
+        return sameProduct && active && notExpired
       })
-      
+
+      // 2) Fallback: promoções "gerais" que listam vários produtos
+      if (!promotion) {
+        promotion = promotions.find(p => {
+          return p.products && p.products.some((pp: any) => 
+            pp.id === product.id || pp.id?.toString() === product.id?.toString()
+          )
+        })
+      }
+
       if (promotion) {
         const originalPrice = product.originalPrice || product.price
-        let discountedPrice = originalPrice
-        
-        if (promotion.discountType === 'fixed') {
-          discountedPrice = Math.max(0, originalPrice - (promotion.discountValue || promotion.discount || 0))
+        let finalPrice = originalPrice
+
+        if (promotion.newPrice != null) {
+          // Promoção com preço final definido
+          finalPrice = Number(promotion.newPrice)
+        } else if (promotion.discountType === 'fixed') {
+          finalPrice = Math.max(0, originalPrice - (promotion.discountValue || promotion.discount || 0))
         } else {
           const discountPercent = (promotion.discountValue || promotion.discount || 0) / 100
-          discountedPrice = originalPrice * (1 - discountPercent)
+          finalPrice = originalPrice * (1 - discountPercent)
         }
-        
+
         return {
           ...product,
-          originalPrice: originalPrice,
-          price: Math.round(discountedPrice * 100) / 100,
-          discount: promotion.discountValue || promotion.discount || 0,
-          discountType: promotion.discountType || 'percentage',
+          originalPrice,
+          price: Math.round(finalPrice * 100) / 100,
+          discount: promotion.discount ?? promotion.discountValue ?? (promotion.newPrice ? Math.max(0, Math.round((1 - (finalPrice / (originalPrice || 1))) * 100)) : 0),
+          discountType: promotion.discountType || (promotion.newPrice != null ? 'fixed' : 'percentage'),
           onPromotion: true,
+          hasActivePromotion: true,
           promotionId: promotion.id,
-          hasActivePromotion: true
+          promotionImage: promotion.image || product.image
         }
       }
-      
-      return {
-        ...product,
-        onPromotion: false,
-        hasActivePromotion: false
-      }
+
+      return { ...product, onPromotion: false, hasActivePromotion: false }
     })
   }
 
-  // Carregar promoções e aplicar aos produtos
+  // Carregar promoções (product-promotions.json) e aplicar aos produtos
   useEffect(() => {
     const loadPromotions = async () => {
       try {
-        const response = await fetch('/api/admin/promotions?status=active')
+        // Usar endpoint público que lê de product-promotions.json
+        const response = await fetch('/api/promotions?status=active')
         if (response.ok) {
           const promotionsData = await response.json()
-          if (promotionsData.success) {
-            setPromotions(promotionsData.data || [])
-          }
-          
-          // Aplicar promoções aos produtos
           const activePromotions = promotionsData.data || promotionsData || []
+          setPromotions(activePromotions)
+          // Aplicar promoções aos produtos
           const productsWithPromotions = applyPromotionsToProducts(products, activePromotions)
           setProducts(productsWithPromotions)
         }
@@ -167,38 +178,102 @@ export default function CatalogPage() {
     }
   }, [])
 
-  const filteredProducts = products.filter((product: Product) => {
-    const searchLower = searchTerm.toLowerCase()
-    const matchesSearch = searchTerm === "" || 
-           product.name.toLowerCase().includes(searchLower) ||
-           (product.brand?.toLowerCase() || '').includes(searchLower) ||
-           product.category.toLowerCase().includes(searchLower) ||
-           (product.description?.toLowerCase() || '').includes(searchLower) ||
-           (product.tags?.join(' ').toLowerCase() || '').includes(searchLower)
-    
-    // Lógica para categorias especiais
-    let matchesCategory = false
-    
-    if (selectedCategory === "Todos") {
-      matchesCategory = true
-    } else if (selectedCategory === "Promoções") {
-      // Produtos com preço original maior que o preço atual (em promoção)
-      matchesCategory = !!(product.originalPrice && product.originalPrice > product.price)
-    } else if (selectedCategory === "Mais Vendidos") {
-      // Produtos com rating alto (simulando mais vendidos)
-      matchesCategory = !!((product as any).rating && (product as any).rating >= 4.5)
-    } else if (selectedCategory === "Novidades") {
-      // Produtos adicionados recentemente (simulando novidades)
-      const productDate = new Date((product as any).createdAt || Date.now())
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-      matchesCategory = productDate > thirtyDaysAgo
-    } else {
-      // Categorias normais
-      matchesCategory = product.category === selectedCategory
+  // Busca com ranking avançado (acentos, múltiplos termos, fuzzy leve)
+  const filteredProducts = useMemo(() => {
+    const normalize = (s: string) => (s || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/\p{Diacritic}|[\u0300-\u036f]/gu, '')
+
+    const levenshtein = (a: string, b: string) => {
+      const m = a.length, n = b.length
+      if (!m) return n
+      if (!n) return m
+      const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0))
+      for (let i = 0; i <= m; i++) dp[i][0] = i
+      for (let j = 0; j <= n; j++) dp[0][j] = j
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1
+          dp[i][j] = Math.min(
+            dp[i - 1][j] + 1,
+            dp[i][j - 1] + 1,
+            dp[i - 1][j - 1] + cost
+          )
+        }
+      }
+      return dp[m][n]
     }
-    
-    return matchesSearch && matchesCategory
-  })
+
+    const q = normalize(searchTerm.trim())
+    const terms = q.split(/\s+/).filter(Boolean)
+
+    const scoreProduct = (p: Product) => {
+      // Campos normalizados
+      const name = normalize(p.name)
+      const brand = normalize(p.brand || '')
+      const category = normalize(p.category)
+      const desc = normalize(p.description || '')
+      const tags = normalize((p.tags || []).join(' '))
+
+      if (terms.length === 0) return 1
+      let score = 0
+
+      for (const t of terms) {
+        // Matches exatos
+        if (name === t) score += 120
+        if (brand === t) score += 70
+        if (category === t) score += 50
+
+        // Prefixos
+        if (name.startsWith(t)) score += 40
+        if (brand.startsWith(t)) score += 25
+        if (category.startsWith(t)) score += 20
+
+        // Substrings
+        if (name.includes(t)) score += 30
+        if (brand.includes(t)) score += 20
+        if (category.includes(t)) score += 15
+        if (desc.includes(t)) score += 10
+        if (tags.includes(t)) score += 8
+
+        // Fuzzy (distância <= 1 para termos curtos, <= 2 para longos)
+        const fuzz = (field: string, base: number) => {
+          const d = levenshtein(field.slice(0, Math.max(field.length, t.length)), t)
+          if ((t.length <= 4 && d <= 1) || (t.length > 4 && d <= 2)) score += base
+        }
+        fuzz(name, 12)
+        fuzz(brand, 8)
+        fuzz(category, 6)
+      }
+
+      // Bônus por promoção quando buscando "promo" etc
+      if (/\b(promo|promocao|desconto|oferta)\b/.test(q) && p.originalPrice && p.originalPrice > p.price) score += 30
+      // Bônus leve para produtos em promoção
+      if (p.originalPrice && p.originalPrice > p.price) score += 5
+      // Penalizar descrições vazias
+      if (!p.description) score -= 3
+      return score
+    }
+
+    const matchesCategory = (p: Product) => {
+      if (selectedCategory === 'Todos') return true
+      if (selectedCategory === 'Promoções') return !!(p.originalPrice && p.originalPrice > p.price)
+      if (selectedCategory === 'Mais Vendidos') return !!((p as any).rating && (p as any).rating >= 4.5)
+      if (selectedCategory === 'Novidades') {
+        const productDate = new Date((p as any).createdAt || Date.now())
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+        return productDate > thirtyDaysAgo
+      }
+      return p.category === selectedCategory
+    }
+
+    return products
+      .map(p => ({ product: p, score: scoreProduct(p) }))
+      .filter(({ score, product }) => (!searchTerm ? true : score > 0) && matchesCategory(product))
+      .sort((a, b) => b.score - a.score)
+      .map(({ product }) => product)
+  }, [products, searchTerm, selectedCategory])
 
   const clearFilters = () => {
     setSearchTerm("")
@@ -207,7 +282,13 @@ export default function CatalogPage() {
   }
 
   const loadMoreProducts = () => {
-    setVisibleProducts(prev => prev + 50) // Carregar mais 50 produtos
+    setIsLoadingMore(true)
+    setLastVisibleCount(visibleProducts)
+    // Simular pequeno delay para animação de entrada
+    setTimeout(() => {
+      setVisibleProducts(prev => prev + 50)
+      setIsLoadingMore(false)
+    }, 200)
   }
 
   const hasActiveFilters = searchTerm || (selectedCategory !== "Todos" && selectedCategory !== "Promoções" && selectedCategory !== "Mais Vendidos" && selectedCategory !== "Novidades")
@@ -287,6 +368,33 @@ export default function CatalogPage() {
         {/* Seções Especiais - Apenas quando não há filtros ativos */}
         {!searchTerm && selectedCategory === "Todos" && (
           <>
+            {/* Seção PROMOÇÕES - Mostrar primeiro para maior visibilidade */}
+            <div className="mb-12 fade-in-up">
+              <div className="text-center mb-8">
+                <Badge className="bg-gradient-to-r from-red-500 to-pink-500 text-white border-0 mb-4 animate-pulse">
+                  <Zap className="h-4 w-4 mr-2" />
+                  PROMOÇÕES
+                </Badge>
+                <h2 className="text-4xl font-bold text-gray-900 mb-4 bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
+                  🔥 Ofertas Especiais
+                </h2>
+                <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+                  Produtos com descontos imperdíveis para você economizar
+                </p>
+              </div>
+              
+              <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {products
+                  .filter(product => product.originalPrice && product.originalPrice > product.price)
+                  .slice(0, 12)
+                  .map((product: Product, index: number) => (
+                    <div key={product.id} className="fade-in-up" style={{ animationDelay: `${index * 0.05}s` }}>
+                      <ProductCard product={product} />
+                    </div>
+                  ))}
+              </div>
+            </div>
+
             {/* Seção DESTAQUES */}
             <div className="mb-12 fade-in-up">
               <div className="text-center mb-8">
@@ -315,58 +423,9 @@ export default function CatalogPage() {
             </div>
 
             {/* Seção AURORA */}
-            <div className="mb-12 fade-in-up">
-              <div className="text-center mb-8">
-                <Badge className="bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0 mb-4 animate-pulse">
-                  <Target className="h-4 w-4 mr-2" />
-                  AURORA
-                </Badge>
-                <h2 className="text-4xl font-bold text-gray-900 mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  🌅 Produtos Aurora
-                </h2>
-                <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-                  Produtos da marca Aurora com qualidade garantida
-                </p>
-              </div>
+ 
               
-              <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {products
-                  .filter(product => product.brand?.toLowerCase().includes('aurora'))
-                  .slice(0, 8)
-                  .map((product: Product, index: number) => (
-                    <div key={product.id} className="fade-in-up" style={{ animationDelay: `${index * 0.05}s` }}>
-                      <ProductCard product={product} />
-                    </div>
-                  ))}
-              </div>
-            </div>
 
-            {/* Seção PROMOÇÕES */}
-            <div className="mb-12 fade-in-up">
-              <div className="text-center mb-8">
-                <Badge className="bg-gradient-to-r from-red-500 to-pink-500 text-white border-0 mb-4 animate-pulse">
-                  <Zap className="h-4 w-4 mr-2" />
-                  PROMOÇÕES
-                </Badge>
-                <h2 className="text-4xl font-bold text-gray-900 mb-4 bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
-                  🔥 Ofertas Especiais
-                </h2>
-                <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-                  Produtos com descontos imperdíveis para você economizar
-                </p>
-              </div>
-              
-              <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {products
-                  .filter(product => product.originalPrice && product.originalPrice > product.price)
-                  .slice(0, 12)
-                  .map((product: Product, index: number) => (
-                    <div key={product.id} className="fade-in-up" style={{ animationDelay: `${index * 0.05}s` }}>
-                      <ProductCard product={product} />
-                    </div>
-                  ))}
-              </div>
-            </div>
           </>
         )}
 
@@ -419,12 +478,14 @@ export default function CatalogPage() {
               </p>
             </div>
             
-            <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {products.slice(0, visibleProducts).map((product: Product, index: number) => (
-                <div key={product.id} className="fade-in-up" style={{ animationDelay: `${index * 0.05}s` }}>
+            <div className={`grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 ${isLoadingMore ? 'opacity-90' : ''}`}>
+              {products.slice(0, visibleProducts).map((product: Product, index: number) => {
+                const isNew = index >= lastVisibleCount
+                return (
+                <div key={product.id} className={isNew ? 'pop-in' : 'fade-in-up'} style={{ animationDelay: `${index * 0.03}s` }}>
                   <ProductCard product={product} />
                 </div>
-              ))}
+              )})}
             </div>
             
             {/* Botão "Ver mais" para todos os produtos */}
@@ -447,12 +508,14 @@ export default function CatalogPage() {
         {/* Products Grid para resultados filtrados */}
         {(searchTerm || selectedCategory !== "Todos") && (
           <>
-            <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {filteredProducts.slice(0, visibleProducts).map((product: Product, index: number) => (
-                <div key={product.id} className="fade-in-up" style={{ animationDelay: `${index * 0.05}s` }}>
+            <div className={`grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 ${isLoadingMore ? 'opacity-90' : ''}`}>
+              {filteredProducts.slice(0, visibleProducts).map((product: Product, index: number) => {
+                const isNew = index >= lastVisibleCount
+                return (
+                <div key={product.id} className={isNew ? 'pop-in' : 'fade-in-up'} style={{ animationDelay: `${index * 0.03}s` }}>
                   <ProductCard product={product} />
                 </div>
-              ))}
+              )})}
             </div>
             
             {/* Botão "Ver mais" */}
@@ -598,6 +661,11 @@ export default function CatalogPage() {
             </div>
         </div>
       </div>
+      {/* Animations for newly loaded cards */}
+      <style jsx>{`
+        @keyframes pop-in { from { opacity: 0; transform: scale(0.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .pop-in { animation: pop-in 0.35s cubic-bezier(.2,.7,.3,1) both; }
+      `}</style>
     </div>
   )
 } 

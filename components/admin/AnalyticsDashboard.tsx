@@ -46,6 +46,7 @@ export default function AnalyticsDashboard() {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
+  const [period, setPeriod] = useState<'7d' | '31d' | '1y'>('7d')
 
   const loadAnalytics = async () => {
     try {
@@ -111,12 +112,14 @@ export default function AnalyticsDashboard() {
     { label: 'Cancelado', value: analyticsData.orderStatus.cancelled, color: '#ef4444' }
   ]
 
-  const dailyOrdersData = analyticsData.dailyOrders.slice(-7).map(item => ({
+  const windowSize = period === '7d' ? 7 : period === '31d' ? 31 : 365
+  const sliced = analyticsData.dailyOrders.slice(-windowSize)
+  const dailyOrdersData = sliced.map(item => ({
     label: new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
     value: item.count
   }))
 
-  const dailyRevenueData = analyticsData.dailyOrders.slice(-7).map(item => ({
+  const dailyRevenueData = sliced.map(item => ({
     label: new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
     value: item.revenue
   }))
@@ -143,9 +146,23 @@ export default function AnalyticsDashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <h2 className="text-2xl font-bold text-gray-900">Analytics em Tempo Real</h2>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 bg-gray-100 rounded-md p-1 text-sm">
+            <button
+              onClick={() => setPeriod('7d')}
+              className={`px-2 py-1 rounded ${period === '7d' ? 'bg-white shadow text-gray-900' : 'text-gray-600'}`}
+            >7d</button>
+            <button
+              onClick={() => setPeriod('31d')}
+              className={`px-2 py-1 rounded ${period === '31d' ? 'bg-white shadow text-gray-900' : 'text-gray-600'}`}
+            >31d</button>
+            <button
+              onClick={() => setPeriod('1y')}
+              className={`px-2 py-1 rounded ${period === '1y' ? 'bg-white shadow text-gray-900' : 'text-gray-600'}`}
+            >1 ano</button>
+          </div>
           <button
             onClick={loadAnalytics}
             disabled={isLoading}
@@ -225,7 +242,7 @@ export default function AnalyticsDashboard() {
         {/* Gráfico de pedidos diários */}
         <LineChart
           data={dailyOrdersData}
-          title="Pedidos dos Últimos 7 Dias"
+          title={`Pedidos (${period === '7d' ? '7 dias' : period === '31d' ? '31 dias' : '1 ano'})`}
           height={300}
         />
       </div>
@@ -234,7 +251,7 @@ export default function AnalyticsDashboard() {
         {/* Gráfico de receita diária */}
         <LineChart
           data={dailyRevenueData}
-          title="Receita dos Últimos 7 Dias"
+          title={`Receita (${period === '7d' ? '7 dias' : period === '31d' ? '31 dias' : '1 ano'})`}
           height={300}
         />
 

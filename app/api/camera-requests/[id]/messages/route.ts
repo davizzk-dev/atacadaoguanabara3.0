@@ -33,7 +33,7 @@ export async function GET(
           createdAt: request.createdAt
         }
       }
-    })
+    }, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } })
   } catch (error) {
     console.error('Erro ao buscar mensagens:', error)
     return NextResponse.json({

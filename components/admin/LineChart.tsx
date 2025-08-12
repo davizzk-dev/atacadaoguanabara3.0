@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface LineChartProps {
   data: Array<{
@@ -22,6 +22,7 @@ export default function LineChart({
   showPoints = true 
 }: LineChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [hover, setHover] = useState<{ index: number; x: number; y: number } | null>(null)
 
   useEffect(() => {
     if (!canvasRef.current || !data || data.length === 0) return
@@ -141,7 +142,66 @@ export default function LineChart({
     ctx.textBaseline = 'top'
     ctx.fillText(title, canvas.offsetWidth / 2, 10)
 
-  }, [data, title, height, showGrid, showPoints])
+    // Desenhar tooltip se houver hover
+    if (hover && data[hover.index]) {
+      const paddingBox = 8
+      const label = data[hover.index].label
+      const value = data[hover.index].value
+      const text = `${label}: ${value}`
+
+      ctx.font = '12px Arial'
+      const textWidth = ctx.measureText(text).width
+      const boxX = Math.min(Math.max(hover.x - textWidth / 2 - paddingBox, 10), canvas.offsetWidth - textWidth - 2 * paddingBox - 10)
+      const boxY = Math.max(hover.y - 35, 10)
+
+      // Caixa
+      ctx.fillStyle = 'rgba(17, 24, 39, 0.9)'
+      ctx.fillRect(boxX, boxY, textWidth + paddingBox * 2, 24)
+
+      // Texto
+      ctx.fillStyle = '#ffffff'
+      ctx.textAlign = 'left'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(text, boxX + paddingBox, boxY + 12)
+    }
+
+  }, [data, title, height, showGrid, showPoints, hover])
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const handleMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const y = e.clientY - rect.top
+
+      const padding = 40
+      const chartWidth = canvas.offsetWidth - padding * 2
+      const segment = data.length > 1 ? chartWidth / (data.length - 1) : chartWidth
+      const index = Math.round((x - padding) / segment)
+
+      if (index >= 0 && index < data.length) {
+        // Calcular y do ponto para posicionar tooltip de forma mais precisa
+        const values = data.map(d => d.value)
+        const minValue = Math.min(...values)
+        const maxValue = Math.max(...values)
+        const valueRange = maxValue - minValue || 1
+        const chartHeight = height - padding * 2
+        const pointX = padding + segment * index
+        const pointY = padding + chartHeight - ((data[index].value - minValue) / valueRange) * chartHeight
+        setHover({ index, x: pointX, y: pointY })
+      } else {
+        setHover(null)
+      }
+    }
+    const handleLeave = () => setHover(null)
+    canvas.addEventListener('mousemove', handleMove)
+    canvas.addEventListener('mouseleave', handleLeave)
+    return () => {
+      canvas.removeEventListener('mousemove', handleMove)
+      canvas.removeEventListener('mouseleave', handleLeave)
+    }
+  }, [data, height])
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-4">

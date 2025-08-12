@@ -10,6 +10,8 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [searchResults, setSearchResults] = useState<any[]>([])
+  const [lastOrderId, setLastOrderId] = useState<string | null>(null)
+  const [lastOrderDelivered, setLastOrderDelivered] = useState(false)
   const [pendingOrders, setPendingOrders] = useState(0)
   const [pendingReturns, setPendingReturns] = useState(0)
   const [pendingCameraRequests, setPendingCameraRequests] = useState(0)
@@ -27,6 +29,36 @@ export default function Header() {
     }
   }, [user])
 
+  // Ler último pedido salvo localmente (qualquer usuário)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('lastOrderId')
+      if (saved) setLastOrderId(saved)
+    } catch {}
+  }, [])
+
+  // Verificar status do último pedido salvo e esconder o botão quando entregue
+  useEffect(() => {
+    const checkLastOrderStatus = async () => {
+      if (!lastOrderId) return
+      try {
+        const res = await fetch(`/api/orders/${lastOrderId}`)
+        if (!res.ok) return
+        const data = await res.json()
+        const order = data?.order || data
+        if (order && order.status === 'delivered') {
+          // marcar como entregue e limpar id salvo
+          setLastOrderDelivered(true)
+          setLastOrderId(null)
+          try { localStorage.removeItem('lastOrderId') } catch {}
+        }
+      } catch (e) {
+        console.warn('Falha ao checar status do pedido:', e)
+      }
+    }
+    checkLastOrderStatus()
+  }, [lastOrderId])
+
   const checkPendingItems = async () => {
     try {
       // Verificar pedidos pendentes
@@ -43,7 +75,9 @@ export default function Header() {
       }
 
       // Verificar solicitações de troca/devolução pendentes
-      const returnsResponse = await fetch('/api/return-requests')
+      const returnsResponse = await fetch('/api/return-requests', {
+        headers: user?.email ? { 'x-user-email': user.email, 'x-user-id': user.id } as any : undefined
+      })
       if (returnsResponse.ok) {
         const returnsData = await returnsResponse.json()
         if (returnsData.success && returnsData.data) {
@@ -56,7 +90,9 @@ export default function Header() {
       }
 
       // Verificar solicitações de câmera pendentes
-      const cameraResponse = await fetch('/api/camera-requests')
+      const cameraResponse = await fetch('/api/camera-requests', {
+        headers: user?.email ? { 'x-user-email': user.email, 'x-user-id': user.id } as any : undefined
+      })
       if (cameraResponse.ok) {
         const cameraData = await cameraResponse.json()
         if (cameraData.success && cameraData.data) {
@@ -354,6 +390,21 @@ export default function Header() {
 
                 {/* Navigation Links */}
                 <div className="space-y-2">
+                  {lastOrderId && !lastOrderDelivered && (
+                    <Link 
+                      href={`/order-status/${lastOrderId}`} 
+                      className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors mobile-tap-highlight group hover-scale-small"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center group-hover:bg-orange-200 transition-colors">
+                        <RefreshCw className="w-5 h-5 text-orange-600 group-hover:animate-bounce" />
+                      </div>
+                      <div className="flex-1">
+                        <span className="font-medium text-gray-900">Acompanhar Pedido</span>
+                        <p className="text-xs text-gray-500">Pedido #{lastOrderId}</p>
+                      </div>
+                    </Link>
+                  )}
                   <Link 
                     href="/" 
                     className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors mobile-tap-highlight group hover-scale-small"
@@ -472,6 +523,21 @@ export default function Header() {
                     )}
                   </Link>
 
+                  {/* Minhas solicitações de câmera (acesso ao chat) */}
+                  <Link 
+                    href="/camera-request/minhas" 
+                    className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors mobile-tap-highlight group"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+                      <Camera className="w-5 h-5 text-indigo-600" />
+                    </div>
+                    <div className="flex-1">
+                      <span className="font-medium text-gray-900">Minhas Solicitações de Câmera</span>
+                      <p className="text-xs text-gray-500">Ver e conversar com o suporte</p>
+                    </div>
+                  </Link>
+
                   <Link 
                     href="/faq" 
                     className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors mobile-tap-highlight group"
@@ -503,6 +569,21 @@ export default function Header() {
                         {pendingReturns}
                       </span>
                     )}
+                  </Link>
+
+                  {/* Minhas trocas/devoluções (acesso ao chat) */}
+                  <Link 
+                    href="/returns/minhas" 
+                    className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors mobile-tap-highlight group"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center group-hover:bg-green-100 transition-colors">
+                      <RefreshCw className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <span className="font-medium text-gray-900">Minhas Trocas/Devoluções</span>
+                      <p className="text-xs text-gray-500">Acompanhar e conversar</p>
+                    </div>
                   </Link>
 
                   <Link 

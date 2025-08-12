@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams } from "next/navigation"
 import { ArrowLeft, Heart, ShoppingCart, Minus, Plus, Share2, Star, Package, Barcode, Hash, Eye } from "lucide-react"
 import Link from "next/link"
@@ -18,6 +18,9 @@ export default function ProductPage() {
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [quantity, setQuantity] = useState(1)
+  const [isAdding, setIsAdding] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const confettiRef = useRef<HTMLCanvasElement | null>(null)
 
   const { addItem, items } = useCartStore()
   const { addFavorite, removeFavorite, isFavorite } = useFavoritesStore()
@@ -127,12 +130,45 @@ export default function ProductPage() {
     fetchProduct()
   }, [productId])
 
-  const handleAddToCart = () => {
-    if (product) {
-    for (let i = 0; i < quantity; i++) {
-      addItem(product)
-    }
-    }
+  const handleAddToCart = async () => {
+    if (!product) return
+    setIsAdding(true)
+    // pequena animação de loading
+    await new Promise((r) => setTimeout(r, 250))
+    for (let i = 0; i < quantity; i++) addItem(product)
+    setIsAdding(false)
+    setShowSuccess(true)
+    setTimeout(() => setShowSuccess(false), 1600)
+    // confetti simples
+    try {
+      const canvas = confettiRef.current
+      if (canvas) {
+        const ctx = canvas.getContext('2d')!
+        const w = (canvas.width = window.innerWidth)
+        const h = (canvas.height = 180)
+        const pieces = Array.from({ length: 60 }, () => ({
+          x: Math.random() * w,
+          y: Math.random() * 0,
+          r: 4 + Math.random() * 6,
+          c: `hsl(${Math.random() * 50 + 10},90%,55%)`,
+          vy: 2 + Math.random() * 3,
+          vx: -1 + Math.random() * 2
+        }))
+        let frames = 0
+        const animate = () => {
+          frames++
+          ctx.clearRect(0, 0, w, h)
+          pieces.forEach(p => {
+            p.x += p.vx; p.y += p.vy
+            ctx.fillStyle = p.c
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill()
+          })
+          if (frames < 40) requestAnimationFrame(animate)
+          else ctx.clearRect(0, 0, w, h)
+        }
+        animate()
+      }
+    } catch {}
   }
 
   const handleToggleFavorite = () => {
@@ -177,8 +213,10 @@ export default function ProductPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="container mx-auto px-4 py-8">
+    {/* Confetti canvas (top overlay) */}
+    <canvas ref={confettiRef} className="fixed top-16 left-0 right-0 pointer-events-none z-[70]" style={{ height: 180 }} />
         {/* Header com navegação */}
         <div className="flex items-center justify-between mb-8">
           <Link href="/catalog">
@@ -302,18 +340,32 @@ export default function ProductPage() {
 
                 <Button
                   onClick={handleAddToCart}
-                disabled={product.price === 0 || !product.inStock}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg font-semibold disabled:bg-gray-400"
-                size="lg"
-              >
-                <ShoppingCart className="w-5 h-5 mr-2" />
-                {!product.inStock 
-                  ? 'Produto fora de estoque'
-                  : product.price > 0 
-                    ? `Adicionar ${quantity} ao carrinho` 
-                    : 'Preço indisponível'
-                }
+                  disabled={product.price === 0 || !product.inStock || isAdding}
+                  className={`w-full text-white py-3 text-lg font-semibold disabled:bg-gray-400 ${isAdding ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} relative overflow-hidden`}
+                  size="lg"
+                >
+                  {isAdding ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Adicionando...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center">
+                      <ShoppingCart className="w-5 h-5 mr-2" />
+                      {!product.inStock
+                        ? 'Produto fora de estoque'
+                        : product.price > 0
+                        ? `Adicionar ${quantity} ao carrinho`
+                        : 'Preço indisponível'}
+                    </span>
+                  )}
                 </Button>
+
+                {showSuccess && (
+                  <div className="fixed top-20 right-4 z-[80] bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg animate-slide-in-up">
+                    ✅ Produto adicionado ao carrinho
+                  </div>
+                )}
             </div>
               </div>
             </div>
@@ -480,3 +532,6 @@ export default function ProductPage() {
     </div>
   )
 }
+
+// Add page-scoped styles
+// Using styled-jsx within a fragment is not available here; rely on global Tailwind utilities and minimal keyframes via a style tag in parent layout if needed.

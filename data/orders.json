@@ -2637,5 +2637,547 @@
     "shippingCost": 15.600000000000001,
     "shippingDistance": 5.2,
     "updatedAt": "2025-08-11T18:33:57.242Z"
+  },
+  {
+    "id": "1754953084178",
+    "items": [
+      {
+        "product": {
+          "id": "1253",
+          "name": "ALMONDEGA EM LATA BORDON 420G",
+          "price": 12.49,
+          "originalPrice": 12.49,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "ENLATADOS E EM CONSERVA",
+          "description": "ALMONDEGA EM LATA BO",
+          "stock": 34,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 81,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "enlatados e em conserva",
+            "preparações de carne, de peixes",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 8,
+            "generoId": 16,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2023-07-11T03:00:00.000+00:00",
+            "dataAlteracao": "2025-02-17T03:00:00.000+00:00",
+            "estoque": {
+              "saldo": 34,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:51.390+00:00",
+              "atualizadoEm": "2025-07-30T16:15:12.935+00:00"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 1
+      },
+      {
+        "product": {
+          "id": "3739",
+          "name": "AZEITONA MUCHO GOSTO VERDE INTEIRA MIUDA 2KG",
+          "price": 34.99,
+          "originalPrice": 34.99,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "ENLATADOS E EM CONSERVA",
+          "description": "AZEITONA MUCHO GOSTO",
+          "stock": 6,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 48,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "enlatados e em conserva",
+            "preparações de produtos hortíc",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 8,
+            "generoId": 20,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2024-04-05T03:00:00.000+00:00",
+            "dataAlteracao": "2025-02-17T03:00:00.000+00:00",
+            "estoque": {
+              "saldo": 6,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:52.310+00:00",
+              "atualizadoEm": "2025-02-17T20:31:25.036+00:00"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 1
+      },
+      {
+        "product": {
+          "id": "5355",
+          "name": "CARNE FIAMBRE DE FRANGO ODERICH 320G",
+          "price": 6.99,
+          "originalPrice": 6.99,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "ENLATADOS E EM CONSERVA",
+          "description": "CARNE FIAMBRE DE FRA",
+          "stock": 1,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 82,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "enlatados e em conserva",
+            "preparações de carne, de peixes",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 8,
+            "generoId": 16,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2024-12-28T03:00:00.000+00:00",
+            "dataAlteracao": "2025-02-17T03:00:00.000+00:00",
+            "estoque": {
+              "saldo": 1,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:52.762+00:00",
+              "atualizadoEm": "2025-03-02T13:47:59.381+00:00"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 1
+      },
+      {
+        "product": {
+          "id": "4214",
+          "name": "ARROZ INTEGRAL CAMIL 1KG",
+          "price": 6.49,
+          "originalPrice": 6.49,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "MERCEARIA",
+          "description": "ARROZ INTEGRAL CAMIL",
+          "stock": 48,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 48,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "mercearia",
+            "cereais",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 11,
+            "generoId": 10,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2024-06-25T03:00:00.000+00:00",
+            "dataAlteracao": "2025-02-17T03:00:00.000+00:00",
+            "estoque": {
+              "saldo": 48,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:52.310+00:00",
+              "atualizadoEm": "2025-07-26T20:55:14.089+00:00"
+            }
+          }
+        },
+        "quantity": 7
+      },
+      {
+        "product": {
+          "id": "3982",
+          "name": "ABSORVENTE COM ABAS C/ 8 UNID MODESS",
+          "price": 2.99,
+          "originalPrice": 2.99,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "PRODUTOS DE LIMPEZA",
+          "description": "ABSORVENTE COM ABAS",
+          "stock": 14,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 75,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "produtos de limpeza",
+            "obras diversas",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 6,
+            "generoId": 96,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2024-06-03T03:00:00.000+00:00",
+            "dataAlteracao": "2025-02-17T03:00:00.000+00:00",
+            "estoque": {
+              "saldo": 14,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:52.310+00:00",
+              "atualizadoEm": "2025-08-03T11:33:29.683+00:00"
+            }
+          }
+        },
+        "quantity": 1
+      }
+    ],
+    "total": 119.39,
+    "customerInfo": {
+      "name": "Charleana de Vasconcelos Alexandre",
+      "email": "vcharleana@gmail.com",
+      "phone": "(85) 98704-0183",
+      "address": {
+        "street": "Rua Coronel Correia",
+        "number": "382",
+        "neighborhood": "Parque Soledade",
+        "city": "Caucaia",
+        "state": "CE",
+        "zipCode": "61603-005"
+      }
+    },
+    "status": "pending",
+    "createdAt": "2025-08-11T22:58:04.178Z",
+    "estimatedDelivery": "2025-08-11T23:20:04.178Z",
+    "shippingCost": 16.5,
+    "shippingDistance": 5.5
+  },
+  {
+    "id": "1754953874757",
+    "items": [
+      {
+        "product": {
+          "id": "5994",
+          "name": " DEO COLONIA AMOR DE MAINHA 225 ML",
+          "price": 14.99,
+          "originalPrice": 14.99,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "PRODUTOS DE LIMPEZA",
+          "description": " D COL AMOR 225ML",
+          "stock": 1,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 68,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "produtos de limpeza",
+            "sabões, agentes orgânicos",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 6,
+            "generoId": 34,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2025-06-19T13:48:15.697+00:00",
+            "dataAlteracao": "2025-06-19T13:48:15.697+00:00",
+            "estoque": {
+              "saldo": 1,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-06-19T13:48:15.695+00:00",
+              "atualizadoEm": "2025-08-08T11:08:54.108+00:00"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 10
+      }
+    ],
+    "total": 166.4,
+    "customerInfo": {
+      "name": "Charleana de Vasconcelos Alexandre",
+      "email": "vcharleana@gmail.com",
+      "phone": "(85) 98704-0183",
+      "address": {
+        "street": "Rua Coronel Correia",
+        "number": "382",
+        "neighborhood": "Parque Soledade",
+        "city": "Caucaia",
+        "state": "CE",
+        "zipCode": "61603-005"
+      }
+    },
+    "status": "delivered",
+    "createdAt": "2025-08-11T23:11:14.757Z",
+    "estimatedDelivery": "2025-08-11T23:33:14.757Z",
+    "shippingCost": 16.5,
+    "shippingDistance": 5.5,
+    "payment": {
+      "method": "pix",
+      "wantsChange": false
+    },
+    "updatedAt": "2025-08-11T23:13:51.264Z"
+  },
+  {
+    "id": "1754956621390",
+    "items": [
+      {
+        "product": {
+          "id": "777",
+          "name": " REFRIGERANTE SPRITE 250ML",
+          "price": 1.99,
+          "originalPrice": 1.99,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "REFIGERANTES E OUTROS LIQUIDOS",
+          "description": "SPRITE 250ML",
+          "stock": 884,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 107,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "refigerantes e outros liquidos",
+            "bebidas, líquidos alcoólicos",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 15,
+            "generoId": 22,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2023-07-07T03:00:00.000+00:00",
+            "dataAlteracao": "2025-08-06T18:23:50.206+00:00",
+            "estoque": {
+              "saldo": 884,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:50.808+00:00",
+              "atualizadoEm": "2025-08-11T18:28:03.616+00:00"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 4
+      },
+      {
+        "product": {
+          "id": "5994",
+          "name": " DEO COLONIA AMOR DE MAINHA 225 ML",
+          "price": 14.99,
+          "originalPrice": 14.99,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "PRODUTOS DE LIMPEZA",
+          "description": " D COL AMOR 225ML",
+          "stock": 1,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 68,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "produtos de limpeza",
+            "sabões, agentes orgânicos",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 6,
+            "generoId": 34,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2025-06-19T13:48:15.697+00:00",
+            "dataAlteracao": "2025-06-19T13:48:15.697+00:00",
+            "estoque": {
+              "saldo": 1,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-06-19T13:48:15.695+00:00",
+              "atualizadoEm": "2025-08-08T11:08:54.108+00:00"
+            }
+          }
+        },
+        "quantity": 10
+      }
+    ],
+    "total": 157.86,
+    "customerInfo": {
+      "name": "kiki",
+      "email": "felipelucas@alu.ufc.br",
+      "phone": "(88) 88888-8888",
+      "address": {
+        "street": "kiki",
+        "number": "555",
+        "neighborhood": "curykyky",
+        "city": "fortaleza",
+        "state": "Ceará",
+        "zipCode": "65608-803"
+      }
+    },
+    "status": "delivered",
+    "createdAt": "2025-08-11T23:57:01.390Z",
+    "estimatedDelivery": "2025-08-12T00:16:01.390Z",
+    "shippingCost": 0,
+    "shippingDistance": 5.3,
+    "payment": {
+      "method": "pix",
+      "wantsChange": false
+    },
+    "updatedAt": "2025-08-11T23:59:35.483Z"
+  },
+  {
+    "id": "1754956794942",
+    "items": [
+      {
+        "product": {
+          "id": "1139",
+          "name": "ALHO AMASSADO TEMPERO DA CASA 1KG",
+          "price": 17.99,
+          "originalPrice": 17.99,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "TEMPEROS",
+          "description": "ALHO AMASSA TEMP 1KG",
+          "stock": 15,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 61,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "temperos",
+            "produtos horticolas, plantas, raizes",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 7,
+            "generoId": 7,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2023-07-10T03:00:00.000+00:00",
+            "dataAlteracao": "2025-02-17T03:00:00.000+00:00",
+            "estoque": {
+              "saldo": 15,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:50.808+00:00",
+              "atualizadoEm": "2025-08-10T13:06:11.692+00:00"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 1
+      },
+      {
+        "product": {
+          "id": "1132",
+          "name": "ALHO PICADO TEMPERO DA CASA 1KG",
+          "price": 17.99,
+          "originalPrice": 17.99,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "TEMPEROS",
+          "description": "ALHO PICADO TEMP 1KG",
+          "stock": 16,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 37,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "temperos",
+            "produtos horticolas, plantas, raizes",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "secaoId": 7,
+            "generoId": 7,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2023-07-10T03:00:00.000+00:00",
+            "dataAlteracao": "2025-02-17T03:00:00.000+00:00",
+            "estoque": {
+              "saldo": 16,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:50.808+00:00",
+              "atualizadoEm": "2025-08-08T19:32:20.450+00:00"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 1
+      },
+      {
+        "product": {
+          "id": "4467",
+          "name": "VODKA ABSOLUT 1L",
+          "price": 81.9,
+          "originalPrice": 81.9,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "REFIGERANTES E OUTROS LIQUIDOS",
+          "description": "VODKA ABSOLUT 1L",
+          "stock": 8,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 92,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "refigerantes e outros liquidos",
+            "bebidas, líquidos alcoólicos",
+            "varejo-facil"
+          ],
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 15,
+            "generoId": 22,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2024-08-30T03:00:00.000+00:00",
+            "dataAlteracao": "2025-02-17T03:00:00.000+00:00",
+            "estoque": {
+              "saldo": 8,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:52.310+00:00",
+              "atualizadoEm": "2025-05-30T20:41:01.739+00:00"
+            }
+          }
+        },
+        "quantity": 1
+      }
+    ],
+    "total": 133.78,
+    "customerInfo": {
+      "name": "felipe",
+      "email": "8787@kjkdj",
+      "phone": "(54) 89898-9899",
+      "address": {
+        "street": "padre romualdo",
+        "number": "145",
+        "neighborhood": "padre romualdo",
+        "city": "caucaia",
+        "state": "Ceará",
+        "zipCode": "65608-803"
+      }
+    },
+    "status": "delivered",
+    "createdAt": "2025-08-11T23:59:54.942Z",
+    "estimatedDelivery": "2025-08-12T00:18:54.942Z",
+    "shippingCost": 15.899999999999999,
+    "shippingDistance": 5.3,
+    "payment": {
+      "method": "pix",
+      "wantsChange": false
+    },
+    "updatedAt": "2025-08-12T00:02:37.317Z"
   }
 ]

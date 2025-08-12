@@ -101,12 +101,73 @@ nextApp.prepare().then(() => {
 
   // Rota para sincronizar produtos (agora usa sync-with-formatting.js)
   app.post('/api/sync-products', express.json(), async (req, res) => {
+    const startedAt = Date.now();
     try {
       console.log('🔄 Sincronização de produtos iniciada via /api/sync-products');
       const result = await syncAndFormatProducts();
+
+      // Persistir histórico da sincronização
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const dataDir = path.join(process.cwd(), 'data');
+        const historyPath = path.join(dataDir, 'varejo-sync-history.json');
+        if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+        let history = [];
+        if (fs.existsSync(historyPath)) {
+          try {
+            history = JSON.parse(fs.readFileSync(historyPath, 'utf-8') || '[]');
+          } catch {}
+        }
+        const entry = {
+          id: Date.now().toString(),
+          startedAt: new Date(startedAt).toISOString(),
+          finishedAt: new Date().toISOString(),
+          durationMs: Date.now() - startedAt,
+          totals: {
+            products: result.totalProducts ?? result.productsTotal ?? 0,
+            sections: result.totalSections ?? 0,
+            brands: result.totalBrands ?? 0,
+            genres: result.totalGenres ?? 0,
+          },
+          message: 'Sincronização concluída',
+          status: 'success'
+        };
+        history.unshift(entry);
+        // Manter no máximo 100 registros
+        if (history.length > 100) history = history.slice(0, 100);
+        fs.writeFileSync(historyPath, JSON.stringify(history, null, 2));
+      } catch (persistErr) {
+        console.warn('⚠️ Falha ao salvar histórico de sync:', persistErr?.message || persistErr);
+      }
+
       res.json({ success: true, ...result });
     } catch (error) {
       console.error('Erro na sincronização:', error);
+      // Persistir falha no histórico
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const dataDir = path.join(process.cwd(), 'data');
+        const historyPath = path.join(dataDir, 'varejo-sync-history.json');
+        if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+        let history = [];
+        if (fs.existsSync(historyPath)) {
+          try { history = JSON.parse(fs.readFileSync(historyPath, 'utf-8') || '[]'); } catch {}
+        }
+        history.unshift({
+          id: Date.now().toString(),
+          startedAt: new Date(startedAt).toISOString(),
+          finishedAt: new Date().toISOString(),
+          durationMs: Date.now() - startedAt,
+          totals: { products: 0, sections: 0, brands: 0, genres: 0 },
+          message: error?.message || 'Erro na sincronização',
+          status: 'error'
+        });
+        if (history.length > 100) history = history.slice(0, 100);
+        fs.writeFileSync(historyPath, JSON.stringify(history, null, 2));
+      } catch {}
+
       res.status(500).json({
         success: false,
         error: 'Erro interno do servidor',

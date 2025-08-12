@@ -387,9 +387,16 @@
         "message": "oxe",
         "timestamp": "2025-08-11T14:33:00.177Z",
         "type": "text"
+      },
+      {
+        "id": "1754944869308",
+        "sender": "admin",
+        "message": "q",
+        "timestamp": "2025-08-11T20:41:09.308Z",
+        "type": "text"
       }
     ],
-    "updatedAt": "2025-08-11T14:33:00.177Z"
+    "updatedAt": "2025-08-11T20:41:09.308Z"
   },
   {
     "id": "1754867992414",
@@ -423,5 +430,146 @@
       }
     ],
     "updatedAt": "2025-08-11T14:11:19.878Z"
+  },
+  {
+    "id": "1754944980705",
+    "orderId": "q",
+    "userName": "q",
+    "reason": "Produto danificado na entrega",
+    "description": "a",
+    "requestType": "refund",
+    "productName": "1aaaaaaa",
+    "quantity": 11,
+    "userId": null,
+    "userEmail": "q@Gmail.com",
+    "createdAt": "2025-08-11T20:43:00.705Z",
+    "status": "pending",
+    "messages": []
+  },
+  {
+    "id": "1754950132535",
+    "orderId": "22222222",
+    "userName": "aaaaaaaaa",
+    "reason": "Produto diferente do anunciado",
+    "description": "a",
+    "requestType": "exchange",
+    "productName": "JOSE ARIMATEA COSTA ALEXANDRE",
+    "quantity": 1,
+    "userId": null,
+    "userEmail": "q@Gmail.com",
+    "createdAt": "2025-08-11T22:08:52.535Z",
+    "status": "pending",
+    "messages": []
+  },
+  {
+    "id": "1754958020264",
+    "orderId": "1111111",
+    "userName": "11111111111111111111111111",
+    "reason": "Produto danificado na entrega",
+    "description": "111",
+    "requestType": "exchange",
+    "productName": "1111111111111111111",
+    "quantity": 1,
+    "userId": null,
+    "userEmail": "q@Gmail.com",
+    "createdAt": "2025-08-12T00:20:20.264Z",
+    "status": "pending",
+    "messages": []
+  },
+  {
+    "id": "1754959408503",
+    "orderId": "111111",
+    "userName": "11111111111111111111111",
+    "reason": "Produto danificado na entrega",
+    "description": "A",
+    "requestType": "exchange",
+    "productName": "JOSE ARIMATEA COSTA ALEXANDRE",
+    "quantity": 1,
+    "userId": null,
+    "userEmail": "111111111111111111111@K",
+    "createdAt": "2025-08-12T00:43:28.503Z",
+    "status": "pending",
+    "messages": []
+  },
+  {
+    "id": "1754962309477",
+    "orderId": "1212",
+    "userName": "Administrador",
+    "reason": "Erro no pedido",
+    "description": "a",
+    "requestType": "refund",
+    "productName": "1111111111111111111",
+    "quantity": 1,
+    "userId": "admin-user",
+    "userEmail": "admin",
+    "contactEmail": "admin@Gmailcom",
+    "contactPhone": "111111111111111111",
+    "createdAt": "2025-08-12T01:31:49.477Z",
+    "status": "pending",
+    "messages": [
+      {
+        "id": "1754962316419",
+        "sender": "user",
+        "message": "a",
+        "timestamp": "2025-08-12T01:31:56.419Z",
+        "type": "text"
+      },
+      {
+        "id": "1754962331421",
+        "sender": "admin",
+        "message": "a oq man",
+        "timestamp": "2025-08-12T01:32:11.421Z",
+        "type": "text"
+      },
+      {
+        "id": "1754962338136",
+        "sender": "user",
+        "message": "q man",
+        "timestamp": "2025-08-12T01:32:18.136Z",
+        "type": "text"
+      },
+      {
+        "id": "1754962428393",
+        "sender": "user",
+        "message": "Áudio enviado",
+        "timestamp": "2025-08-12T01:33:48.403Z",
+        "type": "audio",
+        "mediaUrl": "/api/uploads/chat/1754962309477_1754962428393.wav",
+        "mediaName": "audio.wav"
+      },
+      {
+        "id": "1754962437778",
+        "sender": "user",
+        "message": "Imagem enviada",
+        "timestamp": "2025-08-12T01:33:57.785Z",
+        "type": "image",
+        "mediaUrl": "/api/uploads/chat/1754962309477_1754962437778.png",
+        "mediaName": "com o.png"
+      },
+      {
+        "id": "1754962717901",
+        "sender": "user",
+        "message": "a",
+        "timestamp": "2025-08-12T01:38:37.901Z",
+        "type": "text"
+      },
+      {
+        "id": "1754962723787",
+        "sender": "admin",
+        "message": "q",
+        "timestamp": "2025-08-12T01:38:43.787Z",
+        "type": "text"
+      },
+      {
+        "id": "1754962740331",
+        "sender": "user",
+        "message": "Áudio enviado",
+        "timestamp": "2025-08-12T01:39:00.341Z",
+        "type": "audio",
+        "mediaUrl": "/api/uploads/chat/1754962309477_1754962740331.wav",
+        "mediaName": "audio.wav"
+      }
+    ],
+    "updatedAt": "2025-08-12T01:39:00.341Z"
   }
 ]

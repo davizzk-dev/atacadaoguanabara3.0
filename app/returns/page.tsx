@@ -16,6 +16,7 @@ import { ArrowLeft, Upload, X, Check, Package, RotateCcw, Shield, Clock, Message
 import { toast } from 'sonner'
 import Header from '@/components/header'
 import { Footer } from '@/components/footer'
+import { useAuthStore } from '@/lib/store'
 
 interface ReturnFormData {
   orderId: string
@@ -87,6 +88,7 @@ const getStatusText = (status: string) => {
 
 export default function ReturnsPage() {
   const router = useRouter()
+  const { user } = useAuthStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [activeTab, setActiveTab] = useState('auto')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -127,9 +129,9 @@ export default function ReturnsPage() {
   
   const [formData, setFormData] = useState<ReturnFormData>({
     orderId: '',
-    userName: '',
-    userEmail: '',
-    userPhone: '',
+    userName: user?.name || '',
+    userEmail: user?.email || '',
+    userPhone: user?.phone || '',
     productName: '',
     productId: '',
     quantity: 1,
@@ -138,6 +140,18 @@ export default function ReturnsPage() {
     description: '',
     photos: []
   })
+
+  // Atualizar quando o usuário logar após o primeiro render
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        userName: prev.userName || user.name || '',
+        userEmail: prev.userEmail || user.email || '',
+        userPhone: prev.userPhone || user.phone || '',
+      }))
+    }
+  }, [user])
 
   // Carregar solicitações existentes
   useEffect(() => {
@@ -311,7 +325,8 @@ export default function ReturnsPage() {
       const response = await fetch('/api/return-requests', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(user ? { 'x-user-email': user.email, 'x-user-id': user.id } : {})
         },
         body: JSON.stringify({
           orderId: formData.orderId,
@@ -333,7 +348,7 @@ export default function ReturnsPage() {
 
       const result = await response.json()
       
-      if (result.success) {
+  if (result.success) {
         toast.success('Solicitação de troca/devolução enviada com sucesso!')
         setShowSuccess(true)
         setFormData({
@@ -349,8 +364,19 @@ export default function ReturnsPage() {
           description: '',
           photos: []
         })
-        loadReturnRequests()
+        await loadReturnRequests()
         setActiveTab('list')
+        // Abrir chat automaticamente em Minhas Solicitações
+        try {
+          const newId = result.data?.id
+          if (newId) {
+            const email = formData.userEmail || ''
+            setTimeout(() => {
+              const q = new URLSearchParams({ open: newId, email }).toString()
+              router.push(`/returns/minhas?${q}`)
+            }, 300)
+          }
+        } catch {}
         setTimeout(() => setShowSuccess(false), 3000)
       } else {
         throw new Error(result.message || 'Erro desconhecido')
@@ -798,8 +824,7 @@ export default function ReturnsPage() {
           // Tentar reproduzir
           await audio.play()
           
-          // Atualizar referência
-          audioRef.current = audio
+          // Não atualizar audioRef.current (read-only), usar instância local
           
         } catch (playError) {
           console.error('❌ Erro ao iniciar reprodução:', playError)

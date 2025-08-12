@@ -33,7 +33,23 @@
     "id": "1753385365751",
     "createdAt": "2025-07-24T19:29:25.751Z",
     "status": "completed",
-    "updatedAt": "2025-07-31T09:55:45.992Z"
+    "updatedAt": "2025-08-12T00:19:57.280Z",
+    "messages": [
+      {
+        "id": "1754957995854",
+        "sender": "user",
+        "message": "A",
+        "timestamp": "2025-08-12T00:19:55.854Z",
+        "type": "text"
+      },
+      {
+        "id": "1754957997280",
+        "sender": "user",
+        "message": "a",
+        "timestamp": "2025-08-12T00:19:57.280Z",
+        "type": "text"
+      }
+    ]
   },
   {
     "name": "ana beatriz de vasconcelos",
@@ -103,5 +119,67 @@
     "createdAt": "2025-08-11T18:43:02.581Z",
     "status": "pending",
     "reviewed": false
+  },
+  {
+    "id": "1754944937991",
+    "name": "Administrador",
+    "phone": "85988286178",
+    "rg": "1111111",
+    "cause": "1aaaaaaa",
+    "moment": "11111111",
+    "period": "manha",
+    "additionalInfo": "a",
+    "userId": "admin-user",
+    "userEmail": "admin",
+    "createdAt": "2025-08-11T20:42:17.991Z",
+    "status": "completed",
+    "reviewed": false,
+    "messages": [
+      {
+        "id": "1754948100043",
+        "sender": "user",
+        "message": "a",
+        "timestamp": "2025-08-11T21:35:00.043Z",
+        "type": "text"
+      },
+      {
+        "id": "1754948110612",
+        "sender": "admin",
+        "message": "a oq",
+        "timestamp": "2025-08-11T21:35:10.612Z",
+        "type": "text"
+      },
+      {
+        "id": "1754948117158",
+        "sender": "user",
+        "message": "q oq",
+        "timestamp": "2025-08-11T21:35:17.158Z",
+        "type": "text"
+      },
+      {
+        "id": "1754948134576",
+        "sender": "user",
+        "message": "Áudio enviado",
+        "timestamp": "2025-08-11T21:35:34.587Z",
+        "type": "audio",
+        "mediaUrl": "/api/uploads/chat/1754944937991_1754948134576.wav",
+        "mediaName": "audio.wav"
+      },
+      {
+        "id": "1754948141658",
+        "sender": "user",
+        "message": "a",
+        "timestamp": "2025-08-11T21:35:41.658Z",
+        "type": "text"
+      },
+      {
+        "id": "1754948147105",
+        "sender": "user",
+        "message": "s",
+        "timestamp": "2025-08-11T21:35:47.105Z",
+        "type": "text"
+      }
+    ],
+    "updatedAt": "2025-08-11T21:35:49.860Z"
   }
 ]

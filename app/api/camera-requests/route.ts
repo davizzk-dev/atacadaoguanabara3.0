@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 
 const dataPath = join(process.cwd(), 'data', 'camera-requests.json')
 
@@ -115,14 +117,52 @@ export async function POST(request: NextRequest) {
 }
 
 // GET - Listar solicitações de câmera
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     console.log('[API/camera-requests][GET] chamada recebida')
     ensureDataFile()
     const data = readFileSync(dataPath, 'utf-8')
     const requests = JSON.parse(data)
-    
-    return NextResponse.json({ success: true, data: requests })
+
+    // Identificar usuário/admin
+    let userEmail = null
+    let userId = null
+    let isAdmin = false
+
+    // Tenta NextAuth primeiro
+    try {
+      const session = await getServerSession(authOptions)
+      if (session?.user?.email) {
+        userEmail = session.user.email
+        userId = session.user.id || null
+        if (userEmail === 'davikalebe20020602@gmail.com') isAdmin = true
+      }
+    } catch (e) {
+      // ignora
+    }
+
+    // Permitir bypass para admin via header (suporte ao admin do painel sem NextAuth)
+    const adminHeader = request.headers.get('x-admin')
+    if (adminHeader && adminHeader.toLowerCase() === 'true') {
+      isAdmin = true
+    }
+
+    // Se não for admin, tenta pegar do header (fallback para usuário comum)
+    if (!isAdmin && !userEmail) {
+      userEmail = request.headers.get('x-user-email')
+      userId = request.headers.get('x-user-id')
+    }
+
+    let filtered = requests
+    if (!isAdmin && userEmail) {
+      filtered = requests.filter((r:any) => r.userEmail === userEmail || r.userId === userId)
+    }
+    if (!isAdmin && !userEmail) {
+      // Não autenticado: não retorna nada
+      filtered = []
+    }
+
+    return NextResponse.json({ success: true, data: filtered })
   } catch (error: any) {
     console.error('[API/camera-requests][GET] Erro:', error, error?.stack)
     return NextResponse.json({

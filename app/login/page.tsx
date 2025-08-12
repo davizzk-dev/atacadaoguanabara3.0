@@ -18,7 +18,7 @@ function LoginContent() {
   const [error, setError] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
-  const callback = searchParams.get('callback') || '/'
+  const callback = searchParams.get('callbackUrl') || searchParams.get('callback') || '/'
   const { login } = useAuthStore()
   const [animateRegister, setAnimateRegister] = useState(false)
   const [isAdminMode, setIsAdminMode] = useState(false)

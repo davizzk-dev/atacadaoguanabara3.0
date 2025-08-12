@@ -178,8 +178,63 @@
         "message": "s",
         "timestamp": "2025-08-11T21:35:47.105Z",
         "type": "text"
+      },
+      {
+        "id": "1754963774661",
+        "sender": "user",
+        "message": "a",
+        "timestamp": "2025-08-12T01:56:14.661Z",
+        "type": "text"
+      },
+      {
+        "id": "1754963777704",
+        "sender": "user",
+        "message": "a",
+        "timestamp": "2025-08-12T01:56:17.704Z",
+        "type": "text"
+      },
+      {
+        "id": "1754998646712",
+        "sender": "user",
+        "message": "📷🙏👍👍",
+        "timestamp": "2025-08-12T11:37:26.712Z",
+        "type": "text"
+      },
+      {
+        "id": "1754998654353",
+        "sender": "user",
+        "message": "Quero entender o status da minha solicitação.",
+        "timestamp": "2025-08-12T11:37:34.353Z",
+        "type": "text"
+      },
+      {
+        "id": "1754998678030",
+        "sender": "user",
+        "message": "Áudio enviado",
+        "timestamp": "2025-08-12T11:37:58.038Z",
+        "type": "audio",
+        "mediaUrl": "/api/uploads/chat/1754944937991_1754998678030.wav",
+        "mediaName": "audio.wav"
+      },
+      {
+        "id": "1754998709249",
+        "sender": "user",
+        "message": "Áudio enviado",
+        "timestamp": "2025-08-12T11:38:29.275Z",
+        "type": "audio",
+        "mediaUrl": "/api/uploads/chat/1754944937991_1754998709249.wav",
+        "mediaName": "audio.wav"
+      },
+      {
+        "id": "1754998731225",
+        "sender": "user",
+        "message": "Imagem enviada",
+        "timestamp": "2025-08-12T11:38:51.233Z",
+        "type": "image",
+        "mediaUrl": "/api/uploads/chat/1754944937991_1754998731225.png",
+        "mediaName": "com o.png"
       }
     ],
-    "updatedAt": "2025-08-11T21:35:49.860Z"
+    "updatedAt": "2025-08-12T11:38:51.233Z"
   }
 ]

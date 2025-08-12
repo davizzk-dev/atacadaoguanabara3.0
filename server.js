@@ -14,8 +14,63 @@ const app = express();
 
 app.use(cors());
 
-// Carregar variáveis de ambiente PRIMEIRO
-require('dotenv').config({ path: '.env.local' });
+// Carregar variáveis de ambiente PRIMEIRO (usar caminho absoluto para evitar falhas)
+const envPath = path.join(__dirname, '.env.local');
+// Robust env load: parse and set manually with override semantics
+try {
+  const exists = fs.existsSync(envPath);
+  if (exists) {
+    const dotenv = require('dotenv');
+    const buf = fs.readFileSync(envPath);
+    let raw = '';
+    // Detect BOM/encoding
+    if (buf.length >= 2 && buf[0] === 0xFF && buf[1] === 0xFE) {
+      // UTF-16 LE
+      raw = buf.toString('utf16le');
+    } else if (buf.length >= 3 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) {
+      // UTF-8 BOM
+      raw = buf.toString('utf8');
+    } else {
+      // Try UTF-8 by default
+      raw = buf.toString('utf8');
+      // Fallback: if no keys parsed and it looks like UTF-16 text (lots of NULs), try utf16le
+      if (/\u0000/.test(raw)) {
+        raw = buf.toString('utf16le');
+      }
+    }
+    let parsed = {};
+    try { parsed = dotenv.parse(raw); } catch {}
+    let keys = Object.keys(parsed || {});
+    // If zero keys but file contains equals signs, try normalizing line endings and re-parsing
+    if (keys.length === 0 && /\w+=/.test(raw)) {
+      const normalized = raw.replace(/\r\n?/g, '\n');
+      try { parsed = dotenv.parse(normalized); keys = Object.keys(parsed || {}); } catch {}
+    }
+    // If we successfully parsed but file wasn't UTF-8, rewrite as UTF-8 to avoid future issues
+    if (keys.length > 0) {
+      for (const k of keys) {
+        process.env[k] = parsed[k];
+      }
+      // Optionally persist UTF-8 normalized file if not already
+      try {
+        const current = fs.readFileSync(envPath, 'utf8');
+        // Heuristic: if current contains NULs or BOM, rewrite
+        if (/\u0000/.test(current) || current.charCodeAt(0) === 0xFEFF) {
+          fs.writeFileSync(envPath, Object.entries(parsed).map(([k,v]) => `${k}=${v}`).join('\r\n') + '\r\n', { encoding: 'utf8' });
+          console.log('🧹 .env.local normalizado para UTF-8');
+        }
+      } catch {}
+    }
+    console.log(`🔧 .env.local: carregado (${keys.length} chaves) -> ${envPath}`);
+  } else {
+    console.log(`🔧 .env.local: NÃO encontrado -> ${envPath}`);
+  }
+} catch (e) {
+  console.warn('⚠️ Falha ao carregar .env.local:', e?.message || e);
+}
+console.log('🔧 NEXTAUTH_URL:', process.env.NEXTAUTH_URL || 'não definido');
+console.log('🔧 GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? '✅ presente' : '❌ ausente');
+console.log('🔧 GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? '✅ presente' : '❌ ausente');
 
 // Definir porta para Next.js ANTES de importar o Next
 process.env.PORT = 3005;

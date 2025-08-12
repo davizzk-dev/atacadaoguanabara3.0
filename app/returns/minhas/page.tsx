@@ -61,9 +61,18 @@ function MinhasDevolucoesInner() {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
-          <RefreshCw className="w-6 h-6 text-orange-600" /> Minhas Solicitações de Troca/Devolução
-        </h1>
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <RefreshCw className="w-6 h-6 text-orange-600" /> Minhas Solicitações de Troca/Devolução
+          </h1>
+          <button
+            onClick={() => router.push("/")}
+            aria-label="Voltar ao início"
+            className="px-3 py-2 text-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50"
+          >
+            Voltar ao início
+          </button>
+        </div>
         {loading ? (
           <div className="text-center text-gray-500">Carregando...</div>
         ) : requests.length === 0 ? (
@@ -104,17 +113,22 @@ function MinhasDevolucoesInner() {
               onMessageSent={() => {
                 // Recarrega lista para trazer novas mensagens imediatamente
                 setLoading(true)
-                fetch("/api/return-requests", {
-                  headers: {
-                    "x-user-email": user.email,
-                    "x-user-id": user.id,
-                  },
+                const emailParam = searchParams?.get('email')
+                const headers: Record<string, string> = {}
+                if (user?.email) headers["x-user-email"] = user.email
+                if (user?.id) headers["x-user-id"] = user.id
+                if (!user && emailParam) headers["x-user-email"] = emailParam as string
+
+                fetch(`/api/return-requests?t=${Date.now()}`, {
+                  headers,
+                  cache: 'no-store'
                 })
                   .then((res) => res.json())
                   .then((data) => setRequests(Array.isArray(data.data) ? data.data : []))
                   .finally(() => setLoading(false))
               }}
               sender="user"
+              onBack={() => setSelectedId(null)}
             />
           </div>
         )}

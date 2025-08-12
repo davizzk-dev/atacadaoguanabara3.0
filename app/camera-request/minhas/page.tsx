@@ -29,11 +29,12 @@ export default function MinhasCameraRequests() {
       return;
     }
     setLoading(true);
-    fetch("/api/camera-requests", {
+    fetch(`/api/camera-requests?t=${Date.now()}`, {
       headers: {
         "x-user-email": user.email,
         "x-user-id": user.id,
       },
+      cache: 'no-store'
     })
       .then((res) => res.json())
       .then((data) => setRequests(Array.isArray(data.data) ? data.data : []))
@@ -47,9 +48,18 @@ export default function MinhasCameraRequests() {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
-          <Camera className="w-6 h-6 text-orange-600" /> Minhas Solicitações de Câmera
-        </h1>
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Camera className="w-6 h-6 text-orange-600" /> Minhas Solicitações de Câmera
+          </h1>
+          <button
+            onClick={() => router.push("/")}
+            aria-label="Voltar ao início"
+            className="px-3 py-2 text-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50"
+          >
+            Voltar ao início
+          </button>
+        </div>
         {loading ? (
           <div className="text-center text-gray-500">Carregando...</div>
         ) : requests.length === 0 ? (
@@ -88,6 +98,20 @@ export default function MinhasCameraRequests() {
               requestStatus={requests.find((r) => r.id === selectedId)?.status || "pending"}
               onStatusChange={() => {}}
               sender="user"
+              onBack={() => setSelectedId(null)}
+              onMessageSent={() => {
+                setLoading(true)
+                fetch(`/api/camera-requests?t=${Date.now()}`, {
+                  headers: {
+                    "x-user-email": user!.email,
+                    "x-user-id": user!.id,
+                  },
+                  cache: 'no-store'
+                })
+                  .then((res) => res.json())
+                  .then((data) => setRequests(Array.isArray(data.data) ? data.data : []))
+                  .finally(() => setLoading(false))
+              }}
             />
           </div>
         )}

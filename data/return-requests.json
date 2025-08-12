@@ -568,8 +568,91 @@
         "type": "audio",
         "mediaUrl": "/api/uploads/chat/1754962309477_1754962740331.wav",
         "mediaName": "audio.wav"
+      },
+      {
+        "id": "1754963285949",
+        "sender": "user",
+        "message": "a",
+        "timestamp": "2025-08-12T01:48:05.949Z",
+        "type": "text"
+      },
+      {
+        "id": "1754963695043",
+        "sender": "user",
+        "message": "Áudio enviado",
+        "timestamp": "2025-08-12T01:54:55.057Z",
+        "type": "audio",
+        "mediaUrl": "/api/uploads/chat/1754962309477_1754963695043.wav",
+        "mediaName": "audio.wav"
+      },
+      {
+        "id": "1754963715075",
+        "sender": "user",
+        "message": "Áudio enviado",
+        "timestamp": "2025-08-12T01:55:15.084Z",
+        "type": "audio",
+        "mediaUrl": "/api/uploads/chat/1754962309477_1754963715075.wav",
+        "mediaName": "audio.wav"
+      },
+      {
+        "id": "1754963754834",
+        "sender": "user",
+        "message": "Imagem enviada",
+        "timestamp": "2025-08-12T01:55:54.841Z",
+        "type": "image",
+        "mediaUrl": "/api/uploads/chat/1754962309477_1754963754834.png",
+        "mediaName": "descartáveis..png"
+      },
+      {
+        "id": "1754998837901",
+        "sender": "admin",
+        "message": "Olá! Preciso de ajuda com meu pedido.",
+        "timestamp": "2025-08-12T11:40:37.901Z",
+        "type": "text"
+      },
+      {
+        "id": "1754998992129",
+        "sender": "user",
+        "message": "a",
+        "timestamp": "2025-08-12T11:43:12.130Z",
+        "type": "text"
+      },
+      {
+        "id": "1754999197493",
+        "sender": "admin",
+        "message": "bo",
+        "timestamp": "2025-08-12T11:46:37.493Z",
+        "type": "text"
+      },
+      {
+        "id": "1754999564379",
+        "sender": "user",
+        "message": "Q",
+        "timestamp": "2025-08-12T11:52:44.379Z",
+        "type": "text"
+      },
+      {
+        "id": "1754999568676",
+        "sender": "user",
+        "message": "A",
+        "timestamp": "2025-08-12T11:52:48.676Z",
+        "type": "text"
+      },
+      {
+        "id": "1754999574665",
+        "sender": "admin",
+        "message": "QQQ",
+        "timestamp": "2025-08-12T11:52:54.665Z",
+        "type": "text"
+      },
+      {
+        "id": "1754999577666",
+        "sender": "admin",
+        "message": "QQQ",
+        "timestamp": "2025-08-12T11:52:57.666Z",
+        "type": "text"
       }
     ],
-    "updatedAt": "2025-08-12T01:39:00.341Z"
+    "updatedAt": "2025-08-12T11:52:57.666Z"
   }
 ]

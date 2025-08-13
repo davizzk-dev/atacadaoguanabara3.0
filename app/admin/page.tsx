@@ -850,12 +850,52 @@ export default function AdminPage() {
     }
   }
 
-  // Funções de filtro
+  // Funções de filtro melhoradas
   const filteredProducts = products.filter(product => {
-    const matchesSearch = searchTerm === '' || 
-      product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category?.toLowerCase().includes(searchTerm.toLowerCase())
+    if (!searchTerm || searchTerm === '') return selectedCategory === 'all' || product.category === selectedCategory
+    
+    const searchLower = searchTerm.toLowerCase().trim()
+    const searchWords = searchLower.split(' ').filter(word => word.length > 0)
+    
+    // Função para normalizar texto (remover acentos)
+    const normalizeText = (text: string) => {
+      return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    }
+    
+    // Criar texto completo do produto para busca (normalizado)
+    const productText = normalizeText([
+      product.name?.toLowerCase() || '',
+      product.brand?.toLowerCase() || '',
+      product.category?.toLowerCase() || '',
+      product.description?.toLowerCase() || '',
+      product.id?.toString() || '',
+      product.tags?.join(' ')?.toLowerCase() || ''
+    ].join(' '))
+    
+    // Normalizar termo de busca também
+    const normalizedSearchTerm = normalizeText(searchLower)
+    const normalizedSearchWords = searchWords.map(word => normalizeText(word))
+    
+    // Verificar se contém o termo completo
+    const containsFullTerm = productText.includes(normalizedSearchTerm)
+    
+    // Verificar se contém todas as palavras da busca
+    const containsAllWords = normalizedSearchWords.every(word => productText.includes(word))
+    
+    // Match se contém o termo completo OU todas as palavras
+    const matchesSearch = containsFullTerm || containsAllWords
+    
+    // Debug para primeiros produtos quando há busca
+    if (searchTerm && products.indexOf(product) < 3) {
+      console.log(`🔍 Debug busca "${searchTerm}":`, {
+        produto: product.name,
+        texto: productText,
+        busca: normalizedSearchTerm,
+        matchFullTerm: containsFullTerm,
+        matchAllWords: containsAllWords,
+        finalMatch: matchesSearch
+      })
+    }
     
     const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory
     
@@ -1796,7 +1836,7 @@ function PromotionForm({
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Pesquisar produtos, pedidos, usuários..."
+                  placeholder="🔍 Pesquisar por nome, marca, categoria, ID... (ex: arroz, coca-cola, 1276)"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"

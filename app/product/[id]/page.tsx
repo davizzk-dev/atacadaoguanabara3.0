@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import Header from "@/components/header"
 import { Footer } from "@/components/footer"
@@ -12,8 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { products } from "@/lib/data"
 import { useCartStore, useFavoritesStore } from "@/lib/store"
 import { Heart, Share2, ShoppingCart, Truck, Shield, RotateCcw, Check, ArrowLeft } from "lucide-react"
-import Image from "next/image"
-import Link from "next/link"
+// Note: using native <img> and <a> to avoid type issues across workspaces
+ 
 
 export default function ProductPage() {
   const params = useParams()
@@ -25,8 +25,23 @@ export default function ProductPage() {
   const [quantity, setQuantity] = useState(1)
   const [showAddAnimation, setShowAddAnimation] = useState(false)
   const [showNotification, setShowNotification] = useState(false)
+  const [whatsNumber, setWhatsNumber] = useState<string | null>(null)
 
   const relatedProducts = products.filter((p) => p.category === product?.category && p.id !== productId).slice(0, 4)
+
+  // Carrega número do WhatsApp de settings via API
+  useEffect(() => {
+    let mounted = true
+    if (!whatsNumber) {
+      fetch('/api/settings')
+        .then((r) => r.json())
+        .then((s) => {
+          if (mounted && s?.whatsapp_number) setWhatsNumber(String(s.whatsapp_number))
+        })
+        .catch(() => {})
+    }
+    return () => { mounted = false }
+  }, [whatsNumber])
 
   if (!product) {
     return (
@@ -70,6 +85,29 @@ export default function ProductPage() {
     }
   }
 
+  const handleShareWhatsApp = () => {
+    const price = `R$ ${product.price.toFixed(2)}`
+    const unit = product.unit ? ` (${product.unit})` : ""
+    const store = "Atacadão Guanabara"
+    const productUrl = typeof window !== 'undefined' ? window.location.href : ''
+    const text = [
+      "🛒 Olá! Gostaria de mais informações e disponibilidade deste produto: ",
+      `• Produto: ${product.name}${unit}`,
+      product.brand ? `• Marca: ${product.brand}` : null,
+      `• Preço: ${price}`,
+      product.category ? `• Categoria: ${product.category}` : null,
+      productUrl ? `• Link: ${productUrl}` : null,
+      "",
+      `Agradeço desde já! ${store} 🙏✨`
+    ].filter(Boolean).join("\n")
+
+    const phone = whatsNumber || '5585985147067'
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
+    if (typeof window !== 'undefined') {
+      window.open(url, '_blank')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -87,12 +125,12 @@ export default function ProductPage() {
       <div className="container mx-auto px-4 py-8">
         {/* Botão Voltar ao Catálogo */}
         <div className="mb-6">
-          <Link href="/catalog">
+          <a href="/catalog">
             <Button variant="outline" className="flex items-center gap-2">
               <ArrowLeft className="w-4 h-4" />
               Voltar ao Catálogo
             </Button>
-          </Link>
+          </a>
         </div>
 
         {/* Breadcrumb */}
@@ -106,7 +144,7 @@ export default function ProductPage() {
           {/* Images */}
           <div className="space-y-4">
             <div className="aspect-square bg-white rounded-2xl shadow-lg overflow-hidden">
-              <Image
+              <img
                 src={product.image || "/placeholder.svg"}
                 alt={product.name}
                 width={600}
@@ -125,7 +163,7 @@ export default function ProductPage() {
                   }`}
                   onClick={() => setSelectedImage(i)}
                 >
-                  <Image
+                  <img
                     src={product.image || "/placeholder.svg"}
                     alt={`${product.name} ${i + 1}`}
                     width={150}
@@ -243,7 +281,7 @@ export default function ProductPage() {
                   <Heart className={`h-5 w-5 ${isFavorite(product.id) ? "fill-current" : ""}`} />
                 </Button>
 
-                <Button variant="outline" className="px-6 py-4 bg-transparent">
+                <Button variant="outline" className="px-6 py-4 bg-transparent" onClick={handleShareWhatsApp} title="Compartilhar no WhatsApp">
                   <Share2 className="h-5 w-5" />
                 </Button>
               </div>
@@ -305,22 +343,25 @@ export default function ProductPage() {
 
               <TabsContent value="details" className="p-6">
                 <div className="space-y-4">
-                  <h3 className="text-xl font-bold">Informações do Produto</h3>
+                  <h3 className="text-xl font-bold">Informações que importam para você</h3>
                   <div>
-                    <h4 className="font-semibold mb-2">Especificações</h4>
+                    <h4 className="font-semibold mb-2">Especificações principais</h4>
                     <ul className="space-y-2 text-gray-700">
-                      <li>
-                        <strong>Marca:</strong> {product.brand}
-                      </li>
-                      <li>
-                        <strong>Categoria:</strong> {product.category}
-                      </li>
-                      <li>
-                        <strong>Unidade:</strong> {product.unit}
-                      </li>
-                      <li>
-                        <strong>Código:</strong> {product.id}
-                      </li>
+                      {product.brand && (
+                        <li>
+                          <strong>Marca:</strong> {product.brand}
+                        </li>
+                      )}
+                      {product.unit && (
+                        <li>
+                          <strong>Unidade:</strong> {product.unit}
+                        </li>
+                      )}
+                      {product.category && (
+                        <li>
+                          <strong>Categoria:</strong> {product.category}
+                        </li>
+                      )}
                     </ul>
                   </div>
                 </div>

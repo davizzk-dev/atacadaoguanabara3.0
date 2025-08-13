@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useParams } from "next/navigation"
-import { ArrowLeft, Heart, ShoppingCart, Minus, Plus, Share2, Star, Package, Barcode, Hash, Eye } from "lucide-react"
+import { ArrowLeft, Heart, ShoppingCart, Minus, Plus, Share2, Star, Package, Barcode, Hash, Eye, TrendingDown, Calculator } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,15 +11,31 @@ import type { Product } from "@/lib/types"
 import { useCartStore, useFavoritesStore } from "@/lib/store"
 import { ProductCard } from "@/components/product-card"
 
+interface PriceData {
+  id: number
+  precoVenda1: number
+  precoOferta1: number
+  precoVenda2: number
+  precoOferta2: number
+  quantidadeMinimaPreco2: number
+  precoVenda3: number
+  precoOferta3: number
+  quantidadeMinimaPreco3: number
+  descontoMaximo: number
+  permiteDesconto: boolean
+}
+
 export default function ProductPage() {
   const params = useParams()
   const productId = params.id as string
   const [product, setProduct] = useState<Product | null>(null)
+  const [priceData, setPriceData] = useState<PriceData | null>(null)
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [quantity, setQuantity] = useState(1)
   const [isAdding, setIsAdding] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [currentPrice, setCurrentPrice] = useState(0)
   const confettiRef = useRef<HTMLCanvasElement | null>(null)
 
   const { addItem, items } = useCartStore()
@@ -101,6 +117,98 @@ export default function ProductPage() {
             category: foundProduct.category
           })
           setProduct(foundProduct)
+          setCurrentPrice(foundProduct.price)
+          
+          // Verificar se o produto tem preços escalonados reais
+          let hasScaledPrices = false
+          
+          // Verificar se tem preços escalonados no formato do Varejo Fácil
+          if (foundProduct.prices && foundProduct.prices.minQuantityPrice2 && foundProduct.prices.minQuantityPrice2 > 1) {
+            const prices = foundProduct.prices
+            console.log('🏷️ PRODUTO COM PREÇOS ESCALONADOS ENCONTRADO!', {
+              id: foundProduct.id,
+              name: foundProduct.name,
+              prices: prices
+            })
+            setPriceData({
+              id: 0,
+              precoVenda1: prices.price1 || foundProduct.price,
+              precoOferta1: prices.offerPrice1 || 0,
+              precoVenda2: prices.price2 || 0,
+              precoOferta2: prices.offerPrice2 || 0,
+              quantidadeMinimaPreco2: prices.minQuantityPrice2 || 0,
+              precoVenda3: prices.price3 || 0,
+              precoOferta3: prices.offerPrice3 || 0,
+              quantidadeMinimaPreco3: prices.minQuantityPrice3 || 0,
+              descontoMaximo: 0,
+              permiteDesconto: false
+            })
+            hasScaledPrices = true
+            console.log('💰 Usando preços escalonados do Varejo Fácil:', prices)
+          } else {
+            console.log('❌ PRODUTO SEM PREÇOS ESCALONADOS', {
+              id: foundProduct.id,
+              name: foundProduct.name,
+              hasPrices: !!foundProduct.prices,
+              minQuantity: foundProduct.prices?.minQuantityPrice2,
+              prices: foundProduct.prices
+            })
+          }
+          
+          // Fallback: Usar preços escalonados se disponíveis nos dados sincronizados E válidos
+          if (!hasScaledPrices && (foundProduct as any).scaledPrices) {
+            const scaledPrices = (foundProduct as any).scaledPrices
+            // Só considera como preços escalonados se realmente há uma quantidade mínima para preço 2
+            if (scaledPrices.price2?.quantidadeMinima && scaledPrices.price2.quantidadeMinima > 1) {
+              setPriceData({
+                id: 0,
+                precoVenda1: scaledPrices.price1.precoVenda,
+                precoOferta1: scaledPrices.price1.precoOferta,
+                precoVenda2: scaledPrices.price2.precoVenda,
+                precoOferta2: scaledPrices.price2.precoOferta,
+                quantidadeMinimaPreco2: scaledPrices.price2.quantidadeMinima,
+                precoVenda3: scaledPrices.price3?.precoVenda || 0,
+                precoOferta3: scaledPrices.price3?.precoOferta || 0,
+                quantidadeMinimaPreco3: scaledPrices.price3?.quantidadeMinima || 0,
+                descontoMaximo: scaledPrices.descontoMaximo || 0,
+                permiteDesconto: scaledPrices.permiteDesconto || false
+              })
+              hasScaledPrices = true
+              console.log('💰 Usando preços escalonados dos dados sincronizados:', scaledPrices)
+            }
+          }
+          
+          // Se não tem preços escalonados sincronizados, buscar da API como fallback
+          if (!hasScaledPrices) {
+            try {
+              const pricesResponse = await fetch(`/api/product-prices?q=produtoId==${foundProduct.id}`, {
+                cache: 'no-store'
+              })
+              
+              if (pricesResponse.ok) {
+                const pricesData = await pricesResponse.json()
+                if (pricesData.success && pricesData.data?.items?.length > 0) {
+                  const priceInfo = pricesData.data.items[0]
+                  // Só usar se realmente há quantidade mínima para preço 2
+                  if (priceInfo.quantidadeMinimaPreco2 && priceInfo.quantidadeMinimaPreco2 > 1) {
+                    setPriceData(priceInfo)
+                    console.log('💰 Preços escalonados encontrados via API:', priceInfo)
+                  } else {
+                    console.log('ℹ️ Produto não possui preços escalonados válidos via API')
+                  }
+                } else {
+                  console.log('ℹ️ Nenhum preço escalonado encontrado via API')
+                }
+              }
+            } catch (error) {
+              console.log('⚠️ Erro ao buscar preços escalonados:', error)
+            }
+          }
+          
+          // Se não encontrou preços escalonados válidos, garantir que priceData seja null
+          if (!hasScaledPrices) {
+            console.log('ℹ️ Produto possui preço único (sem preços escalonados)')
+          }
           
           // Buscar produtos relacionados da mesma categoria (dados reais)
           const related = products
@@ -129,6 +237,34 @@ export default function ProductPage() {
 
     fetchProduct()
   }, [productId])
+
+  // Calcular preço baseado na quantidade
+  useEffect(() => {
+    if (!product) return
+
+    let newPrice = product.price
+    
+    // Só usar preços escalonados se realmente existirem e forem válidos
+    if (priceData && priceData.quantidadeMinimaPreco2 && priceData.quantidadeMinimaPreco2 > 1) {
+      // Verificar se quantidade atinge preço 3
+      if (priceData.quantidadeMinimaPreco3 && priceData.quantidadeMinimaPreco3 > 1 && quantity >= priceData.quantidadeMinimaPreco3) {
+        newPrice = priceData.precoOferta3 || priceData.precoVenda3 || product.price
+      }
+      // Verificar se quantidade atinge preço 2
+      else if (quantity >= priceData.quantidadeMinimaPreco2) {
+        newPrice = priceData.precoOferta2 || priceData.precoVenda2 || product.price
+      }
+      // Usar preço padrão (preço 1) 
+      else {
+        newPrice = priceData.precoOferta1 || priceData.precoVenda1 || product.price
+      }
+    } else {
+      // Produto sem preços escalonados - usar preço único
+      newPrice = product.price
+    }
+
+    setCurrentPrice(newPrice)
+  }, [quantity, priceData, product])
 
   const handleAddToCart = async () => {
     if (!product) return
@@ -173,25 +309,31 @@ export default function ProductPage() {
 
   const handleToggleFavorite = () => {
     if (product) {
-    if (isFavorite(product.id)) {
-      removeFavorite(product.id)
-    } else {
-      addFavorite(product.id)
+      if (isFavorite(product.id)) {
+        removeFavorite(product.id)
+      } else {
+        addFavorite(product.id)
+      }
     }
-  }
   }
 
   const cartItem = items.find((item) => item.product.id === productId)
   const cartQuantity = cartItem?.quantity || 0
 
   if (loading) {
-  return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-blue-600 font-semibold">Carregando produto do Varejo Fácil...</p>
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-white/80 backdrop-blur shadow-lg border border-gray-100">
+          <img src="https://i.ibb.co/fGSnH3hd/logoatacad-o.jpg" alt="Atacadão Guanabara" className="w-24 h-24 rounded-xl object-cover" />
+          <div className="flex items-center gap-3">
+            <div className="w-5 h-5 rounded-full border-2 border-green-500 border-t-transparent animate-spin" />
+            <p className="text-gray-700 font-semibold">Carregando produto — Atacadão Guanabara</p>
           </div>
+          <p className="text-sm text-gray-500 text-center max-w-md">
+            Estamos preparando as melhores ofertas para você. Obrigado pela preferência! 🛒✨
+          </p>
         </div>
+      </div>
     )
   }
 
@@ -213,10 +355,10 @@ export default function ProductPage() {
   }
 
   return (
-  <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="container mx-auto px-4 py-8">
-    {/* Confetti canvas (top overlay) */}
-    <canvas ref={confettiRef} className="fixed top-16 left-0 right-0 pointer-events-none z-[70]" style={{ height: 180 }} />
+        {/* Confetti canvas (top overlay) */}
+        <canvas ref={confettiRef} className="fixed top-16 left-0 right-0 pointer-events-none z-[70]" style={{ height: 180 }} />
         {/* Header com navegação */}
         <div className="flex items-center justify-between mb-8">
           <Link href="/catalog">
@@ -243,8 +385,8 @@ export default function ProductPage() {
             <Button variant="outline" size="icon" className="border-blue-200">
               <Share2 className="w-4 h-4" />
             </Button>
-            </div>
           </div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
           {/* Imagem do produto */}
@@ -272,31 +414,152 @@ export default function ProductPage() {
               <p className="text-xl text-blue-600 font-semibold">{product.brand}</p>
             </div>
 
-            {/* Preço */}
-            <div className="flex items-center gap-4">
-              {product.price > 0 ? (
-                <span className="text-4xl font-bold text-blue-600">
-                  R$ {product.price.toFixed(2)}
-                </span>
-              ) : (
-                <span className="text-2xl font-bold text-gray-500">
-                  Consulte o preço
-                </span>
-              )}
-              
-              {product.originalPrice && product.originalPrice > product.price && (
-                <>
-                  <span className="text-xl text-gray-400 line-through">
-                    R$ {product.originalPrice.toFixed(2)}
-                  </span>
-                  <Badge className="bg-red-500 text-white">
-                    {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
-                  </Badge>
-                </>
-              )}
-              <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold border border-blue-200">
-                por {product.unit}
-              </span>
+            {/* Preços */}
+            <div className="space-y-4">
+              {/* Preço Principal */}
+              <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
+                <div className="flex items-center gap-4 mb-4">
+                  {currentPrice > 0 ? (
+                    <span className="text-4xl font-bold text-blue-600">
+                      R$ {currentPrice.toFixed(2)}
+                    </span>
+                  ) : (
+                    <span className="text-2xl font-bold text-gray-500">
+                      Consulte o preço
+                    </span>
+                  )}
+                  
+                  {product.originalPrice && product.originalPrice > currentPrice && (
+                    <>
+                      <span className="text-xl text-gray-500 line-through">
+                        R$ {product.originalPrice.toFixed(2)}
+                      </span>
+                      <Badge className="bg-red-100 text-red-800 border-red-200">
+                        {Math.round((1 - currentPrice / product.originalPrice) * 100)}% OFF
+                      </Badge>
+                    </>
+                  )}
+                </div>
+
+                {/* Mensagem de Preços Escalonados - Visual e Atrativa */}
+                {priceData && priceData.quantidadeMinimaPreco2 && priceData.quantidadeMinimaPreco2 > 1 && (
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-4 shadow-lg">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                        <span className="text-white font-bold text-sm">💰</span>
+                      </div>
+                      <h3 className="text-lg font-bold text-green-800">Preços Especiais por Quantidade!</h3>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {/* Preço atual ativo */}
+                      <div className={`flex items-center justify-between p-3 rounded-lg transition-all ${
+                        quantity < (priceData.quantidadeMinimaPreco2 || 0) 
+                          ? 'bg-blue-100 border-2 border-blue-300 shadow-md' 
+                          : 'bg-gray-100 border border-gray-300'
+                      }`}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-blue-600 font-bold">📦</span>
+                          <span className="font-semibold text-gray-700">
+                            1 - {(priceData.quantidadeMinimaPreco2 || 2) - 1} unidades
+                          </span>
+                          {quantity < (priceData.quantidadeMinimaPreco2 || 0) && (
+                            <Badge className="bg-blue-500 text-white text-xs">ATUAL</Badge>
+                          )}
+                        </div>
+                        <span className="text-lg font-bold text-blue-600">
+                          R$ {(priceData.precoOferta1 || priceData.precoVenda1 || product.price).toFixed(2)}
+                        </span>
+                      </div>
+
+                      {/* Preço com desconto - Destaque especial */}
+                      <div className={`flex items-center justify-between p-3 rounded-lg transition-all ${
+                        quantity >= (priceData.quantidadeMinimaPreco2 || 0) && quantity < (priceData.quantidadeMinimaPreco3 || 999999)
+                          ? 'bg-green-100 border-2 border-green-400 shadow-lg transform scale-[1.02]' 
+                          : 'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-300 hover:shadow-md hover:scale-[1.01] cursor-pointer'
+                      }`}
+                      onClick={() => priceData.quantidadeMinimaPreco2 && setQuantity(priceData.quantidadeMinimaPreco2)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-green-600 font-bold">🎯</span>
+                          <div>
+                            <div className="font-semibold text-gray-700">
+                              A partir de {priceData.quantidadeMinimaPreco2} unidades
+                            </div>
+                            <div className="text-xs text-green-700 font-medium">
+                              Economia de R$ {((priceData.precoOferta1 || priceData.precoVenda1 || product.price) - (priceData.precoOferta2 || priceData.precoVenda2 || product.price)).toFixed(2)} por unidade!
+                            </div>
+                          </div>
+                          {quantity >= (priceData.quantidadeMinimaPreco2 || 0) && quantity < (priceData.quantidadeMinimaPreco3 || 999999) && (
+                            <Badge className="bg-green-500 text-white text-xs animate-pulse">ATIVO</Badge>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-green-600">
+                            R$ {(priceData.precoOferta2 || priceData.precoVenda2 || product.price).toFixed(2)}
+                          </div>
+                          <div className="text-xs text-green-700">
+                            Total: R$ {((priceData.precoOferta2 || priceData.precoVenda2 || product.price) * (priceData.quantidadeMinimaPreco2 || 1)).toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Preço com desconto máximo - Se existir */}
+                      {priceData.quantidadeMinimaPreco3 && priceData.quantidadeMinimaPreco3 > 1 && (
+                        <div className={`flex items-center justify-between p-3 rounded-lg transition-all ${
+                          quantity >= (priceData.quantidadeMinimaPreco3 || 0)
+                            ? 'bg-purple-100 border-2 border-purple-400 shadow-lg transform scale-[1.02]' 
+                            : 'bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-300 hover:shadow-md hover:scale-[1.01] cursor-pointer'
+                        }`}
+                        onClick={() => priceData.quantidadeMinimaPreco3 && setQuantity(priceData.quantidadeMinimaPreco3)}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-purple-600 font-bold">🏆</span>
+                            <div>
+                              <div className="font-semibold text-gray-700">
+                                A partir de {priceData.quantidadeMinimaPreco3} unidades
+                              </div>
+                              <div className="text-xs text-purple-700 font-medium">
+                                Máxima economia: R$ {((priceData.precoOferta1 || priceData.precoVenda1 || product.price) - (priceData.precoOferta3 || priceData.precoVenda3 || product.price)).toFixed(2)} por unidade!
+                              </div>
+                            </div>
+                            {quantity >= (priceData.quantidadeMinimaPreco3 || 0) && (
+                              <Badge className="bg-purple-500 text-white text-xs animate-pulse">ATIVO</Badge>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-purple-600">
+                              R$ {(priceData.precoOferta3 || priceData.precoVenda3 || product.price).toFixed(2)}
+                            </div>
+                            <div className="text-xs text-purple-700">
+                              Total: R$ {((priceData.precoOferta3 || priceData.precoVenda3 || product.price) * (priceData.quantidadeMinimaPreco3 || 1)).toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-center gap-2 text-sm text-yellow-800">
+                        <span>💡</span>
+                        <span className="font-medium">
+                          Dica: Clique em qualquer faixa de preço para ajustar automaticamente a quantidade!
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Se não houver preços escalonados, mostrar aviso */}
+                {(!priceData || !priceData.quantidadeMinimaPreco2 || priceData.quantidadeMinimaPreco2 <= 1) && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-sm text-blue-700">
+                      <span>ℹ️</span>
+                      <span>Este produto possui preço único para qualquer quantidade.</span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Descrição */}
@@ -305,70 +568,137 @@ export default function ProductPage() {
               <p className="text-gray-600 leading-relaxed">{product.description}</p>
             </div>
 
-
-
             {/* Controles de quantidade e compra */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <span className="text-sm font-medium text-gray-700">Quantidade:</span>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    disabled={quantity <= 1}
-                    className="w-8 h-8 p-0 border-blue-200"
-                  >
-                    <Minus className="w-4 h-4" />
-                  </Button>
-                  <span className="w-8 text-center font-semibold">{quantity}</span>
-              <Button 
-                variant="outline" 
-                    size="sm"
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="w-8 h-8 p-0 border-blue-200"
-                  >
-                    <Plus className="w-4 h-4" />
-              </Button>
-            </div>
-                {cartQuantity > 0 && (
-                  <span className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                    {cartQuantity} no carrinho
-              </span>
-                )}
-              </div>
-
-                <Button
-                  onClick={handleAddToCart}
-                  disabled={product.price === 0 || !product.inStock || isAdding}
-                  className={`w-full text-white py-3 text-lg font-semibold disabled:bg-gray-400 ${isAdding ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} relative overflow-hidden`}
-                  size="lg"
-                >
-                  {isAdding ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Adicionando...
-                    </span>
-                  ) : (
-                    <span className="flex items-center justify-center">
-                      <ShoppingCart className="w-5 h-5 mr-2" />
-                      {!product.inStock
-                        ? 'Produto fora de estoque'
-                        : product.price > 0
-                        ? `Adicionar ${quantity} ao carrinho`
-                        : 'Preço indisponível'}
-                    </span>
+            <div className="space-y-6">
+              {/* Controle de Quantidade Melhorado */}
+              <div className="bg-white border-2 border-gray-200 rounded-xl p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-lg font-semibold text-gray-800">Selecione a Quantidade:</span>
+                  {/* Indicador de economia atual */}
+                  {priceData?.quantidadeMinimaPreco2 && quantity >= priceData.quantidadeMinimaPreco2 && (
+                    <Badge className="bg-green-500 text-white animate-pulse">
+                      🎉 Economia Ativa!
+                    </Badge>
                   )}
-                </Button>
+                </div>
+                
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      disabled={quantity <= 1}
+                      className="w-10 h-10 p-0 border-gray-300 hover:border-blue-400 hover:bg-blue-50"
+                    >
+                      <Minus className="w-5 h-5" />
+                    </Button>
+                    <div className="w-16 text-center">
+                      <div className="text-2xl font-bold text-gray-800">{quantity}</div>
+                      <div className="text-xs text-gray-500">unidades</div>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setQuantity(quantity + 1)}
+                      className="w-10 h-10 p-0 border-gray-300 hover:border-blue-400 hover:bg-blue-50"
+                    >
+                      <Plus className="w-5 h-5" />
+                    </Button>
+                  </div>
+                  
+                  {/* Botões de quantidade rápida */}
+                  <div className="flex gap-2 flex-wrap">
+                    {priceData?.quantidadeMinimaPreco2 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setQuantity(priceData.quantidadeMinimaPreco2)}
+                        className={`${quantity === priceData.quantidadeMinimaPreco2 ? 'bg-green-100 border-green-400 text-green-700' : 'border-green-300 text-green-600 hover:bg-green-50'}`}
+                      >
+                        {priceData.quantidadeMinimaPreco2}
+                      </Button>
+                    )}
+                    {priceData?.quantidadeMinimaPreco3 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setQuantity(priceData.quantidadeMinimaPreco3)}
+                        className={`${quantity === priceData.quantidadeMinimaPreco3 ? 'bg-purple-100 border-purple-400 text-purple-700' : 'border-purple-300 text-purple-600 hover:bg-purple-50'}`}
+                      >
+                        {priceData.quantidadeMinimaPreco3}
+                      </Button>
+                    )}
+                  </div>
+                </div>
 
-                {showSuccess && (
-                  <div className="fixed top-20 right-4 z-[80] bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg animate-slide-in-up">
-                    ✅ Produto adicionado ao carrinho
+                {/* Resumo do preço atual */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm text-gray-600">Preço unitário atual:</div>
+                      <div className="text-lg font-bold text-blue-600">
+                        R$ {currentPrice.toFixed(2)}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm text-gray-600">Total a pagar:</div>
+                      <div className="text-2xl font-bold text-green-600">
+                        R$ {(currentPrice * quantity).toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Economia calculada */}
+                  {priceData?.precoVenda1 && currentPrice < priceData.precoVenda1 && (
+                    <div className="mt-2 pt-2 border-t border-blue-200">
+                      <div className="text-sm text-green-700 font-medium">
+                        💰 Você está economizando: R$ {((priceData.precoVenda1 - currentPrice) * quantity).toFixed(2)} ({(((priceData.precoVenda1 - currentPrice) / priceData.precoVenda1) * 100).toFixed(0)}% de desconto)
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {cartQuantity > 0 && (
+                  <div className="mt-3 text-center">
+                    <span className="text-sm text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-200">
+                      🛒 {cartQuantity} unidades já no carrinho
+                    </span>
                   </div>
                 )}
-            </div>
               </div>
+
+              <Button
+                onClick={handleAddToCart}
+                disabled={currentPrice === 0 || !product.inStock || isAdding}
+                className={`w-full text-white py-3 text-lg font-semibold disabled:bg-gray-400 ${isAdding ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} relative overflow-hidden`}
+                size="lg"
+              >
+                {isAdding ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Adicionando...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center">
+                    <ShoppingCart className="w-5 h-5 mr-2" />
+                    {!product.inStock
+                      ? 'Produto fora de estoque'
+                      : currentPrice > 0
+                      ? `Adicionar ${quantity} ao carrinho - R$ ${(currentPrice * quantity).toFixed(2)}`
+                      : 'Preço indisponível'}
+                  </span>
+                )}
+              </Button>
+
+              {showSuccess && (
+                <div className="fixed top-20 right-4 z-[80] bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg animate-slide-in-up">
+                  ✅ Produto adicionado ao carrinho
+                </div>
+              )}
             </div>
+          </div>
+        </div>
 
         {/* Detalhes técnicos do Varejo Fácil */}
         <Card className="mb-8 border-blue-200">
@@ -384,9 +714,7 @@ export default function ProductPage() {
                 <Hash className="w-4 h-4 text-blue-500" />
                 <span className="text-sm text-gray-600">ID:</span>
                 <span className="font-semibold">{product.id}</span>
-                </div>
-              
-
+              </div>
 
               <div className="flex items-center gap-2">
                 <Eye className="w-4 h-4 text-blue-500" />
@@ -410,7 +738,7 @@ export default function ProductPage() {
                 </div>
               )}
 
-                            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <Package className="w-4 h-4 text-blue-500" />
                 <span className="text-sm text-gray-600">Unidade:</span>
                 <span className="font-semibold">{product.unit}</span>
@@ -437,7 +765,7 @@ export default function ProductPage() {
                   <Package className="w-4 h-4 text-blue-500" />
                   <span className="text-sm text-gray-600">Peso Líquido:</span>
                   <span className="font-semibold">{(product as any).varejoFacilData.pesoLiquido} kg</span>
-              </div>
+                </div>
               )}
 
               {(product as any).varejoFacilData?.altura && (product as any).varejoFacilData?.largura && (product as any).varejoFacilData?.comprimento && (
@@ -447,7 +775,7 @@ export default function ProductPage() {
                   <span className="font-semibold">
                     {(product as any).varejoFacilData.altura} x {(product as any).varejoFacilData.largura} x {(product as any).varejoFacilData.comprimento} cm
                   </span>
-            </div>
+                </div>
               )}
 
               {(product as any).varejoFacilData?.unidadeDeCompra && (
@@ -455,7 +783,7 @@ export default function ProductPage() {
                   <Package className="w-4 h-4 text-blue-500" />
                   <span className="text-sm text-gray-600">Unidade de Compra:</span>
                   <span className="font-semibold">{(product as any).varejoFacilData.unidadeDeCompra}</span>
-          </div>
+                </div>
               )}
 
               {(product as any).varejoFacilData?.unidadeDeTransferencia && (
@@ -463,7 +791,7 @@ export default function ProductPage() {
                   <Package className="w-4 h-4 text-blue-500" />
                   <span className="text-sm text-gray-600">Unidade de Transferência:</span>
                   <span className="font-semibold">{(product as any).varejoFacilData.unidadeDeTransferencia}</span>
-        </div>
+                </div>
               )}
 
               {(product as any).varejoFacilData?.secaoId && (
@@ -479,7 +807,7 @@ export default function ProductPage() {
                   <Eye className="w-4 h-4 text-blue-500" />
                   <span className="text-sm text-gray-600">Marca ID:</span>
                   <span className="font-semibold">{(product as any).varejoFacilData.marcaId}</span>
-                  </div>
+                </div>
               )}
 
               {(product as any).varejoFacilData?.generoId && (
@@ -497,10 +825,8 @@ export default function ProductPage() {
                   <span className={`font-semibold ${(product as any).varejoFacilData.ativoNoEcommerce ? 'text-green-600' : 'text-red-600'}`}>
                     {(product as any).varejoFacilData.ativoNoEcommerce ? 'Sim' : 'Não'}
                   </span>
-                  </div>
+                </div>
               )}
-
-              
 
               {(product as any).varejoFacilData?.dataAlteracao && (
                 <div className="flex items-center gap-2">
@@ -509,9 +835,9 @@ export default function ProductPage() {
                   <span className="font-semibold">
                     {new Date((product as any).varejoFacilData.dataAlteracao).toLocaleDateString('pt-BR')}
                   </span>
-                        </div>
-              )}
                 </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -532,6 +858,3 @@ export default function ProductPage() {
     </div>
   )
 }
-
-// Add page-scoped styles
-// Using styled-jsx within a fragment is not available here; rely on global Tailwind utilities and minimal keyframes via a style tag in parent layout if needed.

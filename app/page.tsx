@@ -48,6 +48,15 @@ export default function HomePage() {
   const [quantityMap, setQuantityMap] = useState<{ [id: string]: number }>({}) // Para quantidade
   const [modalProduct, setModalProduct] = useState<any | null>(null) // Para modal do olhinho
   const [showCartPopup, setShowCartPopup] = useState(false)
+  const [banners, setBanners] = useState({
+    hero: {
+      title: "Atacadão Guanabara",
+      subtitle: "Os melhores produtos com preços que cabem no seu bolso",
+      image: "/images/hero-banner.jpg",
+      isActive: true
+    },
+    promotional: []
+  })
   const [lastAddTime, setLastAddTime] = useState<number>(0)
   const [productPromotions, setProductPromotions] = useState<Array<{
     id: string
@@ -184,6 +193,19 @@ export default function HomePage() {
           // Usar dados locais como fallback
           setProductPromotions([])
         }
+
+        // Carregar banners
+        console.log('Carregando banners da API...')
+        const bannersResponse = await fetch('/api/banners')
+        if (bannersResponse.ok) {
+          const bannersResult = await bannersResponse.json()
+          if (bannersResult.success) {
+            setBanners(bannersResult.banners)
+            console.log('Banners carregados:', bannersResult.banners)
+          }
+        } else {
+          console.log('Erro ao carregar banners, usando padrão')
+        }
       } catch (error) {
         console.error('Erro ao carregar dados:', error)
         // Usar dados do JSON como fallback
@@ -279,14 +301,11 @@ export default function HomePage() {
                 </Badge>
 
                 <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">
-                  Atacadão{" "}
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-secondary to-secondary-400 animate-float">
-                    Guanabara
-                  </span>
+                  {banners.hero.title}
                 </h1>
 
                 <p className="text-lg sm:text-xl md:text-2xl text-gray-200 leading-relaxed">
-                  Os melhores produtos com preços que cabem no seu bolso.
+                  {banners.hero.subtitle}
                   <span className="text-secondary font-semibold"> Preço baixo</span> e
                   <span className="text-secondary font-semibold"> qualidade!</span>
                 </p>
@@ -370,18 +389,24 @@ export default function HomePage() {
       </section>
 
       {/* Promotions Banner */}
-      <section className="py-8 sm:py-12 lg:py-16 bg-gradient-to-r from-secondary to-secondary-600 text-white">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center space-x-8 animate-fade-in">
-            <Zap className="h-8 w-8 animate-pulse" />
-            <div className="text-center">
-              <h2 className="text-2xl font-bold">Super Ofertas da Semana!</h2>
-              <p className="text-secondary-100">Até 40% OFF em produtos selecionados</p>
-            </div>
-            <Zap className="h-8 w-8 animate-pulse" />
+      {banners.promotional.filter(b => b.isActive).length > 0 && (
+        <section className="py-8 sm:py-12 lg:py-16 bg-gradient-to-r from-secondary to-secondary-600 text-white">
+          <div className="container mx-auto px-4">
+            {banners.promotional.filter(b => b.isActive).map((banner) => (
+              <Link key={banner.id} href={banner.link || '/catalog'}>
+                <div className="flex items-center justify-center space-x-8 animate-fade-in cursor-pointer hover:opacity-90 transition-opacity">
+                  <Zap className="h-8 w-8 animate-pulse" />
+                  <div className="text-center">
+                    <h2 className="text-2xl font-bold">{banner.title}</h2>
+                    <p className="text-secondary-100">{banner.subtitle}</p>
+                  </div>
+                  <Zap className="h-8 w-8 animate-pulse" />
+                </div>
+              </Link>
+            ))}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
 
 

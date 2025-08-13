@@ -476,7 +476,7 @@ export default function ReturnsPage() {
         className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-3`}
       >
         <div
-          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+          className={`max-w-2xl lg:max-w-4xl px-4 py-2 rounded-lg ${
             isUser
               ? 'bg-blue-600 text-white'
               : 'bg-white border border-gray-200'
@@ -904,7 +904,7 @@ export default function ReturnsPage() {
                           </>
                         ) : (
                           'Enviar Solicitação'
-                        )}
+                        )}cd 
                       </Button>
                     </div>
                   </form>
@@ -917,7 +917,7 @@ export default function ReturnsPage() {
           {isChatOpen && selectedChat && (
             <Dialog open={isChatOpen} onOpenChange={(open) => !open && closeChat()}>
               <DialogContent 
-                className="max-w-2xl max-h-[85vh] flex flex-col p-0"
+                className="max-w-[95vw] max-h-[98vh] flex flex-col p-0"
                 onEscapeKeyDown={(e) => e.preventDefault()}
                 onPointerDownOutside={(e) => e.preventDefault()}
                 onInteractOutside={(e) => e.preventDefault()}
@@ -945,7 +945,7 @@ export default function ReturnsPage() {
                   {/* Container de mensagens com scroll fixo */}
                   <div 
                     ref={chatContainerRef}
-                    className="flex-1 border rounded-lg p-4 overflow-y-auto bg-gray-50 min-h-[350px] max-h-[400px] scroll-smooth"
+                    className="flex-1 border rounded-lg p-4 overflow-y-auto bg-gray-50 min-h-[500px] max-h-[70vh] scroll-smooth"
                     style={{ scrollBehavior: 'smooth' }}
                     onScroll={(e) => e.stopPropagation()}
                   >

@@ -565,3 +565,34 @@ html {
 .animate-pulse-custom {
   animation: pulse 2s infinite;
 }
+
+/* Custom scrollbar styles for search results */
+.search-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #fb923c #f3f4f6;
+}
+
+.search-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.search-scrollbar::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 4px;
+}
+
+.search-scrollbar::-webkit-scrollbar-thumb {
+  background: #fb923c;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.search-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #ea580c;
+}
+
+/* Ensure smooth scrolling */
+.search-scrollable {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}

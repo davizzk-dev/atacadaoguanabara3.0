@@ -17,6 +17,19 @@ export interface Product {
   brand?: string
   unit?: string
   inStock?: boolean
+  // Sistema de preços escalonados
+  prices?: {
+    price1: number
+    offerPrice1: number
+    price2: number
+    offerPrice2: number
+    minQuantityPrice2: number
+    price3: number
+    offerPrice3: number
+    minQuantityPrice3: number
+  }
+  // Dados do Varejo Fácil
+  varejoFacilData?: any
 }
 
 export interface CartItem {

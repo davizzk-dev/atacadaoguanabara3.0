@@ -814,3 +814,26 @@ export async function generateReturnsPDF(returns: any[]) {
     throw new Error('Falha ao gerar relatório de trocas/devoluções')
   }
 }
+
+// Função para calcular preço dinâmico baseado na quantidade
+export function calculateDynamicPrice(product: any, quantity: number) {
+  // Se não tem preços escalonados, usar preço normal
+  if (!product.prices?.price2 || !product.prices.minQuantityPrice2 || product.prices.minQuantityPrice2 <= 0) {
+    return product.price
+  }
+
+  const { price2, price3, minQuantityPrice2, minQuantityPrice3 } = product.prices
+
+  // Verificar preço 3 primeiro (maior quantidade)
+  if (price3 && minQuantityPrice3 && quantity >= minQuantityPrice3) {
+    return price3
+  } 
+  // Depois preço 2
+  else if (price2 && minQuantityPrice2 && quantity >= minQuantityPrice2) {
+    return price2
+  } 
+  // Senão, preço normal
+  else {
+    return product.price
+  }
+}

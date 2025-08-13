@@ -344,7 +344,7 @@ export default function ChatInterface({
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-md h-[28rem] flex flex-col border border-gray-100">
+    <div className="bg-white rounded-xl shadow-md h-[48rem] flex flex-col border border-gray-100">
       {/* Header com branding */}
       <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-amber-50">
         <div className="flex items-center justify-between gap-2">
@@ -385,7 +385,7 @@ export default function ChatInterface({
         ) : (
           messages.map((message) => (
             <div key={message.id} className={`flex ${message.sender === 'admin' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-1 duration-200`}>
-              <div className={`max-w-[75%] px-4 py-2 rounded-2xl shadow-sm ${message.sender === 'admin' ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-br-md' : 'bg-orange-50 text-orange-950 border border-orange-200 rounded-bl-md'}`}>
+              <div className={`max-w-[95%] px-4 py-2 rounded-2xl shadow-sm ${message.sender === 'admin' ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-br-md' : 'bg-orange-50 text-orange-950 border border-orange-200 rounded-bl-md'}`}>
                 {message.type === 'image' && message.mediaUrl && (
                   <div className="mb-2">
                     <img src={message.mediaUrl} alt="Imagem enviada" className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90" onClick={() => window.open(message.mediaUrl!, '_blank')} />

@@ -9,6 +9,29 @@ function formatProductForCatalog(varejoProduct: any, prices: any[] = [], section
   const productPrice = prices.find(p => p.produtoId === varejoProduct.id)
   const price = productPrice?.precoVenda1 || 0
   
+  // Preços escalonados
+  const scaledPrices = productPrice ? {
+    price1: {
+      precoVenda: productPrice.precoVenda1 || 0,
+      precoOferta: productPrice.precoOferta1 || productPrice.precoVenda1 || 0,
+      margem: productPrice.margemPreco1 || 0
+    },
+    price2: productPrice.quantidadeMinimaPreco2 ? {
+      precoVenda: productPrice.precoVenda2 || 0,
+      precoOferta: productPrice.precoOferta2 || productPrice.precoVenda2 || 0,
+      quantidadeMinima: productPrice.quantidadeMinimaPreco2,
+      margem: productPrice.margemPreco2 || 0
+    } : null,
+    price3: productPrice.quantidadeMinimaPreco3 ? {
+      precoVenda: productPrice.precoVenda3 || 0,
+      precoOferta: productPrice.precoOferta3 || productPrice.precoVenda3 || 0,
+      quantidadeMinima: productPrice.quantidadeMinimaPreco3,
+      margem: productPrice.margemPreco3 || 0
+    } : null,
+    descontoMaximo: productPrice.descontoMaximo || 0,
+    permiteDesconto: productPrice.permiteDesconto || false
+  } : null
+  
   // Encontrar seção
   const section = sections.find(s => s.id === varejoProduct.secaoId)
   const category = section?.descricao || 'GERAL'
@@ -47,6 +70,8 @@ function formatProductForCatalog(varejoProduct: any, prices: any[] = [], section
     brand: brandName,
     unit: varejoProduct.unidadeDeVenda || 'un',
     tags: tags,
+    // Preços escalonados
+    scaledPrices: scaledPrices,
     // Dados adicionais do Varejo Fácil
     varejoFacilData: {
       codigoInterno: varejoProduct.codigoInterno,
@@ -65,7 +90,8 @@ function formatProductForCatalog(varejoProduct: any, prices: any[] = [], section
       comprimento: varejoProduct.comprimento,
       ativoNoEcommerce: varejoProduct.ativoNoEcommerce,
       dataInclusao: varejoProduct.dataInclusao,
-      dataAlteracao: varejoProduct.dataAlteracao
+      dataAlteracao: varejoProduct.dataAlteracao,
+      ean: varejoProduct.ean
     }
   }
 }
@@ -141,6 +167,51 @@ export async function POST(request: NextRequest) {
     const formattedProducts = allProducts.map(product => 
       formatProductForCatalog(product, prices, sections, brands, genres)
     )
+
+    // 6.1. Ler produtos existentes para preservar imagens customizadas
+    console.log('🖼️ Lendo produtos existentes para preservar imagens...')
+    let existingImagesMap = new Map()
+    
+    try {
+      const dataDir = path.join(process.cwd(), 'data')
+      const productsFilePath = path.join(dataDir, 'products.json')
+      
+      if (await fs.access(productsFilePath).then(() => true).catch(() => false)) {
+        const existingData = await fs.readFile(productsFilePath, 'utf-8')
+        const existingProducts = JSON.parse(existingData)
+        
+        // Criar mapa de imagens existentes por ID
+        existingProducts.forEach((product: any) => {
+          if (product.id && product.image && 
+              !product.image.includes('images.unsplash.com') && 
+              !product.image.includes('placeholder')) {
+            existingImagesMap.set(product.id, product.image)
+          }
+        })
+        
+        console.log(`✅ ${existingProducts.length} produtos existentes carregados`)
+        console.log(`🖼️ ${existingImagesMap.size} imagens customizadas encontradas para preservar`)
+      } else {
+        console.log('ℹ️ Nenhum arquivo products.json existente encontrado')
+      }
+    } catch (error) {
+      console.warn('⚠️ Erro ao ler produtos existentes:', error)
+    }
+    
+    // 6.2. Preservar imagens customizadas nos produtos formatados
+    console.log('🔄 Preservando imagens customizadas...')
+    let imagesPreserved = 0
+    formattedProducts.forEach(product => {
+      const existingImage = existingImagesMap.get(product.id)
+      if (existingImage) {
+        product.image = existingImage
+        imagesPreserved++
+      }
+    })
+    
+    if (imagesPreserved > 0) {
+      console.log(`✅ ${imagesPreserved} imagens customizadas preservadas`)
+    }
 
     // 7. Salvar no products.json
     console.log('💾 Salvando produtos formatados no products.json...')

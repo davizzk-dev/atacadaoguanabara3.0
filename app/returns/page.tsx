@@ -866,7 +866,7 @@ export default function ReturnsPage() {
         className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}
       >
         <div
-          className={`max-w-sm lg:max-w-md px-4 py-3 rounded-2xl shadow-sm ${
+          className={`max-w-2xl lg:max-w-4xl px-4 py-3 rounded-2xl shadow-sm ${
             isUser
               ? 'bg-blue-600 text-white rounded-br-md'
               : 'bg-white border border-gray-200 rounded-bl-md'
@@ -1333,7 +1333,7 @@ export default function ReturnsPage() {
           {isChatOpen && selectedChat && (
             <Dialog open={isChatOpen} onOpenChange={(open) => !open && closeChat()}>
               <DialogContent 
-                className="max-w-3xl max-h-[90vh] flex flex-col p-0 overflow-hidden"
+                className="max-w-[95vw] max-h-[98vh] flex flex-col p-0 overflow-hidden"
               >
                 {/* Overlay de gravação - Mobile Optimized */}
                 {isRecording && (
@@ -1405,8 +1405,8 @@ export default function ReturnsPage() {
                     ref={chatContainerRef}
                     className="flex-1 p-4 overflow-y-scroll bg-gray-50"
                     style={{ 
-                      maxHeight: 'calc(90vh - 200px)',
-                      minHeight: '400px',
+                      maxHeight: 'calc(95vh - 150px)',
+                      minHeight: '800px',
                       overflowY: 'scroll',
                       scrollBehavior: 'smooth'
                     }}

@@ -45,7 +45,8 @@ export function ProductCard({ product }: ProductCardProps) {
     // Animação de loading
     await new Promise((resolve) => setTimeout(resolve, 300))
     
-    // Adicionar a quantidade selecionada
+    // Adicionar usando o produto original (sem modificar o preço)
+    // O cálculo dinâmico será feito no store e no carrinho
     for (let i = 0; i < selectedQuantity; i++) {
       addItem(product)
     }
@@ -77,9 +78,40 @@ export function ProductCard({ product }: ProductCardProps) {
     }
   }
 
+  // Função para verificar se o produto tem preços escalonados válidos
+  const hasValidScaledPrices = () => {
+    const productData = product as any
+    return (
+      productData.prices?.price2 && 
+      productData.prices.price2 > 0 && 
+      productData.prices.minQuantityPrice2 && 
+      productData.prices.minQuantityPrice2 > 0
+    )
+  }
+
+  // Função para calcular o preço baseado na quantidade
+  const calculatePrice = () => {
+    if (!hasValidScaledPrices()) {
+      return product.price
+    }
+
+    const productData = product as any
+    const { price2, price3, minQuantityPrice2, minQuantityPrice3 } = productData.prices
+
+    if (price3 && minQuantityPrice3 && selectedQuantity >= minQuantityPrice3) {
+      return price3
+    } else if (price2 && minQuantityPrice2 && selectedQuantity >= minQuantityPrice2) {
+      return price2
+    } else {
+      return product.price
+    }
+  }
+
+  const currentPrice = calculatePrice()
+
   return (
     <div 
-      className={`bg-gradient-to-br from-white via-blue-50/30 to-blue-100/50 rounded-2xl shadow-lg border-2 border-blue-100 transition-all duration-500 flex flex-col h-[28rem] w-full max-w-xs mx-auto p-4 relative overflow-hidden group hover-lift ${
+      className={`bg-gradient-to-br from-white via-blue-50/30 to-blue-100/50 rounded-2xl shadow-lg border-2 border-blue-100 transition-all duration-500 flex flex-col h-auto min-h-[32rem] w-full max-w-xs mx-auto p-4 relative overflow-hidden group hover-lift ${
         isHovered ? 'shadow-2xl scale-105 border-blue-300 shadow-blue-200/50' : 'hover:shadow-xl hover:border-blue-200'
       }`}
       onMouseEnter={() => setIsHovered(true)}
@@ -137,12 +169,12 @@ export function ProductCard({ product }: ProductCardProps) {
       }`} />
 
       {/* Imagem do produto */}
-      <div className="w-full flex justify-center items-center mb-3 h-32 relative">
+      <div className="w-full flex justify-center items-center mb-3 h-48 relative">
         {((product as any).promotionImage || product.image) && typeof ((product as any).promotionImage || product.image) === 'string' && (
           <img
             src={(product as any).promotionImage || product.image}
             alt={product.name}
-            className={`h-28 w-auto object-contain rounded-lg bg-white border border-blue-100 shadow-sm transition-all duration-300 ${
+            className={`h-44 w-auto object-contain rounded-lg bg-white border border-blue-100 shadow-sm transition-all duration-300 ${
               isHovered ? 'scale-105 border-blue-300' : ''
             }`}
             onError={(e) => {
@@ -166,8 +198,68 @@ export function ProductCard({ product }: ProductCardProps) {
       {/* Preço */}
       <div className="w-full mb-3">
         <div className="text-center">
-          <span className="text-lg font-bold text-blue-600">R$ {product.price.toFixed(2)}</span>
+          {/* Preço atual */}
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-lg font-bold text-blue-600">
+              R$ {currentPrice.toFixed(2)}
+            </span>
+            {hasValidScaledPrices() && currentPrice < product.price && (
+              <span className="text-xs line-through text-gray-400">
+                R$ {product.price.toFixed(2)}
+              </span>
+            )}
+          </div>
+          
+          {/* Unidade */}
           <div className="text-xs text-gray-500 mt-1">{product.unit}</div>
+          
+          {/* Preços escalonados - sempre visível de forma compacta */}
+          {hasValidScaledPrices() && (
+            <div className="mt-2 space-y-1">
+              {/* Preço atual com destaque */}
+              <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full inline-block">
+                <span className="font-medium">
+                  💰 {selectedQuantity >= (product as any).prices.minQuantityPrice2 ? 'Preço especial ativo!' : `${(product as any).prices.minQuantityPrice2 - selectedQuantity} mais = R$ ${(product as any).prices.price2.toFixed(2)}`}
+                </span>
+              </div>
+              
+              {/* Lista compacta de preços */}
+              <div className="text-xs text-gray-600 space-y-0.5">
+                <div className="flex justify-between items-center">
+                  <span>1-{(product as any).prices.minQuantityPrice2 - 1} unid:</span>
+                  <span className={selectedQuantity < (product as any).prices.minQuantityPrice2 ? 'font-medium text-blue-600' : ''}>
+                    R$ {product.price.toFixed(2)}
+                  </span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span>{(product as any).prices.minQuantityPrice2}+ unid:</span>
+                  <span className={
+                    selectedQuantity >= (product as any).prices.minQuantityPrice2 && 
+                    (!((product as any).prices.price3) || selectedQuantity < (product as any).prices.minQuantityPrice3)
+                      ? 'font-medium text-green-600' 
+                      : 'text-gray-500'
+                  }>
+                    R$ {(product as any).prices.price2.toFixed(2)}
+                  </span>
+                </div>
+                
+                {/* Preço 3 (se existir) */}
+                {(product as any).prices.price3 && (product as any).prices.minQuantityPrice3 && (
+                  <div className="flex justify-between items-center">
+                    <span>{(product as any).prices.minQuantityPrice3}+ unid:</span>
+                    <span className={
+                      selectedQuantity >= (product as any).prices.minQuantityPrice3 
+                        ? 'font-medium text-green-600' 
+                        : 'text-gray-500'
+                    }>
+                      R$ {(product as any).prices.price3.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -90,9 +90,24 @@ export const useCartStore = create<CartStore>()(
       clearCart: () => set({ items: [] }),
       getTotal: () => {
         return get().items.reduce((total, item) => {
-          const price = Number(item.product.price) || 0
+          // Importar função de cálculo dinâmico
+          const calculateDynamicPrice = (product: any, quantity: number) => {
+            if (!product.prices?.price2 || !product.prices.minQuantityPrice2 || product.prices.minQuantityPrice2 <= 0) {
+              return product.price
+            }
+            const { price2, price3, minQuantityPrice2, minQuantityPrice3 } = product.prices
+            if (price3 && minQuantityPrice3 && quantity >= minQuantityPrice3) {
+              return price3
+            } else if (price2 && minQuantityPrice2 && quantity >= minQuantityPrice2) {
+              return price2
+            } else {
+              return product.price
+            }
+          }
+
+          const dynamicPrice = calculateDynamicPrice(item.product, item.quantity)
           const quantity = Number(item.quantity) || 0
-          return total + (price * quantity)
+          return total + (dynamicPrice * quantity)
         }, 0)
       },
       getItemCount: () => {

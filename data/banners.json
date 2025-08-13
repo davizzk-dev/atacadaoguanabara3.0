@@ -1,0 +1,18 @@
+{
+  "hero": {
+    "title": "Atacadão Guanabara",
+    "subtitle": "Os melhores produtos com preços que cabem no seu bolso",
+    "image": "/images/hero-banner.jpg",
+    "isActive": true
+  },
+  "promotional": [
+    {
+      "id": 1,
+      "title": "Super Ofertas da Semana!",
+      "subtitle": "Até 40% OFF em produtos selecionados",
+      "image": "/images/promotional-banner.jpg",
+      "link": "/catalog",
+      "isActive": true
+    }
+  ]
+}

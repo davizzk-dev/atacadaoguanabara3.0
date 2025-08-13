@@ -33,7 +33,7 @@
     "id": "1753385365751",
     "createdAt": "2025-07-24T19:29:25.751Z",
     "status": "completed",
-    "updatedAt": "2025-08-12T00:19:57.280Z",
+    "updatedAt": "2025-08-12T18:05:23.875Z",
     "messages": [
       {
         "id": "1754957995854",
@@ -47,6 +47,13 @@
         "sender": "user",
         "message": "a",
         "timestamp": "2025-08-12T00:19:57.280Z",
+        "type": "text"
+      },
+      {
+        "id": "1755021923875",
+        "sender": "admin",
+        "message": "Oi",
+        "timestamp": "2025-08-12T18:05:23.875Z",
         "type": "text"
       }
     ]
@@ -233,8 +240,152 @@
         "type": "image",
         "mediaUrl": "/api/uploads/chat/1754944937991_1754998731225.png",
         "mediaName": "com o.png"
+      },
+      {
+        "id": "1755020429190",
+        "sender": "user",
+        "message": "a",
+        "timestamp": "2025-08-12T17:40:29.190Z",
+        "type": "text"
+      },
+      {
+        "id": "1755020435635",
+        "sender": "user",
+        "message": "oi",
+        "timestamp": "2025-08-12T17:40:35.635Z",
+        "type": "text"
+      },
+      {
+        "id": "1755020439137",
+        "sender": "admin",
+        "message": "Obrigado! Qualquer dúvida, fico à disposição.",
+        "timestamp": "2025-08-12T17:40:39.137Z",
+        "type": "text"
+      },
+      {
+        "id": "1755020441990",
+        "sender": "user",
+        "message": "Quero entender o status da minha solicitação.",
+        "timestamp": "2025-08-12T17:40:41.990Z",
+        "type": "text"
+      },
+      {
+        "id": "1755020442625",
+        "sender": "admin",
+        "message": "Pode me enviar fotos do problema, por favor?",
+        "timestamp": "2025-08-12T17:40:42.625Z",
+        "type": "text"
+      },
+      {
+        "id": "1755020447760",
+        "sender": "user",
+        "message": "Imagem enviada",
+        "timestamp": "2025-08-12T17:40:47.764Z",
+        "type": "image",
+        "mediaUrl": "/api/uploads/chat/1754944937991_1755020447760.png",
+        "mediaName": "com o.png"
+      },
+      {
+        "id": "1755020449887",
+        "sender": "admin",
+        "message": "Olá! Estou analisando sua solicitação.",
+        "timestamp": "2025-08-12T17:40:49.887Z",
+        "type": "text"
+      },
+      {
+        "id": "1755020457638",
+        "sender": "user",
+        "message": "👍👍👍",
+        "timestamp": "2025-08-12T17:40:57.638Z",
+        "type": "text"
+      },
+      {
+        "id": "1755020473090",
+        "sender": "admin",
+        "message": "eu quero fazer uma reclamação",
+        "timestamp": "2025-08-12T17:41:13.090Z",
+        "type": "text"
+      },
+      {
+        "id": "1755020476491",
+        "sender": "user",
+        "message": "quer nn",
+        "timestamp": "2025-08-12T17:41:16.491Z",
+        "type": "text"
+      },
+      {
+        "id": "1755020479646",
+        "sender": "user",
+        "message": "fake",
+        "timestamp": "2025-08-12T17:41:19.646Z",
+        "type": "text"
+      },
+      {
+        "id": "1755020485361",
+        "sender": "admin",
+        "message": "esse tal de cauã",
+        "timestamp": "2025-08-12T17:41:25.361Z",
+        "type": "text"
+      },
+      {
+        "id": "1755020489066",
+        "sender": "user",
+        "message": "q caua",
+        "timestamp": "2025-08-12T17:41:29.066Z",
+        "type": "text"
+      },
+      {
+        "id": "1755020496371",
+        "sender": "user",
+        "message": "oxe",
+        "timestamp": "2025-08-12T17:41:36.371Z",
+        "type": "text"
+      },
+      {
+        "id": "1755020501141",
+        "sender": "admin",
+        "message": "ele não presta",
+        "timestamp": "2025-08-12T17:41:41.141Z",
+        "type": "text"
+      },
+      {
+        "id": "1755020504593",
+        "sender": "user",
+        "message": "ele presta",
+        "timestamp": "2025-08-12T17:41:44.593Z",
+        "type": "text"
+      },
+      {
+        "id": "1755022052394",
+        "sender": "admin",
+        "message": "ooi",
+        "timestamp": "2025-08-12T18:07:32.394Z",
+        "type": "text"
+      },
+      {
+        "id": "1755022056898",
+        "sender": "user",
+        "message": "Oiii",
+        "timestamp": "2025-08-12T18:07:36.898Z",
+        "type": "text"
+      },
+      {
+        "id": "1755022075593",
+        "sender": "user",
+        "message": "Como você tá?😂",
+        "timestamp": "2025-08-12T18:07:55.593Z",
+        "type": "text"
+      },
+      {
+        "id": "1755022113847",
+        "sender": "user",
+        "message": "Imagem enviada",
+        "timestamp": "2025-08-12T18:08:33.851Z",
+        "type": "image",
+        "mediaUrl": "/api/uploads/chat/1754944937991_1755022113847.jpg",
+        "mediaName": "1000002863.jpg"
       }
     ],
-    "updatedAt": "2025-08-12T11:38:51.233Z"
+    "updatedAt": "2025-08-12T18:08:33.851Z"
   }
 ]

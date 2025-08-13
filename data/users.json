@@ -98,5 +98,25 @@
     "role": "user",
     "createdAt": "2025-08-10T22:09:43.275Z",
     "orders": 0
+  },
+  {
+    "id": "1755038191107",
+    "name": "José Arimatéa Costa Alexandre",
+    "email": "aryalexandre430@gmail.com",
+    "phone": "85986992962",
+    "password": "#Deusef1",
+    "address": {
+      "street": "Rua Coronel Luiz David de Souza",
+      "number": "382",
+      "complement": "Casa",
+      "neighborhood": "Presidente Kennedy",
+      "city": "Fortaleza",
+      "state": "CE",
+      "zipCode": "60355-337",
+      "reference": "Charlespedras"
+    },
+    "role": "user",
+    "createdAt": "2025-08-12T22:36:31.107Z",
+    "orders": 0
   }
 ]

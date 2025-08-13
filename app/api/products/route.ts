@@ -27,6 +27,49 @@ function calculateSimilarity(str1: string, str2: string): number {
   return matches / Math.max(words1.length, words2.length)
 }
 
+// Função para calcular pontuação de busca
+function calculateSearchScore(product: any, normalizedSearch: string, searchWords: string[]): number {
+  const normalizeText = (text: string): string => {
+    return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  }
+  
+  const name = normalizeText(product.name || '')
+  const description = normalizeText(product.description || '')
+  const category = normalizeText(product.category || '')
+  const brand = normalizeText(product.brand || '')
+  const tags = normalizeText((product.tags || []).join(' '))
+  
+  let score = 0
+  
+  // Pontuação alta para correspondência exata no nome
+  if (name.includes(normalizedSearch)) score += 100
+  
+  // Pontuação média para correspondência na marca
+  if (brand.includes(normalizedSearch)) score += 80
+  
+  // Pontuação baixa para correspondência na categoria
+  if (category.includes(normalizedSearch)) score += 60
+  
+  // Pontuação para correspondência na descrição
+  if (description.includes(normalizedSearch)) score += 40
+  
+  // Pontuação para correspondência nas tags
+  if (tags.includes(normalizedSearch)) score += 30
+  
+  // Pontuação adicional para palavras individuais
+  searchWords.forEach(word => {
+    if (name.includes(word)) score += 20
+    if (brand.includes(word)) score += 15
+    if (category.includes(word)) score += 10
+    if (description.includes(word)) score += 5
+  })
+  
+  // Bônus para produtos em estoque
+  if (product.inStock) score += 10
+  
+  return score
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -58,31 +101,54 @@ export async function GET(request: NextRequest) {
       )
     }
     
-    // Busca simplificada e eficiente
+    // Busca inteligente e eficiente
     if (search) {
       const searchLower = search.toLowerCase().trim()
       
       console.log(`🔍 Buscando por: "${search}"`)
       
+      // Função para normalizar texto (remover acentos)
+      const normalizeText = (text: string): string => {
+        return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+      }
+      
+      const normalizedSearch = normalizeText(searchLower)
+      const searchWords = normalizedSearch.split(/\s+/).filter(word => word.length > 1)
+      
       const searchResults = filteredProducts
         .filter(product => {
-          const name = (product.name || '').toLowerCase()
-          const description = (product.description || '').toLowerCase()
-          const category = (product.category || '').toLowerCase()
+          const name = normalizeText(product.name || '')
+          const description = normalizeText(product.description || '')
+          const category = normalizeText(product.category || '')
+          const brand = normalizeText(product.brand || '')
+          const tags = normalizeText((product.tags || []).join(' '))
           const id = product.id.toString()
           
-          // Busca simples: nome, descrição, categoria ou ID
-          return name.includes(searchLower) || 
-                 description.includes(searchLower) || 
-                 category.includes(searchLower) || 
-                 id.includes(search)
+          // Busca por correspondência exata
+          if (name.includes(normalizedSearch) || 
+              description.includes(normalizedSearch) || 
+              category.includes(normalizedSearch) ||
+              brand.includes(normalizedSearch) ||
+              tags.includes(normalizedSearch) ||
+              id.includes(search)) {
+            return true
+          }
+          
+          // Busca por palavras individuais
+          return searchWords.some(word => 
+            name.includes(word) || 
+            description.includes(word) || 
+            category.includes(word) ||
+            brand.includes(word) ||
+            tags.includes(word)
+          )
         })
         .map(product => ({
           product,
-          score: 1, // Pontuação simples
+          score: calculateSearchScore(product, normalizedSearch, searchWords),
           exactMatch: true
         }))
-        .filter(result => result.score > 0) // Apenas resultados com pontuação
+        .filter(result => result.score > 0)
         .sort((a, b) => {
           // Ordena por pontuação (maior primeiro)
           if (b.score !== a.score) return b.score - a.score

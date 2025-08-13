@@ -1,5 +1,5 @@
 // Configuração das imagens das categorias
-export const categoryImages = {
+let categoryImages = {
   "Todos": "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=200&q=80",
   "DESCARTÁVEIS": "https://i.ibb.co/Q7QqHRVh/descart-veis.png",
   "CONFEITARIA E OUTROS": "https://i.ibb.co/Kc8Khndg/confeitaria2-0.png",
@@ -17,7 +17,27 @@ export const categoryImages = {
   "REFRIGERANTES E OUTROS LIQUIDOS": "https://i.ibb.co/TMJ8Gg48/Refrigerante.png",
 }
 
+// Carregar imagens dinâmicas da API
+export async function loadCategoryImages() {
+  try {
+    const response = await fetch('/api/category-images')
+    if (response.ok) {
+      const result = await response.json()
+      if (result.success) {
+        categoryImages = result.images
+        return result.images
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao carregar imagens das categorias:', error)
+  }
+  return categoryImages
+}
+
 // Função para obter a imagem de uma categoria
 export function getCategoryImage(category: string): string {
   return categoryImages[category as keyof typeof categoryImages] || categoryImages["Todos"]
-} 
+}
+
+// Exportar as imagens padrão para compatibilidade
+export { categoryImages } 

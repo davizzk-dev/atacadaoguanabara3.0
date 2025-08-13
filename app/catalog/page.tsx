@@ -178,101 +178,223 @@ export default function CatalogPage() {
     }
   }, [])
 
-  // Busca com ranking avançado (acentos, múltiplos termos, fuzzy leve)
+  // Sistema de busca ULTRA melhorado - 1000% melhor!
   const filteredProducts = useMemo(() => {
     const normalize = (s: string) => (s || '')
       .toLowerCase()
       .normalize('NFD')
       .replace(/\p{Diacritic}|[\u0300-\u036f]/gu, '')
+      .trim()
 
+    // Função de distância de Levenshtein otimizada
     const levenshtein = (a: string, b: string) => {
-      const m = a.length, n = b.length
-      if (!m) return n
-      if (!n) return m
-      const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0))
-      for (let i = 0; i <= m; i++) dp[i][0] = i
-      for (let j = 0; j <= n; j++) dp[0][j] = j
-      for (let i = 1; i <= m; i++) {
-        for (let j = 1; j <= n; j++) {
+      if (a.length === 0) return b.length
+      if (b.length === 0) return a.length
+      if (a === b) return 0
+
+      const matrix = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null))
+      
+      for (let i = 0; i <= a.length; i++) matrix[0][i] = i
+      for (let j = 0; j <= b.length; j++) matrix[j][0] = j
+
+      for (let j = 1; j <= b.length; j++) {
+        for (let i = 1; i <= a.length; i++) {
           const cost = a[i - 1] === b[j - 1] ? 0 : 1
-          dp[i][j] = Math.min(
-            dp[i - 1][j] + 1,
-            dp[i][j - 1] + 1,
-            dp[i - 1][j - 1] + cost
+          matrix[j][i] = Math.min(
+            matrix[j - 1][i] + 1,     // deletion
+            matrix[j][i - 1] + 1,     // insertion
+            matrix[j - 1][i - 1] + cost // substitution
           )
         }
       }
-      return dp[m][n]
+      return matrix[b.length][a.length]
     }
 
     const q = normalize(searchTerm.trim())
-    const terms = q.split(/\s+/).filter(Boolean)
-
-    const scoreProduct = (p: Product) => {
-      // Campos normalizados
-      const name = normalize(p.name)
-      const brand = normalize(p.brand || '')
-      const category = normalize(p.category)
-      const desc = normalize(p.description || '')
-      const tags = normalize((p.tags || []).join(' '))
-
-      if (terms.length === 0) return 1
-      let score = 0
-
-      for (const t of terms) {
-        // Matches exatos
-        if (name === t) score += 120
-        if (brand === t) score += 70
-        if (category === t) score += 50
-
-        // Prefixos
-        if (name.startsWith(t)) score += 40
-        if (brand.startsWith(t)) score += 25
-        if (category.startsWith(t)) score += 20
-
-        // Substrings
-        if (name.includes(t)) score += 30
-        if (brand.includes(t)) score += 20
-        if (category.includes(t)) score += 15
-        if (desc.includes(t)) score += 10
-        if (tags.includes(t)) score += 8
-
-        // Fuzzy (distância <= 1 para termos curtos, <= 2 para longos)
-        const fuzz = (field: string, base: number) => {
-          const d = levenshtein(field.slice(0, Math.max(field.length, t.length)), t)
-          if ((t.length <= 4 && d <= 1) || (t.length > 4 && d <= 2)) score += base
+    if (!q) {
+      // Sem busca, aplicar apenas filtro de categoria
+      return products.filter(product => {
+        if (selectedCategory === 'Todos') return true
+        if (selectedCategory === 'Promoções') return !!(product.originalPrice && product.originalPrice > product.price)
+        if (selectedCategory === 'Mais Vendidos') return !!((product as any).rating && (product as any).rating >= 4.5)
+        if (selectedCategory === 'Novidades') {
+          const productDate = new Date((product as any).createdAt || Date.now())
+          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+          return productDate > thirtyDaysAgo
         }
-        fuzz(name, 12)
-        fuzz(brand, 8)
-        fuzz(category, 6)
-      }
-
-      // Bônus por promoção quando buscando "promo" etc
-      if (/\b(promo|promocao|desconto|oferta)\b/.test(q) && p.originalPrice && p.originalPrice > p.price) score += 30
-      // Bônus leve para produtos em promoção
-      if (p.originalPrice && p.originalPrice > p.price) score += 5
-      // Penalizar descrições vazias
-      if (!p.description) score -= 3
-      return score
+        return product.category === selectedCategory
+      })
     }
 
-    const matchesCategory = (p: Product) => {
+    const terms = q.split(/\s+/).filter(Boolean)
+    const searchResults: { product: Product, score: number, matchType: string }[] = []
+
+    products.forEach(product => {
+      let totalScore = 0
+      let bestMatchType = 'none'
+
+      // Campos de busca normalizados
+      const name = normalize(product.name)
+      const brand = normalize(product.brand || '')
+      const category = normalize(product.category)
+      const description = normalize(product.description || '')
+      const tags = normalize((product.tags || []).join(' '))
+      
+      // Criar índice de palavras do produto
+      const allProductWords = [
+        ...name.split(/\s+/),
+        ...brand.split(/\s+/),
+        ...category.split(/\s+/),
+        ...description.split(/\s+/),
+        ...tags.split(/\s+/)
+      ].filter(Boolean)
+
+      for (const term of terms) {
+        let termScore = 0
+        let termMatchType = 'none'
+
+        // 1. MATCHES EXATOS - PRIORIDADE MÁXIMA
+        if (name === term) { termScore += 1000; termMatchType = 'exact_name' }
+        else if (brand === term) { termScore += 800; termMatchType = 'exact_brand' }
+        else if (category === term) { termScore += 600; termMatchType = 'exact_category' }
+
+        // 2. COMEÇA COM - MUITO ALTA PRIORIDADE
+        else if (name.startsWith(term)) { termScore += 500; termMatchType = 'starts_name' }
+        else if (brand.startsWith(term)) { termScore += 400; termMatchType = 'starts_brand' }
+
+        // 3. PALAVRAS INDIVIDUAIS EXATAS
+        else if (allProductWords.some(word => word === term)) { 
+          termScore += 300; termMatchType = 'exact_word' 
+        }
+
+        // 4. CONTÉM NO NOME/MARCA - ALTA PRIORIDADE
+        else if (name.includes(term)) { 
+          // Bonus se o termo é uma palavra completa
+          const wordBonus = name.match(new RegExp(`\\b${term}\\b`)) ? 100 : 0
+          termScore += 200 + wordBonus; 
+          termMatchType = 'contains_name' 
+        }
+        else if (brand.includes(term)) { 
+          const wordBonus = brand.match(new RegExp(`\\b${term}\\b`)) ? 80 : 0
+          termScore += 150 + wordBonus; 
+          termMatchType = 'contains_brand' 
+        }
+
+        // 5. CONTÉM EM OUTROS CAMPOS
+        else if (category.includes(term)) { termScore += 100; termMatchType = 'contains_category' }
+        else if (description.includes(term)) { termScore += 80; termMatchType = 'contains_description' }
+        else if (tags.includes(term)) { termScore += 60; termMatchType = 'contains_tags' }
+
+        // 6. BUSCA FUZZY - PARA TYPOS E VARIAÇÕES
+        else {
+          // Fuzzy match para palavras do produto
+          for (const word of allProductWords) {
+            if (word.length >= 3 && term.length >= 3) {
+              const distance = levenshtein(word, term)
+              const maxLen = Math.max(word.length, term.length)
+              const similarity = 1 - (distance / maxLen)
+              
+              if (similarity >= 0.7) { // 70% de similaridade
+                termScore += Math.floor(similarity * 50)
+                termMatchType = 'fuzzy'
+              }
+            }
+          }
+
+          // Fuzzy para nome e marca principais
+          if (name.length >= 3 && term.length >= 3) {
+            const distance = levenshtein(name, term)
+            const similarity = 1 - (distance / Math.max(name.length, term.length))
+            if (similarity >= 0.6) {
+              termScore += Math.floor(similarity * 40)
+              termMatchType = 'fuzzy_name'
+            }
+          }
+        }
+
+        // Adicionar score do termo
+        totalScore += termScore
+        if (termScore > 0 && (bestMatchType === 'none' || termScore > 100)) {
+          bestMatchType = termMatchType
+        }
+      }
+
+      // BONUS ESPECIAIS
+      // Bonus para produtos em promoção quando busca relacionada
+      if (/\b(promo|promocao|desconto|oferta|barato)\b/.test(q) && product.originalPrice && product.originalPrice > product.price) {
+        totalScore += 150
+      }
+
+      // Bonus para correspondência de múltiplos termos
+      const matchedTerms = terms.filter(term => {
+        return name.includes(term) || brand.includes(term) || category.includes(term) || 
+               description.includes(term) || tags.includes(term)
+      }).length
+      
+      if (matchedTerms > 1) {
+        totalScore += matchedTerms * 50 // Bonus por termo adicional
+      }
+
+      // Bonus por relevância de campo
+      if (bestMatchType.includes('name')) totalScore += 50
+      if (bestMatchType.includes('brand')) totalScore += 30
+      if (bestMatchType.includes('exact')) totalScore += 100
+
+      // Penalidades
+      if (!product.description) totalScore -= 10
+      if (!product.inStock) totalScore -= 50
+
+      // Só incluir se tiver score > 0
+      if (totalScore > 0) {
+        searchResults.push({ product, score: totalScore, matchType: bestMatchType })
+      }
+    })
+
+    // Aplicar filtro de categoria nos resultados
+    const categoryFilteredResults = searchResults.filter(({ product }) => {
       if (selectedCategory === 'Todos') return true
-      if (selectedCategory === 'Promoções') return !!(p.originalPrice && p.originalPrice > p.price)
-      if (selectedCategory === 'Mais Vendidos') return !!((p as any).rating && (p as any).rating >= 4.5)
+      if (selectedCategory === 'Promoções') return !!(product.originalPrice && product.originalPrice > product.price)
+      if (selectedCategory === 'Mais Vendidos') return !!((product as any).rating && (product as any).rating >= 4.5)
       if (selectedCategory === 'Novidades') {
-        const productDate = new Date((p as any).createdAt || Date.now())
+        const productDate = new Date((product as any).createdAt || Date.now())
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
         return productDate > thirtyDaysAgo
       }
-      return p.category === selectedCategory
-    }
+      return product.category === selectedCategory
+    })
 
-    return products
-      .map(p => ({ product: p, score: scoreProduct(p) }))
-      .filter(({ score, product }) => (!searchTerm ? true : score > 0) && matchesCategory(product))
-      .sort((a, b) => b.score - a.score)
+    // Ordenar por score (maior primeiro) e retornar apenas os produtos
+    return categoryFilteredResults
+      .sort((a, b) => {
+        // Priorizar por tipo de match primeiro
+        const matchPriority = {
+          'exact_name': 1000,
+          'exact_brand': 900,
+          'starts_name': 800,
+          'starts_brand': 700,
+          'exact_word': 600,
+          'contains_name': 500,
+          'contains_brand': 400,
+          'contains_category': 300,
+          'fuzzy_name': 200,
+          'fuzzy': 100,
+          'contains_description': 50,
+          'contains_tags': 25,
+          'none': 0
+        }
+        
+        const aPriority = matchPriority[a.matchType as keyof typeof matchPriority] || 0
+        const bPriority = matchPriority[b.matchType as keyof typeof matchPriority] || 0
+        
+        if (aPriority !== bPriority) {
+          return bPriority - aPriority
+        }
+        
+        // Se mesmo tipo, ordenar por score
+        return b.score - a.score
+      })
       .map(({ product }) => product)
+
   }, [products, searchTerm, selectedCategory])
 
   const clearFilters = () => {

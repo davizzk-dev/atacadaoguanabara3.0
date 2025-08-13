@@ -255,6 +255,17 @@ function formatProductForCatalogFast(varejoProduct, pricesByProductId, pricesByI
     brand: brandName,
     unit: varejoProduct.unidadeDeVenda || 'un',
     tags: tags,
+    // Sistema de preços escalonados
+    prices: {
+      price1: parseFloat(productPrice?.precoVenda1 || 0),
+      offerPrice1: parseFloat(productPrice?.precoOferta1 || 0),
+      price2: parseFloat(productPrice?.precoVenda2 || 0),
+      offerPrice2: parseFloat(productPrice?.precoOferta2 || 0),
+      minQuantityPrice2: parseInt(productPrice?.quantidadeMinimaPreco2 || 0),
+      price3: parseFloat(productPrice?.precoVenda3 || 0),
+      offerPrice3: parseFloat(productPrice?.precoOferta3 || 0),
+      minQuantityPrice3: parseInt(productPrice?.quantidadeMinimaPreco3 || 0)
+    },
     // Dados essenciais do Varejo Fácil (removido alguns campos para performance)
     varejoFacilData: {
       codigoInterno: varejoProduct.codigoInterno,
@@ -272,7 +283,21 @@ function formatProductForCatalogFast(varejoProduct, pricesByProductId, pricesByI
         localId: productStock?.localId,
         criadoEm: productStock?.criadoEm,
         atualizadoEm: productStock?.atualizadoEm
-      }
+      },
+      // Dados completos de preços
+      precos: productPrice ? {
+        id: productPrice.id,
+        precoVenda1: productPrice.precoVenda1,
+        precoOferta1: productPrice.precoOferta1,
+        precoVenda2: productPrice.precoVenda2,
+        precoOferta2: productPrice.precoOferta2,
+        quantidadeMinimaPreco2: productPrice.quantidadeMinimaPreco2,
+        precoVenda3: productPrice.precoVenda3,
+        precoOferta3: productPrice.precoOferta3,
+        quantidadeMinimaPreco3: productPrice.quantidadeMinimaPreco3,
+        descontoMaximo: productPrice.descontoMaximo,
+        permiteDesconto: productPrice.permiteDesconto
+      } : null
     }
   }
 }
@@ -412,6 +437,17 @@ function formatProductForCatalog(varejoProduct, prices = [], sections = [], bran
     brand: brandName,
     unit: varejoProduct.unidadeDeVenda || 'un',
     tags: tags,
+    // Sistema de preços escalonados
+    prices: {
+      price1: parseFloat(productPrice?.precoVenda1 || 0),
+      offerPrice1: parseFloat(productPrice?.precoOferta1 || 0),
+      price2: parseFloat(productPrice?.precoVenda2 || 0),
+      offerPrice2: parseFloat(productPrice?.precoOferta2 || 0),
+      minQuantityPrice2: parseInt(productPrice?.quantidadeMinimaPreco2 || 0),
+      price3: parseFloat(productPrice?.precoVenda3 || 0),
+      offerPrice3: parseFloat(productPrice?.precoOferta3 || 0),
+      minQuantityPrice3: parseInt(productPrice?.quantidadeMinimaPreco3 || 0)
+    },
     // Dados adicionais do Varejo Fácil
     varejoFacilData: {
       codigoInterno: varejoProduct.codigoInterno,
@@ -430,7 +466,21 @@ function formatProductForCatalog(varejoProduct, prices = [], sections = [], bran
       comprimento: varejoProduct.comprimento,
       ativoNoEcommerce: varejoProduct.ativoNoEcommerce,
       dataInclusao: varejoProduct.dataInclusao,
-      dataAlteracao: varejoProduct.dataAlteracao
+      dataAlteracao: varejoProduct.dataAlteracao,
+      // Dados completos de preços
+      precos: productPrice ? {
+        id: productPrice.id,
+        precoVenda1: productPrice.precoVenda1,
+        precoOferta1: productPrice.precoOferta1,
+        precoVenda2: productPrice.precoVenda2,
+        precoOferta2: productPrice.precoOferta2,
+        quantidadeMinimaPreco2: productPrice.quantidadeMinimaPreco2,
+        precoVenda3: productPrice.precoVenda3,
+        precoOferta3: productPrice.precoOferta3,
+        quantidadeMinimaPreco3: productPrice.quantidadeMinimaPreco3,
+        descontoMaximo: productPrice.descontoMaximo,
+        permiteDesconto: productPrice.permiteDesconto
+      } : null
     }
   }
 }
@@ -581,7 +631,73 @@ async function syncAndFormatProducts() {
       })
     }
 
-    // 7. Salvar no products.json
+    // 7. Ler produtos existentes para preservar imagens customizadas
+    console.log('🖼️ Lendo produtos existentes para preservar imagens...')
+    let existingProducts = []
+    let existingImagesMap = new Map()
+    
+    try {
+      const dataDir = path.join(process.cwd(), 'data')
+      const productsFilePath = path.join(dataDir, 'products.json')
+      
+      // Usar fs.promises para verificar se arquivo existe
+      try {
+        await fs.access(productsFilePath)
+        const existingData = await fs.readFile(productsFilePath, 'utf-8')
+        existingProducts = JSON.parse(existingData)
+        
+        // Criar mapa de imagens existentes por ID
+        existingProducts.forEach(product => {
+          if (product.id && product.image && 
+              !product.image.includes('images.unsplash.com') && 
+              !product.image.includes('placeholder')) {
+            // Garantir que o ID seja string para compatibilidade
+            const productId = product.id.toString()
+            existingImagesMap.set(productId, product.image)
+            console.log(`🔍 Preservando imagem customizada: ID ${productId} - ${product.image}`)
+          }
+        })
+        
+        console.log(`✅ ${existingProducts.length} produtos existentes carregados`)
+        console.log(`🖼️ ${existingImagesMap.size} imagens customizadas encontradas para preservar`)
+      } catch (accessError) {
+        console.log('ℹ️ Nenhum arquivo products.json existente encontrado')
+      }
+    } catch (error) {
+      console.warn('⚠️ Erro ao ler produtos existentes:', error.message)
+    }
+    
+    // 8. Preservar imagens customizadas nos produtos formatados
+    console.log('🔄 Preservando imagens customizadas...')
+    let imagesPreserved = 0
+    formattedProducts.forEach(product => {
+      // Garantir que usamos string para buscar no Map
+      const productId = product.id.toString()
+      const existingImage = existingImagesMap.get(productId)
+      if (existingImage) {
+        console.log(`🔄 ID ${productId}: ${product.image} → ${existingImage}`)
+        product.image = existingImage
+        imagesPreserved++
+      }
+    })
+    
+    if (imagesPreserved > 0) {
+      console.log(`✅ ${imagesPreserved} imagens customizadas preservadas`)
+    } else {
+      console.log('⚠️ Nenhuma imagem customizada foi preservada')
+      if (existingImagesMap.size > 0) {
+        console.log('🔍 IDs com imagens customizadas encontradas:')
+        for (const [id, image] of existingImagesMap) {
+          console.log(`   - ID ${id}: ${image}`)
+        }
+        console.log('🔍 Primeiros 5 IDs dos produtos formatados:')
+        formattedProducts.slice(0, 5).forEach(p => {
+          console.log(`   - ID ${p.id}: ${p.name}`)
+        })
+      }
+    }
+
+    // 9. Salvar no products.json
     console.log('💾 Salvando produtos formatados no products.json...')
     const dataDir = path.join(process.cwd(), 'data')
     
@@ -596,7 +712,7 @@ async function syncAndFormatProducts() {
     await fs.writeFile(productsFilePath, JSON.stringify(formattedProducts, null, 2))
     console.log(`💾 Arquivo products.json salvo com ${formattedProducts.length} produtos`)
     
-    // 9. Salvar dados completos do Varejo Fácil
+    // 10. Salvar dados completos do Varejo Fácil
     const varejoFacilData = {
       lastSync: new Date().toISOString(),
       totalProducts: formattedProducts.length,

@@ -9,7 +9,7 @@ import {
   BarChart3, TrendingUp, Activity, Globe, Store,
   MessageCircle, Camera, RefreshCw, RotateCcw,
   CheckCircle, AlertCircle, Clock, Zap, Star, Tag,
-  PieChart, BarChart
+  PieChart, BarChart, ImageIcon, Upload
 } from 'lucide-react'
 import AnalyticsDashboard from '@/components/admin/AnalyticsDashboard'
 import ChatInterface from '@/components/admin/ChatInterface'
@@ -182,6 +182,30 @@ export default function AdminPage() {
   const [showSyncModal, setShowSyncModal] = useState(false)
   const [syncHistory, setSyncHistory] = useState<any[]>([])
 
+  // Estados de imagens do site
+  const [categoryImages, setCategoryImages] = useState<{[key: string]: string}>({})
+  const [banners, setBanners] = useState({
+    hero: {
+      title: "Atacadão Guanabara",
+      subtitle: "Os melhores produtos com preços que cabem no seu bolso",
+      image: "/images/hero-banner.jpg",
+      isActive: true
+    },
+    promotional: [
+      {
+        id: 1,
+        title: "Super Ofertas da Semana!",
+        subtitle: "Até 40% OFF em produtos selecionados",
+        image: "/images/promotional-banner.jpg",
+        link: "/catalog",
+        isActive: true
+      }
+    ]
+  })
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [editingCategory, setEditingCategory] = useState<string | null>(null)
+  const [editingCategoryUrl, setEditingCategoryUrl] = useState('')
+
   // Estados de chat
   const [selectedChat, setSelectedChat] = useState<string | null>(null)
   const [chatMessage, setChatMessage] = useState('')
@@ -318,6 +342,7 @@ export default function AdminPage() {
     const initializeAdmin = async () => {
       try {
         await loadData()
+        loadSyncHistory() // Carregar histórico de sincronização
       } catch (error) {
         console.error('Erro na inicialização:', error)
       } finally {
@@ -354,6 +379,11 @@ export default function AdminPage() {
       return () => clearInterval(interval)
     }
   }, [autoSync])
+
+  // useEffect para carregar imagens salvas
+  useEffect(() => {
+    loadSiteImages()
+  }, [])
 
   // Função para limpar dados não utilizados e liberar memória
   const cleanupMemory = () => {
@@ -446,7 +476,7 @@ export default function AdminPage() {
       
       // Carregar dados básicos com limitação para economizar memória
       const [productsRes, ordersRes, usersRes, feedbacksRes, cameraRes, returnsRes] = await Promise.all([
-        fetch('/api/products?limit=100'), // Limitar produtos iniciais
+        fetch('/api/products'), // Carregar TODOS os produtos para pesquisa funcionar
         fetch('/api/orders?limit=100'),   // Limitar pedidos iniciais
         fetch('/api/users?limit=50'),     // Limitar usuários iniciais
         fetch('/api/feedback?limit=50'),  // Limitar feedback inicial
@@ -654,6 +684,8 @@ export default function AdminPage() {
   }
 
   const startVarejoFacilSync = async () => {
+    const startTime = new Date().toISOString()
+    
     try {
       setSyncProgress({
         status: 'running',
@@ -673,16 +705,23 @@ export default function AdminPage() {
       setTimeout(() => {
         setSyncProgress(prev => ({
           ...prev,
-          message: '💰 Buscando preços dos produtos...'
+          message: '💰 Sincronizando preços escalonados dos produtos...'
         }))
       }, 3000)
 
       setTimeout(() => {
         setSyncProgress(prev => ({
           ...prev,
-          message: '📦 Sincronizando produtos em lotes de 300...'
+          message: '📦 Aplicando preços nas fichas dos produtos...'
         }))
-      }, 5000)
+      }, 4500)
+
+      setTimeout(() => {
+        setSyncProgress(prev => ({
+          ...prev,
+          message: '🔄 Finalizando sincronização de produtos em lotes de 300...'
+        }))
+      }, 6000)
 
 
       // Chamar o endpoint correto de sincronização em lote
@@ -699,11 +738,28 @@ export default function AdminPage() {
       const syncData = await syncRes.json()
 
       if (syncData.success) {
+        const endTime = new Date().toISOString()
+        const duration = new Date(endTime).getTime() - new Date(startTime).getTime()
+        
         setSyncProgress({
           status: 'completed',
           current: syncData.totalProducts || 0,
           total: syncData.totalProducts || 0,
           message: `✅ Sincronização concluída! ${syncData.totalProducts || 0} produtos sincronizados e salvos no products.json.`
+        })
+
+        // Salvar no histórico
+        await saveSyncToHistory({
+          startedAt: startTime,
+          finishedAt: endTime,
+          durationMs: duration,
+          status: 'success',
+          totals: {
+            products: syncData.totalProducts || 0,
+            sections: syncData.totalSections || 0,
+            brands: syncData.totalBrands || 0,
+            genres: syncData.totalGenres || 0
+          }
         })
 
         // Atualizar dados do painel
@@ -726,6 +782,15 @@ export default function AdminPage() {
 
     } catch (error) {
       console.error('Erro na sincronização:', error)
+      
+      // Salvar erro no histórico
+      await saveSyncToHistory({
+        startedAt: startTime,
+        finishedAt: new Date().toISOString(),
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      })
+      
       setSyncProgress({
         status: 'error',
         current: 0,
@@ -983,6 +1048,9 @@ export default function AdminPage() {
       console.log('📦 Response data produto:', result)
 
       if (response.ok && result.success) {
+        console.log('✅ Produto salvo com sucesso!', result)
+        
+        // Fechar modal e limpar form
         setShowProductModal(false)
         setEditingProduct(null)
         setProductForm({
@@ -994,16 +1062,10 @@ export default function AdminPage() {
           inStock: true
         })
         
-        // Atualizar localmente
-        if (editingProduct && result.product) {
-          console.log('🔄 Atualizando produto existente')
-          setProducts(prev => prev.map(p => p.id === result.product.id ? result.product : p))
-        } else if (result.product) {
-          console.log('➕ Adicionando novo produto')
-          setProducts(prev => [...prev, result.product])
-        }
+        // Recarregar dados para garantir que a imagem apareça
+        await loadData()
         
-        console.log('✅ Produto salvo com sucesso!')
+        console.log('✅ Produto salvo e dados recarregados!')
         alert('Produto salvo com sucesso!')
       } else {
         console.error('❌ Erro na resposta produto:', result)
@@ -1014,22 +1076,6 @@ export default function AdminPage() {
       alert(`Erro de rede produto: ${error}`)
     } finally {
       setIsSubmittingProduct(false)
-    }
-  }
-
-  const deleteProduct = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este produto?')) return
-    
-    try {
-      const response = await fetch(`/api/admin/products/${id}`, {
-        method: 'DELETE'
-      })
-
-      if (response.ok) {
-        loadData()
-      }
-    } catch (error) {
-      console.error('Erro ao excluir produto:', error)
     }
   }
 
@@ -1075,6 +1121,157 @@ export default function AdminPage() {
         }
       } catch (error) {
       console.error('Erro ao atualizar pedido:', error)
+    }
+  }
+
+  // Funções de upload de imagens
+  const loadSiteImages = async () => {
+    try {
+      // Carregar imagens das categorias
+      const categoryResponse = await fetch('/api/category-images')
+      if (categoryResponse.ok) {
+        const categoryResult = await categoryResponse.json()
+        if (categoryResult.success) {
+          setCategoryImages(categoryResult.images)
+        }
+      }
+
+      // Carregar banners
+      const bannersResponse = await fetch('/api/banners')
+      if (bannersResponse.ok) {
+        const bannersResult = await bannersResponse.json()
+        if (bannersResult.success) {
+          setBanners(bannersResult.banners)
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar imagens do site:', error)
+    }
+  }
+
+  const updateCategoryImage = async (category: string, newImageUrl: string) => {
+    try {
+      const updatedImages = { ...categoryImages, [category]: newImageUrl }
+      
+      const response = await fetch('/api/category-images', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ images: updatedImages })
+      })
+
+      if (response.ok) {
+        setCategoryImages(updatedImages)
+        setEditingCategory(null)
+        alert('Imagem da categoria atualizada com sucesso!')
+      } else {
+        throw new Error('Erro no servidor')
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar imagem da categoria:', error)
+      alert('Erro ao atualizar imagem da categoria')
+    }
+  }
+
+  const updateBanners = async (newBanners: any) => {
+    try {
+      const response = await fetch('/api/banners', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ banners: newBanners })
+      })
+
+      if (response.ok) {
+        setBanners(newBanners)
+        alert('Banners atualizados com sucesso!')
+      } else {
+        throw new Error('Erro no servidor')
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar banners:', error)
+      alert('Erro ao atualizar banners')
+    }
+  }
+
+  const uploadImage = async (file: File) => {
+    try {
+      setUploadingImage(true)
+      
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('type', 'site-image')
+      
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        return result.url
+      } else {
+        throw new Error('Erro no upload')
+      }
+    } catch (error) {
+      console.error('Erro ao fazer upload:', error)
+      throw error
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
+  const addPromotionalBanner = () => {
+    const newBanner = {
+      id: Date.now(),
+      title: "Novo Banner",
+      subtitle: "Descrição do banner",
+      image: "/images/placeholder.jpg",
+      link: "/catalog",
+      isActive: true
+    }
+    
+    const newBanners = {
+      ...banners,
+      promotional: [...banners.promotional, newBanner]
+    }
+    
+    updateBanners(newBanners)
+  }
+
+  const removePromotionalBanner = (bannerId: number) => {
+    const newBanners = {
+      ...banners,
+      promotional: banners.promotional.filter(b => b.id !== bannerId)
+    }
+    
+    updateBanners(newBanners)
+  }
+
+  // Funções do histórico de sincronização
+  const loadSyncHistory = async () => {
+    try {
+      const response = await fetch('/api/sync-history')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setSyncHistory(data.history)
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar histórico:', error)
+    }
+  }
+
+  const saveSyncToHistory = async (syncData: any) => {
+    try {
+      await fetch('/api/sync-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(syncData)
+      })
+      // Recarregar histórico
+      loadSyncHistory()
+    } catch (error) {
+      console.error('Erro ao salvar histórico:', error)
     }
   }
 
@@ -1396,6 +1593,16 @@ export default function AdminPage() {
               >
                 <Tag className="h-4 w-4 mr-3" />
                 Promoções
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('site-images')}
+                className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
+                  activeTab === 'site-images' ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <ImageIcon className="h-4 w-4 mr-3" />
+                Imagens do Site
               </button>
               
               <button
@@ -2142,7 +2349,7 @@ export default function AdminPage() {
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <input
                         type="text"
-                        placeholder="Buscar produtos..."
+                        placeholder="🔍 Buscar em TODOS os produtos (nome, marca, categoria, descrição)..."
                         value={productSearchTerm}
                         onChange={(e) => {
                           setProductSearchTerm(e.target.value)
@@ -2221,11 +2428,41 @@ export default function AdminPage() {
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                           {(onlySoldLast2Months ? getProductsSoldInLast2Months() : products)
-                            .filter(product => 
-                              product.name.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
-                              product.category.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
-                              (('description' in product) && (product as any).description && (product as any).description.toLowerCase().includes(productSearchTerm.toLowerCase()))
-                            )
+                            .filter(product => {
+                              if (!productSearchTerm) return true
+                              
+                              // Função para normalizar texto (remover acentos)
+                              const normalizeText = (text) => {
+                                return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+                              }
+                              
+                              const searchTerm = normalizeText(productSearchTerm)
+                              const searchWords = searchTerm.split(/\s+/).filter(word => word.length > 1)
+                              
+                              const name = normalizeText(product.name || '')
+                              const category = normalizeText(product.category || '')
+                              const description = normalizeText((product as any).description || '')
+                              const brand = normalizeText((product as any).brand || '')
+                              const tags = normalizeText(((product as any).tags || []).join(' '))
+                              
+                              // Busca por correspondência exata
+                              if (name.includes(searchTerm) || 
+                                  category.includes(searchTerm) ||
+                                  description.includes(searchTerm) ||
+                                  brand.includes(searchTerm) ||
+                                  tags.includes(searchTerm)) {
+                                return true
+                              }
+                              
+                              // Busca por palavras individuais
+                              return searchWords.some(word => 
+                                name.includes(word) || 
+                                category.includes(word) ||
+                                description.includes(word) ||
+                                brand.includes(word) ||
+                                tags.includes(word)
+                              )
+                            })
                             .slice((currentPage - 1) * productsPerPage, currentPage * productsPerPage)
                             .map((product) => (
                             <tr key={product.id}>
@@ -2267,13 +2504,6 @@ export default function AdminPage() {
                                     title="Editar"
                                   >
                                     <Edit className="h-4 w-4" />
-                                  </button>
-                                  <button 
-                                    onClick={() => deleteProduct(product.id)}
-                                    className="text-red-600 hover:text-red-900"
-                                    title="Excluir"
-                                  >
-                                    <Trash className="h-4 w-4" />
                                   </button>
                                 </div>
                               </td>
@@ -2771,6 +3001,537 @@ export default function AdminPage() {
               </div>
             )}
 
+            {/* Gerenciamento de Imagens do Site */}
+            {activeTab === 'site-images' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-gray-900">Imagens do Site</h2>
+                  <div className="text-sm text-gray-500">
+                    Gerencie as imagens do carrossel e banners promocionais
+                  </div>
+                </div>
+
+                {/* Hero Banner */}
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center">
+                    <ImageIcon className="h-5 w-5 mr-2 text-blue-600" />
+                    Banner Principal (Hero)
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Imagem Atual
+                        </label>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                          <img 
+                            src={banners.hero.image} 
+                            alt="Hero Banner" 
+                            className="w-full h-32 object-cover rounded"
+                            onError={(e) => { e.currentTarget.src = '/images/placeholder.jpg' }}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Nova Imagem
+                        </label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) uploadImage(file, 'hero')
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-gray-900">Especificações:</h4>
+                      <ul className="text-sm text-gray-600 space-y-1">
+                        <li>• Tamanho recomendado: 1920x800px</li>
+                        <li>• Formato: JPG, PNG, WEBP</li>
+                        <li>• Tamanho máximo: 5MB</li>
+                        <li>• Usado na seção principal da página inicial</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Banner Promocional */}
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center">
+                    <Zap className="h-5 w-5 mr-2 text-orange-600" />
+                    Banner Promocional
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Imagem Atual
+                        </label>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                          <img 
+                            src={banners.promotional[0]?.image || '/images/placeholder.jpg'} 
+                            alt="Banner Promocional" 
+                            className="w-full h-24 object-cover rounded"
+                            onError={(e) => { e.currentTarget.src = '/images/placeholder.jpg' }}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Nova Imagem
+                        </label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) uploadImage(file, 'banner')
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-gray-900">Especificações:</h4>
+                      <ul className="text-sm text-gray-600 space-y-1">
+                        <li>• Tamanho recomendado: 1200x300px</li>
+                        <li>• Formato: JPG, PNG, WEBP</li>
+                        <li>• Tamanho máximo: 3MB</li>
+                        <li>• Usado na seção de ofertas da semana</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Carrossel de Imagens */}
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold flex items-center">
+                      <Package className="h-5 w-5 mr-2 text-green-600" />
+                      Imagens das Categorias
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Edite as imagens que aparecem no carrossel de categorias
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {Object.entries(categoryImages).map(([category, image]) => (
+                      <div key={category} className="border border-gray-200 rounded-lg p-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              {category}
+                            </label>
+                            <img 
+                              src={image} 
+                              alt={`Categoria ${category}`} 
+                              className="w-full h-20 object-cover rounded"
+                              onError={(e) => { e.currentTarget.src = '/images/placeholder.jpg' }}
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="text"
+                                value={editingCategory === category ? editingCategoryUrl : image}
+                                onChange={(e) => setEditingCategoryUrl(e.target.value)}
+                                disabled={editingCategory !== category}
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-100"
+                                placeholder="URL da imagem"
+                              />
+                              {editingCategory === category ? (
+                                <div className="flex space-x-2">
+                                  <button
+                                    onClick={() => updateCategoryImage(category, editingCategoryUrl)}
+                                    className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                                  >
+                                    Salvar
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setEditingCategory(null)
+                                      setEditingCategoryUrl('')
+                                    }}
+                                    className="px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                                  >
+                                    Cancelar
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setEditingCategory(category)
+                                    setEditingCategoryUrl(image)
+                                  }}
+                                  className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                                >
+                                  Editar
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-2">Especificações do Carrossel:</h4>
+                    <ul className="text-sm text-gray-600 space-y-1">
+                      <li>• Tamanho recomendado: 1200x600px</li>
+                      <li>• Formato: JPG, PNG, WEBP</li>
+                      <li>• Tamanho máximo: 5MB por imagem</li>
+                      <li>• Mínimo 1 imagem, máximo 10 imagens</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {uploadingImage && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                      <p>Enviando imagem...</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Imagens do Site */}
+            {activeTab === 'site-images' && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold text-gray-900">Gerenciar Imagens do Site</h2>
+                
+                {/* Imagens das Categorias */}
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center">
+                    <ImageIcon className="h-5 w-5 mr-2" />
+                    Imagens das Categorias (Carrossel)
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    Edite as imagens que aparecem no carrossel de categorias na página inicial
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Object.entries(categoryImages).map(([category, imageUrl]) => (
+                      <div key={category} className="border rounded-lg p-4">
+                        <img 
+                          src={imageUrl} 
+                          alt={category}
+                          className="w-full h-32 object-cover rounded-md mb-3"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/images/placeholder.jpg'
+                          }}
+                        />
+                        <h4 className="font-medium text-sm mb-2">{category}</h4>
+                        
+                        {editingCategory === category ? (
+                          <div className="space-y-2">
+                            <input
+                              type="url"
+                              placeholder="URL da nova imagem"
+                              className="w-full px-3 py-1 text-sm border rounded"
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                  const url = (e.target as HTMLInputElement).value
+                                  if (url) updateCategoryImage(category, url)
+                                }
+                              }}
+                            />
+                            <div className="flex gap-2">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                id={`file-${category}`}
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0]
+                                  if (file) {
+                                    try {
+                                      const url = await uploadImage(file)
+                                      updateCategoryImage(category, url)
+                                    } catch (error) {
+                                      alert('Erro ao enviar imagem')
+                                    }
+                                  }
+                                }}
+                              />
+                              <label 
+                                htmlFor={`file-${category}`}
+                                className="flex-1 bg-blue-500 text-white text-xs px-2 py-1 rounded cursor-pointer text-center hover:bg-blue-600"
+                              >
+                                {uploadingImage ? 'Enviando...' : 'Upload'}
+                              </label>
+                              <button 
+                                onClick={() => setEditingCategory(null)}
+                                className="flex-1 bg-gray-300 text-gray-700 text-xs px-2 py-1 rounded hover:bg-gray-400"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={() => setEditingCategory(category)}
+                            className="w-full bg-blue-500 text-white text-xs px-3 py-1 rounded hover:bg-blue-600"
+                          >
+                            Editar Imagem
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Banner Hero */}
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center">
+                    <Eye className="h-5 w-5 mr-2" />
+                    Banner Principal (Hero)
+                  </h3>
+                  
+                  <div className="flex gap-6">
+                    <div className="flex-1">
+                      <img 
+                        src={banners.hero.image} 
+                        alt="Banner Principal"
+                        className="w-full h-48 object-cover rounded-md mb-4"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/images/placeholder.jpg'
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1 space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Título</label>
+                        <input
+                          type="text"
+                          value={banners.hero.title}
+                          onChange={(e) => setBanners(prev => ({
+                            ...prev,
+                            hero: { ...prev.hero, title: e.target.value }
+                          }))}
+                          className="w-full px-3 py-2 border rounded-md"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Subtítulo</label>
+                        <textarea
+                          value={banners.hero.subtitle}
+                          onChange={(e) => setBanners(prev => ({
+                            ...prev,
+                            hero: { ...prev.hero, subtitle: e.target.value }
+                          }))}
+                          className="w-full px-3 py-2 border rounded-md"
+                          rows={3}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">URL da Imagem</label>
+                        <input
+                          type="url"
+                          value={banners.hero.image}
+                          onChange={(e) => setBanners(prev => ({
+                            ...prev,
+                            hero: { ...prev.hero, image: e.target.value }
+                          }))}
+                          className="w-full px-3 py-2 border rounded-md"
+                        />
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          id="hero-file"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            if (file) {
+                              try {
+                                const url = await uploadImage(file)
+                                setBanners(prev => ({
+                                  ...prev,
+                                  hero: { ...prev.hero, image: url }
+                                }))
+                              } catch (error) {
+                                alert('Erro ao enviar imagem')
+                              }
+                            }
+                          }}
+                        />
+                        <label 
+                          htmlFor="hero-file"
+                          className="bg-blue-500 text-white px-4 py-2 rounded cursor-pointer hover:bg-blue-600"
+                        >
+                          {uploadingImage ? 'Enviando...' : 'Upload Nova Imagem'}
+                        </label>
+                        <button 
+                          onClick={() => updateBanners(banners)}
+                          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                        >
+                          Salvar Alterações
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Banners Promocionais */}
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold flex items-center">
+                      <Tag className="h-5 w-5 mr-2" />
+                      Banners Promocionais
+                    </h3>
+                    <button 
+                      onClick={addPromotionalBanner}
+                      className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 flex items-center"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Adicionar Banner
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {banners.promotional.map((banner, index) => (
+                      <div key={banner.id} className="border rounded-lg p-4">
+                        <div className="flex gap-4">
+                          <img 
+                            src={banner.image} 
+                            alt={banner.title}
+                            className="w-32 h-20 object-cover rounded-md"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = '/images/placeholder.jpg'
+                            }}
+                          />
+                          <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Título</label>
+                              <input
+                                type="text"
+                                value={banner.title}
+                                onChange={(e) => {
+                                  const newBanners = { ...banners }
+                                  newBanners.promotional[index].title = e.target.value
+                                  setBanners(newBanners)
+                                }}
+                                className="w-full px-3 py-2 border rounded-md"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Subtítulo</label>
+                              <input
+                                type="text"
+                                value={banner.subtitle}
+                                onChange={(e) => {
+                                  const newBanners = { ...banners }
+                                  newBanners.promotional[index].subtitle = e.target.value
+                                  setBanners(newBanners)
+                                }}
+                                className="w-full px-3 py-2 border rounded-md"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Link</label>
+                              <input
+                                type="text"
+                                value={banner.link}
+                                onChange={(e) => {
+                                  const newBanners = { ...banners }
+                                  newBanners.promotional[index].link = e.target.value
+                                  setBanners(newBanners)
+                                }}
+                                className="w-full px-3 py-2 border rounded-md"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              id={`promo-file-${banner.id}`}
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0]
+                                if (file) {
+                                  try {
+                                    const url = await uploadImage(file)
+                                    const newBanners = { ...banners }
+                                    newBanners.promotional[index].image = url
+                                    setBanners(newBanners)
+                                  } catch (error) {
+                                    alert('Erro ao enviar imagem')
+                                  }
+                                }
+                              }}
+                            />
+                            <label 
+                              htmlFor={`promo-file-${banner.id}`}
+                              className="bg-blue-500 text-white px-3 py-1 rounded text-sm cursor-pointer hover:bg-blue-600 text-center"
+                            >
+                              Upload
+                            </label>
+                            <button 
+                              onClick={() => removePromotionalBanner(banner.id)}
+                              className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600"
+                            >
+                              Remover
+                            </button>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between">
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={banner.isActive}
+                              onChange={(e) => {
+                                const newBanners = { ...banners }
+                                newBanners.promotional[index].isActive = e.target.checked
+                                setBanners(newBanners)
+                              }}
+                              className="mr-2"
+                            />
+                            Banner Ativo
+                          </label>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">URL da Imagem</label>
+                            <input
+                              type="url"
+                              value={banner.image}
+                              onChange={(e) => {
+                                const newBanners = { ...banners }
+                                newBanners.promotional[index].image = e.target.value
+                                setBanners(newBanners)
+                              }}
+                              className="px-3 py-1 border rounded-md text-sm"
+                              placeholder="URL da imagem"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-4 flex justify-end">
+                    <button 
+                      onClick={() => updateBanners(banners)}
+                      className="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600"
+                    >
+                      Salvar Todos os Banners
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Configurações */}
             {activeTab === 'settings' && (
               <div className="space-y-6">
@@ -3257,28 +4018,37 @@ export default function AdminPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Categoria
                     </label>
-                    <select
-                      value={productForm.category}
-                      onChange={(e) => setProductForm({...productForm, category: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    >
-                      <option value="">Selecione uma categoria</option>
-                      <option value="DESCARTÁVEIS">DESCARTÁVEIS</option>
-                      <option value="CONFEITARIA E OUTROS">CONFEITARIA E OUTROS</option>
-                      <option value="PANIFICAÇÃO">PANIFICAÇÃO</option>
-                      <option value="MOLHOS">MOLHOS</option>
-                      <option value="SUSHITERIA">SUSHITERIA</option>
-                      <option value="PRODUTOS DE LIMPEZA">PRODUTOS DE LIMPEZA</option>
-                      <option value="TEMPEROS">TEMPEROS</option>
-                      <option value="ENLATADOS E EM CONSERVA">ENLATADOS E EM CONSERVA</option>
-                      <option value="BISCOITOS">BISCOITOS</option>
-                      <option value="MERCEARIA">MERCEARIA</option>
-                      <option value="FRIOS Á GRANEL E PACOTES">FRIOS Á GRANEL E PACOTES</option>
-                      <option value="RESFRIADOS">RESFRIADOS</option>
-                      <option value="CONGELADOS">CONGELADOS</option>
-                      <option value="REFRIGERANTES E OUTROS LIQUIDOS">REFRIGERANTES E OUTROS LIQUIDOS</option>
-                    </select>
+                    {editingProduct ? (
+                      <input
+                        type="text"
+                        value={productForm.category}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600"
+                        readOnly
+                      />
+                    ) : (
+                      <select
+                        value={productForm.category}
+                        onChange={(e) => setProductForm({...productForm, category: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        required
+                      >
+                        <option value="">Selecione uma categoria</option>
+                        <option value="DESCARTÁVEIS">DESCARTÁVEIS</option>
+                        <option value="CONFEITARIA E OUTROS">CONFEITARIA E OUTROS</option>
+                        <option value="PANIFICAÇÃO">PANIFICAÇÃO</option>
+                        <option value="MOLHOS">MOLHOS</option>
+                        <option value="SUSHITERIA">SUSHITERIA</option>
+                        <option value="PRODUTOS DE LIMPEZA">PRODUTOS DE LIMPEZA</option>
+                        <option value="TEMPEROS">TEMPEROS</option>
+                        <option value="ENLATADOS E EM CONSERVA">ENLATADOS E EM CONSERVA</option>
+                        <option value="BISCOITOS">BISCOITOS</option>
+                        <option value="MERCEARIA">MERCEARIA</option>
+                        <option value="FRIOS Á GRANEL E PACOTES">FRIOS Á GRANEL E PACOTES</option>
+                        <option value="RESFRIADOS">RESFRIADOS</option>
+                        <option value="CONGELADOS">CONGELADOS</option>
+                        <option value="REFRIGERANTES E OUTROS LIQUIDOS">REFRIGERANTES E OUTROS LIQUIDOS</option>
+                      </select>
+                    )}
                   </div>
                 </div>
 
@@ -3340,10 +4110,14 @@ export default function AdminPage() {
                           onChange={async (e) => {
                             const file = e.target.files?.[0]
                             if (file) {
+                              console.log('📁 Arquivo selecionado:', file.name)
+                              
                               // Preview imediato
                               const reader = new FileReader()
                               reader.onload = (e) => {
-                                setProductForm({...productForm, image: e.target?.result as string})
+                                const result = e.target?.result as string
+                                console.log('🖼️ Preview carregado')
+                                setProductForm(prev => ({...prev, image: result}))
                               }
                               reader.readAsDataURL(file)
                               
@@ -3351,17 +4125,18 @@ export default function AdminPage() {
                               const formData = new FormData()
                               formData.append('file', file)
                               try {
+                                console.log('☁️ Iniciando upload...')
                                 const response = await fetch('/api/upload', {
                                   method: 'POST',
                                   body: formData
                                 })
                                 const result = await response.json()
                                 if (result.success) {
-                                  setProductForm({...productForm, image: result.url})
-                                  console.log(`✅ Upload produto via ${result.service}`)
+                                  console.log(`✅ Upload produto via ${result.service}:`, result.url)
+                                  setProductForm(prev => ({...prev, image: result.url}))
                                 }
                               } catch (error) {
-                                console.log('Upload em background falhou, usando preview local')
+                                console.log('Upload em background falhou, usando preview local:', error)
                               }
                             }
                           }}
@@ -3385,15 +4160,22 @@ export default function AdminPage() {
                       </div>
                     </div>
                     {productForm.image && (
-                      <div className="mt-2">
-                        <img 
-                          src={productForm.image} 
-                          alt="Preview" 
-                          className="h-20 w-20 object-cover rounded-md"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none'
-                          }}
-                        />
+                      <div className="mt-3">
+                        <p className="text-sm font-medium text-gray-700 mb-2">Prévia da Imagem:</p>
+                        <div className="flex justify-center">
+                          <img 
+                            src={productForm.image} 
+                            alt="Preview" 
+                            className="h-32 w-32 object-cover rounded-lg border-2 border-blue-200 shadow-md"
+                            onError={(e) => {
+                              console.log('❌ Erro ao carregar prévia da imagem')
+                              (e.target as HTMLImageElement).style.display = 'none'
+                            }}
+                            onLoad={() => {
+                              console.log('✅ Prévia da imagem carregada com sucesso')
+                            }}
+                          />
+                        </div>
                       </div>
                     )}
                   </div>

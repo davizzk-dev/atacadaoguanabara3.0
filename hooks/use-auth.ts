@@ -5,23 +5,8 @@ import { useSessionWrapper } from '@/hooks/use-session-wrapper'
 import { useAuthStore } from '@/lib/store'
 
 export function useAuth() {
-<<<<<<< HEAD
-  let session: any = null
-  let status: any = 'unauthenticated'
-  
-  try {
-    const sessionData = useSession()
-    session = sessionData?.data || null
-    status = sessionData?.status || 'unauthenticated'
-  } catch (error) {
-    // Fallback para build estático
-    session = null
-    status = 'unauthenticated'
-  }
-
-=======
   const { data: session, status } = useSessionWrapper()
->>>>>>> 9731986bd2ab46d7f04a58ef52f184bb4e57851a
+
   const { user, setUser, logout: storeLogout } = useAuthStore()
 
   useEffect(() => {

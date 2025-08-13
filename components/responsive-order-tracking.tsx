@@ -314,9 +314,13 @@ export function ResponsiveOrderTracking({ order }: ResponsiveOrderTrackingProps)
           <CardContent className="space-y-4">
             <div>
               <h4 className="font-semibold text-gray-900 mb-1">Endereço</h4>
-              <p className="text-gray-600 text-sm sm:text-base">{order.customerInfo.address}</p>
               <p className="text-gray-600 text-sm sm:text-base">
-                {order.customerInfo.city} - {order.customerInfo.zipCode}
+                {order.customerInfo.address?.street ? 
+                  `${order.customerInfo.address.street}, ${order.customerInfo.address.number} - ${order.customerInfo.address.neighborhood}` 
+                  : 'Jardim Guanabara'}
+              </p>
+              <p className="text-gray-600 text-sm sm:text-base">
+                {order.customerInfo.address?.city || order.customerInfo.city || 'Fortaleza'} - {order.customerInfo.address?.zipCode || order.customerInfo.zipCode || 'CEP'}
               </p>
             </div>
 

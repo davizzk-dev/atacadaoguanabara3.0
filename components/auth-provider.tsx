@@ -1,7 +1,7 @@
-'use client'
+"use client"
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { useSessionWrapper } from '@/hooks/use-session-wrapper'
+import { useSession } from 'next-auth/react'
 
 interface AuthContextType {
   user: any
@@ -16,7 +16,7 @@ const AuthContext = createContext<AuthContextType>({
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSessionWrapper()
+  const { data: session, status } = useSession()
   const [user, setUser] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -41,4 +41,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuthContext() {
   return useContext(AuthContext)
-} 
+}

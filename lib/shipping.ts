@@ -154,18 +154,8 @@ export class ShippingService {
    * Formata tempo estimado de entrega
    */
   private formatEstimatedDelivery(durationMinutes: number): string {
-    if (durationMinutes < 60) {
-      return `Em até ${Math.ceil(durationMinutes)} minutos`
-    }
-    
-    const hours = Math.floor(durationMinutes / 60)
-    const minutes = Math.ceil(durationMinutes % 60)
-    
-    if (minutes === 0) {
-      return `Em até ${hours} hora${hours > 1 ? 's' : ''}`
-    }
-    
-    return `Em até ${hours}h${minutes}min`
+    // Sempre retorna o prazo fixo solicitado
+    return '2 a 3 horas';
   }
 
   /**

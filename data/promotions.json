@@ -1,0 +1,22 @@
+[
+  {
+    "id": "test_1754783420296",
+    "title": "Teste",
+    "name": "Teste",
+    "description": "Descrição de teste",
+    "type": "promotion",
+    "products": [
+      {
+        "id": "1",
+        "name": "Produto Teste"
+      }
+    ],
+    "discount": 10,
+    "discountType": "percentage",
+    "startDate": "2025-08-09T23:50:20.296Z",
+    "endDate": "2025-08-16T23:50:20.297Z",
+    "isActive": true,
+    "createdAt": "2025-08-09T23:50:20.297Z",
+    "updatedAt": "2025-08-09T23:50:20.297Z"
+  }
+]

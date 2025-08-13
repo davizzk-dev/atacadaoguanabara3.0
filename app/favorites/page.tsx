@@ -1,21 +1,57 @@
-export const dynamic = 'force-dynamic'
-
 "use client"
 
+export const dynamic = 'force-dynamic'
+
+import { useState, useEffect } from "react"
 import Header from "@/components/header"
 import { Footer } from "@/components/footer"
 import { ProductCard } from "@/components/product-card"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useFavoritesStore } from "@/lib/store"
-import { products } from "@/lib/data"
-import { Heart, ShoppingCart } from "lucide-react"
+import { Heart, ShoppingCart, RefreshCw } from "lucide-react"
 import Link from "next/link"
 
 export default function FavoritesPage() {
   const { favorites, removeFavorite } = useFavoritesStore()
+  const [products, setProducts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  
+  // Carregar produtos da API
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const response = await fetch('/api/products')
+        if (response.ok) {
+          const data = await response.json()
+          setProducts(data.products || data || [])
+        }
+      } catch (error) {
+        console.error('Erro ao carregar produtos:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadProducts()
+  }, [])
   
   const favoriteProducts = products.filter(product => favorites.includes(product.id))
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <div className="container mx-auto px-4 py-16">
+          <div className="flex items-center justify-center">
+            <RefreshCw className="h-8 w-8 animate-spin mr-2" />
+            <span>Carregando favoritos...</span>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
 
   if (favoriteProducts.length === 0) {
     return (

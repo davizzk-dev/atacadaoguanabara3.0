@@ -1,6 +1,6 @@
-export const dynamic = 'force-dynamic'
-
 "use client"
+
+export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from "react"
 import Header from "@/components/header"
@@ -21,9 +21,17 @@ export default function OrdersPage() {
   const { user } = useAuthStore()
   const [isLoading, setIsLoading] = useState(true)
   const [ordersData, setOrdersData] = useState<any[]>([])
+  const [mounted, setMounted] = useState(false)
+
+  // Garantir hidratação correta
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Carregar pedidos da API
   useEffect(() => {
+    if (!mounted) return
+    
     const loadOrders = async () => {
       try {
         console.log('🔍 Carregando pedidos...')
@@ -37,11 +45,18 @@ export default function OrdersPage() {
           return
         }
 
+        console.log('👤 Dados completos do usuário:', JSON.stringify(user, null, 2))
+
         // Fazer requisição com o ID do usuário logado
         let url = `/api/orders?userId=${user.id}`
         
         // Se for usuário guest, adicionar email para filtro mais preciso
         if ((user.id === 'guest' || user.id.startsWith('guest_')) && user.email) {
+          url += `&userEmail=${encodeURIComponent(user.email)}`
+        }
+        
+        // Se tem email mas não é guest, também adicionar email para filtro
+        if (user.email && !user.id.startsWith('guest')) {
           url += `&userEmail=${encodeURIComponent(user.email)}`
         }
         
@@ -56,8 +71,8 @@ export default function OrdersPage() {
           console.log('📋 Tipo dos dados:', typeof data)
           console.log('📋 É array?', Array.isArray(data))
           
-          // Garantir que data é um array
-          const ordersArray = Array.isArray(data) ? data : []
+          // A API retorna { success: true, orders: [...] }
+          const ordersArray = Array.isArray(data) ? data : (data.orders || [])
           console.log('📋 Array de pedidos:', ordersArray.length)
           
           setOrdersData(ordersArray)
@@ -81,7 +96,23 @@ export default function OrdersPage() {
     }
 
     loadOrders()
-  }, [orders, addOrder, user])
+  }, [mounted, user])
+
+  // Se não está montado ainda, mostrar loading
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-blue-50">
+        <Header />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="flex items-center space-x-2">
+            <RefreshCw className="h-4 w-4 animate-spin" />
+            <span>Carregando...</span>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
 
   // Função para retornar produtos do pedido ao carrinho
   const handleReturnToCart = (order: any) => {
@@ -89,12 +120,12 @@ export default function OrdersPage() {
       order.items.forEach((item: any) => {
         // Criar objeto produto para adicionar ao carrinho
         const product = {
-          id: item.productId,
-          name: item.name,
-          price: item.price,
-          image: item.image || '/placeholder.svg',
-          category: item.category || 'Geral',
-          description: item.description || '',
+          id: item.productId || item.product?.id,
+          name: item.product?.name || item.name || 'Produto sem nome',
+          price: item.product?.price || item.price || 0,
+          image: item.product?.image || item.image || '/placeholder.svg',
+          category: item.product?.category || item.category || 'Geral',
+          description: item.product?.description || item.description || '',
           stock: 10,
           rating: 4.5,
           reviews: 0,
@@ -253,21 +284,23 @@ export default function OrdersPage() {
                       <div key={index} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
                                                  <div className="relative w-16 h-16">
                            <Image
-                             src={item.image || "/placeholder.svg"}
-                             alt={item.name || 'Produto'}
+                             src={item.product?.image || item.image || "/placeholder.svg"}
+                             alt={item.product?.name || item.name || 'Produto'}
                              fill
                              className="object-cover rounded-md"
                            />
                          </div>
                          <div className="flex-1">
-                           <h4 className="font-semibold">{item.name || 'Produto sem nome'}</h4>
+                           <h4 className="font-semibold">
+                             {item.product?.name || item.name || 'Produto sem nome'}
+                           </h4>
                                                      <p className="text-sm text-gray-600">
-                             Quantidade: {item.quantity || 0} x R$ {(item.price || 0).toFixed(2)}
+                             Quantidade: {item.quantity || 0} x R$ {(item.product?.price || item.price || 0).toFixed(2)}
                            </p>
                         </div>
                                                  <div className="text-right">
                            <p className="font-semibold">
-                             R$ {((item.quantity || 0) * (item.price || 0)).toFixed(2)}
+                             R$ {((item.quantity || 0) * (item.product?.price || item.price || 0)).toFixed(2)}
                            </p>
                          </div>
                       </div>
@@ -279,13 +312,17 @@ export default function OrdersPage() {
                                          <div>
                        <h4 className="font-semibold mb-2">Informações de Entrega</h4>
                        <p className="text-sm text-gray-600">{order.customerInfo?.name || order.userName || 'Cliente'}</p>
-                       <p className="text-sm text-gray-600">{order.customerInfo?.address || 'Jardim Guanabara'}</p>
                        <p className="text-sm text-gray-600">
-                         {order.customerInfo?.city || 'Fortaleza'} - {order.customerInfo?.zipCode || 'CEP'}
+                         {order.customerInfo?.address?.street ? 
+                           `${order.customerInfo.address.street}, ${order.customerInfo.address.number} - ${order.customerInfo.address.neighborhood}` 
+                           : 'Jardim Guanabara'}
+                       </p>
+                       <p className="text-sm text-gray-600">
+                         {order.customerInfo?.address?.city || 'Fortaleza'} - {order.customerInfo?.address?.zipCode || 'CEP'}
                        </p>
                      </div>
                     <div className="flex flex-col gap-2 items-end">
-                      <Link href={`/order-tracking/${order.id}`}>
+                      <Link href={`/order-status/${order.id}`}>
                         <Button variant="outline" className="w-full md:w-auto">
                           Acompanhar Pedido
                         </Button>

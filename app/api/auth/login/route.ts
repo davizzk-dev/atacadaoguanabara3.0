@@ -22,12 +22,32 @@ function readUsers() {
 // POST - Login de usuário
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    console.log('[API/auth/login][POST] chamada recebida')
+    
+    // Usar request.text() e parsing manual para evitar erro do Express middleware
+    const textBody = await request.text()
+    console.log('[API/auth/login][POST] body recebido:', textBody)
+    
+    let body: any
+    try {
+      body = JSON.parse(textBody)
+    } catch (parseError) {
+      console.error('[API/auth/login][POST] Erro ao fazer parse do JSON:', parseError)
+      return NextResponse.json({
+        success: false,
+        error: 'JSON inválido',
+        details: (parseError as Error)?.message
+      }, { status: 400 })
+    }
+    
     const { email, password } = body
 
     // Validações
     if (!email || !password) {
-      return NextResponse.json({ error: 'Email e senha são obrigatórios' }, { status: 400 })
+      return NextResponse.json({ 
+        success: false,
+        error: 'Email e senha são obrigatórios' 
+      }, { status: 400 })
     }
 
     const users = readUsers()
@@ -36,14 +56,29 @@ export async function POST(request: NextRequest) {
     const user = users.find((u: any) => u.email === email && u.password === password)
     
     if (!user) {
-      return NextResponse.json({ error: 'Email ou senha incorretos' }, { status: 401 })
+      return NextResponse.json({ 
+        success: false,
+        error: 'Email ou senha incorretos' 
+      }, { status: 401 })
     }
 
     // Retornar usuário sem senha
     const { password: _, ...userWithoutPassword } = user
-    return NextResponse.json(userWithoutPassword)
-  } catch (error) {
-    console.error('Erro no login:', error)
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
+    console.log('[API/auth/login][POST] login realizado com sucesso para:', email)
+    
+    return NextResponse.json({
+      success: true,
+      data: userWithoutPassword
+    })
+  } catch (error: any) {
+    console.error('[API/auth/login][POST] Erro:', error, error?.stack)
+    return NextResponse.json({
+      success: false,
+      error: 'Erro interno do servidor',
+      details: error?.message,
+      stack: error?.stack,
+      errorString: String(error),
+      errorType: error?.constructor?.name
+    }, { status: 500 })
   }
 } 

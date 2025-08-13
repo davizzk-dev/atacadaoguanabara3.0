@@ -4,11 +4,12 @@ export const dynamic = 'force-dynamic'
 
 import React, { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Trash2, Minus, Plus, MapPin, Phone, User, AlertCircle, Truck, Calculator, Heart, Star } from 'lucide-react'
+import { Trash2, Minus, Plus, MapPin, Phone, User, AlertCircle, Truck, Calculator, Heart, Star, CreditCard, Banknote, QrCode } from 'lucide-react'
 import Header from '@/components/header'
 import { Footer } from '@/components/footer'
 import { useCartStore, useAuthStore, useOrderStore } from '@/lib/store'
 import { shippingService } from '@/lib/shipping'
+import { calculateDynamicPrice } from '@/lib/utils'
 import type { Address, ShippingCalculation } from '@/lib/types'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -25,6 +26,15 @@ export default function CartPage() {
   const [showThankYouDialog, setShowThankYouDialog] = useState(false)
   const [showRatingDialog, setShowRatingDialog] = useState(false)
   const [orderId, setOrderId] = useState<string | null>(null)
+  // Pagamento
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'debit' | 'credit' | 'cash'>('pix')
+  const [wantsChange, setWantsChange] = useState(false)
+  const [changeFor, setChangeFor] = useState<string>('')
+  const [changeError, setChangeError] = useState<string | null>(null)
+  
+  // Entrega vs Retirada
+  const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery')
+  
   const router = useRouter()
   const errorRef = useRef<HTMLDivElement>(null)
 
@@ -37,6 +47,32 @@ export default function CartPage() {
       })
     }
   }, [error])
+
+  // Utilitário: atualizar dados no localStorage cartFormData
+  const updateCartFormData = (partial: Record<string, any>) => {
+    try {
+      const saved = localStorage.getItem('cartFormData')
+      const current = saved ? JSON.parse(saved) : {}
+      const merged = { ...current, ...partial }
+      localStorage.setItem('cartFormData', JSON.stringify(merged))
+    } catch (e) {
+      console.warn('Não foi possível salvar payment no localStorage')
+    }
+  }
+
+  // Carregar pagamento e tipo de entrega salvos
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('cartFormData')
+      if (saved) {
+        const data = JSON.parse(saved)
+        if (data.paymentMethod) setPaymentMethod(data.paymentMethod)
+        if (typeof data.wantsChange !== 'undefined') setWantsChange(!!data.wantsChange)
+        if (typeof data.changeFor !== 'undefined') setChangeFor(String(data.changeFor))
+        if (data.deliveryType) setDeliveryType(data.deliveryType)
+      }
+    } catch {}
+  }, [])
 
   // Formatar telefone
   const formatPhone = (value: string) => {
@@ -75,6 +111,19 @@ export default function CartPage() {
       setIsCalculatingShipping(false)
     }
   }
+
+  // Validar troco em tempo real
+  useEffect(() => {
+    if (paymentMethod === 'cash' && wantsChange) {
+      const totalWithShipping = getTotal() + (shippingCalculation?.cost || 0)
+      const val = Number(changeFor || 0)
+      if (!val || isNaN(val)) setChangeError('Informe um valor válido para troco')
+      else if (val <= totalWithShipping) setChangeError(`O troco deve ser maior que o total (R$ ${totalWithShipping.toFixed(2)})`)
+      else setChangeError(null)
+    } else {
+      setChangeError(null)
+    }
+  }, [paymentMethod, wantsChange, changeFor, shippingCalculation, getTotal])
 
   // Buscar endereço por CEP
   const handleZipCodeBlur = async (zipCode: string) => {
@@ -200,12 +249,7 @@ export default function CartPage() {
         return
       }
 
-      // Email é opcional, mas se fornecido deve ser válido
-      if (customerEmail.trim() && !customerEmail.includes('@')) {
-        setError('Email deve ser válido (contém @).')
-        setDebugInfo(`Email obtido: "${customerEmail}"`)
-        return
-      }
+      // Email é opcional - não validar formato
 
       // Validar endereço - verificar se os campos estão preenchidos
       const addressFields = { street, number, neighborhood, city, state, zipCode }
@@ -260,6 +304,23 @@ export default function CartPage() {
 
       const totalWithShipping = getTotal() + shipping.cost
 
+      // Ler pagamento salvo
+      const paymentMethod = (formData.paymentMethod as 'pix'|'debit'|'credit'|'cash') || 'pix'
+      const wantsChange = formData.wantsChange === true || formData.wantsChange === 'true'
+      const changeForValue = Number(formData.changeFor || 0)
+
+      // Validações de pagamento (troco)
+      if (paymentMethod === 'cash' && wantsChange) {
+        if (!changeForValue || isNaN(changeForValue)) {
+          setError('Informe o valor para troco.')
+          return
+        }
+        if (changeForValue <= totalWithShipping) {
+          setError(`O valor para troco deve ser maior que o total (R$ ${totalWithShipping.toFixed(2)}).`)
+          return
+        }
+      }
+
       // Criar pedido
       const order = {
         id: Date.now().toString(),
@@ -276,6 +337,13 @@ export default function CartPage() {
         estimatedDelivery: new Date(Date.now() + shipping.duration * 60 * 1000),
         shippingCost: shipping.cost,
         shippingDistance: shipping.distance
+      }
+
+      // Adicionar pagamento ao pedido
+      ;(order as any).payment = {
+        method: paymentMethod,
+        wantsChange,
+        changeFor: paymentMethod === 'cash' && wantsChange ? changeForValue : undefined
       }
 
       // Salvar pedido na API
@@ -308,41 +376,58 @@ export default function CartPage() {
         // Salvar pedido no store local
         addOrder(savedOrder.order || savedOrder)
         
-        // Armazenar ID do pedido para redirecionamento
+        // Armazenar ID do pedido para redirecionamento e acesso no menu
         setOrderId(savedOrder.order?.id || savedOrder.id)
+        try {
+          localStorage.setItem('lastOrderId', String(savedOrder.order?.id || savedOrder.id))
+        } catch {}
 
         // Enviar para WhatsApp
         const orderItems = items.map(item => 
-          `${item.product.name} - Qtd: ${item.quantity} - R$ ${(item.product.price * item.quantity).toFixed(2)}`
+          `• ${item.product.name}  x${item.quantity} — R$ ${(calculateDynamicPrice(item.product, item.quantity) * item.quantity).toFixed(2)}`
         ).join('\n')
 
-        const message = `🛒 *PEDIDO - ATACADÃO GUANABARA*
+        const payLabel = paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'debit' ? 'Cartão de Débito' : paymentMethod === 'credit' ? 'Cartão de Crédito' : 'Dinheiro'
+        const changeLine = paymentMethod === 'cash' && wantsChange ? `\nTroco para: R$ ${changeForValue.toFixed(2)}` : ''
 
-*Cliente:* ${customerName}
-*Telefone:* ${customerPhone}
-*Email:* ${customerEmail}
-
-*Endereço de entrega:*
-${street}, ${number}${complement ? ` - ${complement}` : ''}
-${neighborhood}, ${city} - ${state}
-CEP: ${zipCode}
-
-*Itens:*
-${orderItems}
-
-*Subtotal: R$ ${getTotal().toFixed(2)}*
-*Frete: R$ ${shipping.cost.toFixed(2)}*
-*Total: R$ ${totalWithShipping.toFixed(2)}*
-
-*Informações de entrega:*
-Distância: ${shipping.distance.toFixed(1)} km
-Tempo estimado: ${shipping.estimatedDelivery}
-
-Obrigado pela preferência! 🧡`
+        const message = [
+          '🧾 *PEDIDO — ATACADÃO GUANABARA*',
+          '',
+          `👤 Cliente: ${customerName}`,
+          `📞 Telefone: ${customerPhone}`,
+          customerEmail ? `📧 Email: ${customerEmail}` : null,
+          '',
+          '*📍 Endereço de entrega*',
+          `${street}, ${number}${complement ? ` - ${complement}` : ''}`,
+          `${neighborhood}, ${city} - ${state}`,
+          `CEP: ${zipCode}`,
+          '',
+          '*🛍️ Itens do pedido*',
+          orderItems,
+          '',
+          `Subtotal: R$ ${getTotal().toFixed(2)}`,
+          `Frete: R$ ${shipping.cost.toFixed(2)}`,
+          `Total: R$ ${totalWithShipping.toFixed(2)}`,
+          '',
+          '*💳 Pagamento*',
+          `Forma: ${payLabel}${changeLine}`,
+          '',
+          '*🚚 Entrega*',
+          `Distância: ${shipping.distance.toFixed(1)} km`,
+          `Tempo estimado: ${shipping.estimatedDelivery}`,
+          '',
+          'Agradeço desde já! Atacadão Guanabara 🙏✨'
+        ].filter(Boolean).join('\n')
 
         console.log('Mensagem WhatsApp:', message)
 
-        const whatsappUrl = `https://wa.me/5585985694642?text=${encodeURIComponent(message)}`
+        // Buscar número do WhatsApp em settings
+        let phone = '5585985147067'
+        try {
+          const s = await fetch('/api/settings', { cache: 'no-store' }).then(r => r.ok ? r.json() : null)
+          if (s?.whatsapp_number) phone = String(s.whatsapp_number)
+        } catch {}
+        const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
         console.log('URL WhatsApp:', whatsappUrl)
 
         // Abrir WhatsApp em nova aba
@@ -399,16 +484,38 @@ Obrigado pela preferência! 🧡`
               ) : (
                 <div className="flex flex-col gap-8">
                   {items.map(item => (
-                    <div key={item.product.id} className="flex items-center bg-gradient-to-r from-blue-50 via-white to-orange-50 rounded-2xl shadow-lg p-6 border border-orange-100 gap-6">
-                      <img src={item.product.image} alt={item.product.name} className="w-24 h-24 rounded-2xl object-cover border-2 border-blue-200 shadow-md" />
-                      <div className="flex-1 flex flex-col gap-1 min-w-0">
-                        <div className="font-bold text-gray-900 text-lg md:text-xl truncate mb-1">{item.product.name}</div>
-                        <div className="text-gray-500 text-sm mb-1">Qtd: <span className="font-semibold text-blue-700">{item.quantity}</span></div>
-                        <div className="text-[#FF6600] font-bold text-lg">R$ {(item.product.price * item.quantity).toFixed(2)}</div>
+                    <div key={item.product.id} className="flex items-center bg-gradient-to-r from-blue-50 via-white to-orange-50 rounded-2xl shadow-xl p-8 border border-orange-100 gap-8 min-h-[140px]">
+                      <img src={item.product.image} alt={item.product.name} className="w-32 h-32 rounded-2xl object-cover border-2 border-blue-200 shadow-md flex-shrink-0" />
+                      <div className="flex-1 flex flex-col gap-2 min-w-0">
+                        <div className="font-bold text-gray-900 text-xl md:text-2xl leading-tight mb-2">{item.product.name}</div>
+                        <div className="text-gray-600 text-base mb-2">
+                          Quantidade: <span className="font-semibold text-blue-700 text-lg">{item.quantity} unidade(s)</span>
+                        </div>
+                        <div className="text-[#FF6600] font-extrabold text-xl md:text-2xl">
+                          R$ {((calculateDynamicPrice(item.product, item.quantity)) * (Number(item.quantity) || 0)).toFixed(2)}
+                        </div>
+                        <div className="text-gray-500 text-sm">
+                          Preço unitário: R$ {calculateDynamicPrice(item.product, item.quantity).toFixed(2)}
+                        </div>
                       </div>
-                      <button onClick={() => removeItem(item.product.id)} className="text-red-500 hover:text-white hover:bg-red-500 p-3 rounded-full bg-red-50 shadow transition-all border border-red-100">
-                        <Trash2 className="w-6 h-6" />
-                      </button>
+                      <div className="flex flex-col gap-2 items-center">
+                        <button 
+                          onClick={() => updateQuantity(item.product.id, Math.max(1, item.quantity - 1))} 
+                          className="text-blue-600 hover:text-white hover:bg-blue-600 p-2 rounded-full bg-blue-50 shadow transition-all border border-blue-200"
+                        >
+                          <Minus className="w-5 h-5" />
+                        </button>
+                        <span className="font-bold text-lg px-3 py-1 bg-gray-100 rounded-lg">{item.quantity}</span>
+                        <button 
+                          onClick={() => updateQuantity(item.product.id, item.quantity + 1)} 
+                          className="text-green-600 hover:text-white hover:bg-green-600 p-2 rounded-full bg-green-50 shadow transition-all border border-green-200"
+                        >
+                          <Plus className="w-5 h-5" />
+                        </button>
+                        <button onClick={() => removeItem(item.product.id)} className="text-red-500 hover:text-white hover:bg-red-500 p-3 rounded-full bg-red-50 shadow transition-all border border-red-100 mt-2">
+                          <Trash2 className="w-6 h-6" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -468,10 +575,58 @@ Obrigado pela preferência! 🧡`
                 </div>
               )}
 
-              <FormCart user={user} />
-              
-              {/* Cálculo de Frete */}
+              {/* Seleção de Entrega ou Retirada */}
               <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <Truck className="w-5 h-5 mr-2 text-orange-500" />
+                  Como você quer receber?
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeliveryType('delivery')
+                      updateCartFormData({ deliveryType: 'delivery' })
+                    }}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      deliveryType === 'delivery'
+                        ? 'border-orange-500 bg-orange-50 text-orange-700'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center flex-col">
+                      <Truck className="w-8 h-8 mb-2" />
+                      <span className="font-semibold">Entrega em Casa</span>
+                      <span className="text-sm text-gray-600">Receba no seu endereço</span>
+                    </div>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeliveryType('pickup')
+                      updateCartFormData({ deliveryType: 'pickup' })
+                    }}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      deliveryType === 'pickup'
+                        ? 'border-green-500 bg-green-50 text-green-700'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center flex-col">
+                      <MapPin className="w-8 h-8 mb-2" />
+                      <span className="font-semibold">Retirar na Loja</span>
+                      <span className="text-sm text-gray-600">Busque pessoalmente</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              <FormCart user={user} deliveryType={deliveryType} />
+              
+              {/* Cálculo de Frete - apenas para entrega */}
+              {deliveryType === 'delivery' && (
+                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">Cálculo de Frete</h3>
                   <button
@@ -536,11 +691,117 @@ Obrigado pela preferência! 🧡`
                   </div>
                 )}
               </div>
+              )}
               
               {/* Total */}
               <div className="flex flex-col md:flex-row justify-between items-center border-t pt-8 gap-6 md:gap-0">
                 <span className="text-2xl font-bold text-blue-900 tracking-wide">Subtotal</span>
                 <span className="text-4xl font-extrabold text-[#FF6600] drop-shadow">R$ {getTotal().toFixed(2)}</span>
+              </div>
+
+              {/* Forma de Pagamento */}
+              <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Forma de Pagamento</h3>
+                
+                {/* Aviso sobre orçamento */}
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-yellow-800">
+                      <p className="font-semibold mb-1">💡 Informação Importante sobre Pagamento</p>
+                      <p>
+                        O pagamento é realizado <strong>somente na presença da nota fiscal</strong>. 
+                        O valor apresentado é um <strong>orçamento</strong> que pode ser alterado conforme 
+                        disponibilidade e condições do produto no momento da {deliveryType === 'pickup' ? 'retirada' : 'entrega'}.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-3">
+                  <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer ${paymentMethod==='pix'?'border-green-500 bg-green-50':'border-gray-200 hover:bg-gray-50'}`}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="pix"
+                      checked={paymentMethod==='pix'}
+                      onChange={() => { setPaymentMethod('pix'); updateCartFormData({ paymentMethod: 'pix', wantsChange: false, changeFor: '' }) }}
+                    />
+                    <QrCode className="w-4 h-4 text-green-600" />
+                    <span className="font-medium">PIX</span>
+                    <span className="ml-auto text-xs text-gray-500">Mais rápido</span>
+                  </label>
+                  <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer ${paymentMethod==='debit'?'border-blue-500 bg-blue-50':'border-gray-200 hover:bg-gray-50'}`}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="debit"
+                      checked={paymentMethod==='debit'}
+                      onChange={() => { setPaymentMethod('debit'); updateCartFormData({ paymentMethod: 'debit', wantsChange: false, changeFor: '' }) }}
+                    />
+                    <CreditCard className="w-4 h-4 text-blue-600" />
+                    <span className="font-medium">Cartão de Débito</span>
+                  </label>
+                  <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer ${paymentMethod==='credit'?'border-purple-500 bg-purple-50':'border-gray-200 hover:bg-gray-50'}`}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="credit"
+                      checked={paymentMethod==='credit'}
+                      onChange={() => { setPaymentMethod('credit'); updateCartFormData({ paymentMethod: 'credit', wantsChange: false, changeFor: '' }) }}
+                    />
+                    <CreditCard className="w-4 h-4 text-purple-600" />
+                    <span className="font-medium">Cartão de Crédito</span>
+                    <span className="ml-auto text-xs text-gray-500">Parcelas no local</span>
+                  </label>
+                  <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer ${paymentMethod==='cash'?'border-orange-500 bg-orange-50':'border-gray-200 hover:bg-gray-50'}`}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="cash"
+                      checked={paymentMethod==='cash'}
+                      onChange={() => { setPaymentMethod('cash'); updateCartFormData({ paymentMethod: 'cash' }) }}
+                    />
+                    <Banknote className="w-4 h-4 text-orange-600" />
+                    <span className="font-medium">Dinheiro</span>
+                    <span className="ml-auto text-xs text-gray-500">Troco disponível</span>
+                  </label>
+                </div>
+
+                {/* Troco quando dinheiro */}
+                {paymentMethod === 'cash' && (
+                  <div className="mt-4 space-y-3">
+                    <label className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={wantsChange}
+                        onChange={(e) => { setWantsChange(e.target.checked); updateCartFormData({ wantsChange: e.target.checked }) }}
+                      />
+                      <span className="text-sm font-medium text-gray-700">Precisa de troco?</span>
+                    </label>
+                    {wantsChange && (
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-gray-600">Troco para R$</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={changeFor}
+                            onChange={(e) => { setChangeFor(e.target.value); updateCartFormData({ changeFor: e.target.value }) }}
+                            className={`w-44 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${changeError ? 'border-red-300 focus:ring-red-300' : 'border-gray-300 focus:ring-orange-400'}`}
+                            placeholder={(getTotal() + (shippingCalculation?.cost||0)).toFixed(2)}
+                          />
+                        </div>
+                        {changeError && (
+                          <div className="text-xs text-red-600 flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" /> {changeError}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               
               {shippingCalculation && (
@@ -561,9 +822,9 @@ Obrigado pela preferência! 🧡`
               {/* Botão WhatsApp */}
               <button
                 onClick={handleWhatsAppOrder}
-                disabled={isLoading || getTotal() < 100}
+                disabled={isLoading || getTotal() < 100 || (paymentMethod==='cash' && wantsChange && !!changeError)}
                 className={`w-full py-5 px-10 rounded-2xl font-extrabold transition-colors flex items-center justify-center gap-3 text-2xl shadow-2xl border-2 focus:outline-none focus:ring-2 focus:ring-green-400 ${
-                  isLoading || getTotal() < 100
+                  isLoading || getTotal() < 100 || (paymentMethod==='cash' && wantsChange && !!changeError)
                     ? 'bg-gray-400 text-gray-600 border-gray-400 cursor-not-allowed'
                     : 'bg-[#25D366] text-white hover:bg-[#1ebe57] border-[#25D366]'
                 }`}
@@ -718,11 +979,19 @@ Obrigado pela preferência! 🧡`
 }
 
 // Formulário com máscaras e validação
-function FormCart({ user }: { user: any }) {
+function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' | 'pickup' }) {
   const [phone, setPhone] = useState(user?.phone || '')
   const [zipCode, setZipCode] = useState('')
   const [email, setEmail] = useState(user?.email || '')
   const [name, setName] = useState(user?.name || '')
+  
+  // Campos específicos para retirada
+  const [pickupFirstName, setPickupFirstName] = useState('')
+  const [pickupLastName, setPickupLastName] = useState('')
+  const [pickupPhone, setPickupPhone] = useState('')
+  const [pickupEmail, setPickupEmail] = useState('')
+  
+  // Campos de entrega
   const [street, setStreet] = useState('')
   const [number, setNumber] = useState('')
   const [complement, setComplement] = useState('')
@@ -744,10 +1013,14 @@ function FormCart({ user }: { user: any }) {
       city,
       state,
       zipCode,
-      reference
+      reference,
+      pickupFirstName,
+      pickupLastName,
+      pickupPhone,
+      pickupEmail
     }
     localStorage.setItem('cartFormData', JSON.stringify(formData))
-  }, [name, phone, email, street, number, complement, neighborhood, city, state, zipCode, reference])
+  }, [name, phone, email, street, number, complement, neighborhood, city, state, zipCode, reference, pickupFirstName, pickupLastName, pickupPhone, pickupEmail])
 
   // Carregar dados do localStorage ao montar
   useEffect(() => {
@@ -766,6 +1039,10 @@ function FormCart({ user }: { user: any }) {
         setState(formData.state || '')
         setZipCode(formData.zipCode || '')
         setReference(formData.reference || '')
+        setPickupFirstName(formData.pickupFirstName || '')
+        setPickupLastName(formData.pickupLastName || '')
+        setPickupPhone(formData.pickupPhone || '')
+        setPickupEmail(formData.pickupEmail || '')
       } catch (error) {
         console.error('Erro ao carregar dados do formulário:', error)
       }
@@ -814,7 +1091,84 @@ function FormCart({ user }: { user: any }) {
   
   return (
     <form className="flex flex-col gap-5 bg-blue-50 rounded-xl p-6 border border-blue-100 shadow-md">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <h3 className="text-lg font-semibold text-blue-900 mb-2">
+        {deliveryType === 'delivery' ? 'Dados para Entrega' : 'Dados para Retirada na Loja'}
+      </h3>
+      
+      {deliveryType === 'pickup' ? (
+        /* Formulário para Retirada */
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-2">
+            <label className="font-semibold text-blue-900 text-sm">Nome *</label>
+            <input 
+              type="text" 
+              name="pickupFirstName"
+              value={pickupFirstName}
+              onChange={(e) => setPickupFirstName(e.target.value)}
+              className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition text-base" 
+              placeholder="Seu nome" 
+              required 
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="font-semibold text-blue-900 text-sm">Sobrenome *</label>
+            <input 
+              type="text" 
+              name="pickupLastName"
+              value={pickupLastName}
+              onChange={(e) => setPickupLastName(e.target.value)}
+              className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition text-base" 
+              placeholder="Seu sobrenome" 
+              required 
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="font-semibold text-blue-900 text-sm">Telefone *</label>
+            <input
+              type="tel"
+              name="pickupPhone"
+              className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition text-base"
+              placeholder="(85) 99999-9999"
+              value={pickupPhone}
+              onChange={e => setPickupPhone(formatPhone(e.target.value))}
+              required
+              maxLength={15}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="font-semibold text-blue-900 text-sm">E-mail (opcional)</label>
+            <input
+              type="email"
+              name="pickupEmail"
+              className={`rounded-lg border px-4 py-3 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition text-base ${pickupEmail && !isValidEmail(pickupEmail) ? 'border-red-400' : 'border-gray-300'}`}
+              placeholder="seu@email.com"
+              value={pickupEmail}
+              onChange={e => setPickupEmail(e.target.value)}
+            />
+            {pickupEmail && !isValidEmail(pickupEmail) && (
+              <span className="text-xs text-red-500 mt-1">Digite um e-mail válido com @</span>
+            )}
+          </div>
+          
+          {/* Informações da loja */}
+          <div className="md:col-span-2 bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
+            <h4 className="font-semibold text-green-800 mb-2 flex items-center">
+              <MapPin className="w-4 h-4 mr-2" />
+              Informações para Retirada
+            </h4>
+            <div className="text-sm text-green-700 space-y-1">
+              <p><strong>Endereço:</strong> R. Exemplo, 123 - Centro, Fortaleza - CE</p>
+              <p><strong>Horário:</strong> Segunda a Sexta: 8h às 18h | Sábado: 8h às 12h</p>
+              <p><strong>Telefone:</strong> (85) 3333-4444</p>
+              <p className="text-xs mt-2 text-green-600">
+                💡 Leve um documento com foto para retirar o pedido
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Formulário para Entrega */
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">
           <label className="font-semibold text-blue-900 text-sm">Nome Completo *</label>
           <input 
@@ -952,7 +1306,8 @@ function FormCart({ user }: { user: any }) {
             placeholder="Próximo ao mercado, farmácia, etc."
           />
         </div>
-      </div>
+        </div>
+      )}
     </form>
   )
 }

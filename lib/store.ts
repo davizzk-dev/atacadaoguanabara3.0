@@ -89,7 +89,26 @@ export const useCartStore = create<CartStore>()(
       },
       clearCart: () => set({ items: [] }),
       getTotal: () => {
-        return get().items.reduce((total, item) => total + item.product.price * item.quantity, 0)
+        return get().items.reduce((total, item) => {
+          // Importar função de cálculo dinâmico
+          const calculateDynamicPrice = (product: any, quantity: number) => {
+            if (!product.prices?.price2 || !product.prices.minQuantityPrice2 || product.prices.minQuantityPrice2 <= 0) {
+              return product.price
+            }
+            const { price2, price3, minQuantityPrice2, minQuantityPrice3 } = product.prices
+            if (price3 && minQuantityPrice3 && quantity >= minQuantityPrice3) {
+              return price3
+            } else if (price2 && minQuantityPrice2 && quantity >= minQuantityPrice2) {
+              return price2
+            } else {
+              return product.price
+            }
+          }
+
+          const dynamicPrice = calculateDynamicPrice(item.product, item.quantity)
+          const quantity = Number(item.quantity) || 0
+          return total + (dynamicPrice * quantity)
+        }, 0)
       },
       getItemCount: () => {
         return get().items.reduce((count, item) => count + item.quantity, 0)
@@ -119,9 +138,17 @@ export const useAuthStore = create<AuthStore>()(
           })
           
           if (response.ok) {
-            const user = await response.json()
-            set({ user })
-            return true
+            const result = await response.json()
+            // Verificar se a resposta tem sucesso e dados
+            if (result.success && result.data) {
+              set({ user: result.data })
+              return true
+            }
+            // Compatibilidade com resposta antiga
+            if (result.id) {
+              set({ user: result })
+              return true
+            }
           }
           return false
         } catch (error) {
@@ -144,9 +171,17 @@ export const useAuthStore = create<AuthStore>()(
           })
           
           if (response.ok) {
-            const user = await response.json()
-            set({ user })
-            return true
+            const result = await response.json()
+            // Verificar se a resposta tem sucesso e dados
+            if (result.success && result.data) {
+              set({ user: result.data })
+              return true
+            }
+            // Compatibilidade com resposta antiga
+            if (result.id) {
+              set({ user: result })
+              return true
+            }
           }
           return false
         } catch (error) {

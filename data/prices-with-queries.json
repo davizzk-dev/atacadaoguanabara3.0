@@ -1,0 +1,30 @@
+{
+  "prices": [
+    {
+      "id": 5475,
+      "lojaId": 1,
+      "produtoId": 5290,
+      "precoVenda1": 6.9,
+      "precoOferta1": 0,
+      "margemPreco1": 0,
+      "dataUltimoReajustePreco1": "2025-04-22T12:51:42.981+00:00",
+      "precoVenda2": 6.49,
+      "precoOferta2": 0,
+      "margemPreco2": 0,
+      "quantidadeMinimaPreco2": 6,
+      "dataUltimoReajustePreco2": "2025-04-22T12:51:42.981+00:00",
+      "precoVenda3": 0,
+      "precoOferta3": 0,
+      "margemPreco3": 0,
+      "quantidadeMinimaPreco3": 0,
+      "descontoMaximo": 0,
+      "permiteDesconto": true,
+      "custoProduto": 5.5,
+      "precoMedioDeReposicao": 5.5,
+      "precoFiscalDeReposicao": 5.5,
+      "origem": "NOTA_FISCAL"
+    }
+  ],
+  "lastSync": "2025-08-08T20:04:48.947Z",
+  "totalPrices": 1
+}

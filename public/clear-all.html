@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Limpar Storage</title>
+</head>
+<body>
+    <h1>Limpando dados...</h1>
+    <script>
+        // Limpar completamente o localStorage
+        localStorage.clear()
+        
+        // Limpar sessionStorage também
+        sessionStorage.clear()
+        
+        // Limpar todos os cookies
+        document.cookie.split(";").forEach(function(c) { 
+            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+        });
+        
+        console.log('✅ Todos os dados foram limpos!')
+        alert('Dados limpos! A página será recarregada.')
+        window.location.href = '/'
+    </script>
+</body>
+</html>

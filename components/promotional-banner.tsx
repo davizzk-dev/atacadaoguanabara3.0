@@ -76,11 +76,11 @@ export default function PromotionalBanner() {
   }
 
   return (
-    <div className="relative bg-white py-12 w-full">
+    <div className="relative bg-white w-full">
       <div className="w-full">
-        <div className="relative overflow-hidden shadow-2xl">
+        <div className="relative overflow-hidden shadow-lg">
                      {/* Banner atual */}
-           <div className="relative h-64 md:h-80 lg:h-96">
+           <div className="relative h-32 md:h-40 lg:h-48">
             <img
               src={banners[currentIndex].image}
               alt={banners[currentIndex].title}

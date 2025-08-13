@@ -9,7 +9,7 @@ export default function VisitorTracker() {
   useEffect(() => {
     const trackVisit = async () => {
       try {
-        await fetch('/api/analytics/visitors', {
+        const response = await fetch('/api/analytics/visitors', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -21,6 +21,11 @@ export default function VisitorTracker() {
             timestamp: new Date().toISOString()
           })
         })
+        
+        // Only try to parse JSON if response is ok and has content
+        if (response.ok && response.headers.get('content-type')?.includes('application/json')) {
+          await response.json()
+        }
       } catch (error) {
         console.error('Erro ao registrar visita:', error)
       }

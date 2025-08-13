@@ -1,6 +1,6 @@
-export const dynamic = 'force-dynamic'
-
 "use client"
+
+export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from "react"
 import Header from "@/components/header"
@@ -9,7 +9,7 @@ import { AnimatedCounter } from "@/components/animated-counter"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { products as productsData } from "@/lib/data"
+import { getCatalogProducts } from "@/lib/data"
 import { useUIStore } from "@/lib/store"
 import { Truck, Shield, Clock, Star, Zap, Gift, ChevronRight, Sparkles, Target, Award, Heart, ShoppingCart, Eye, Minus, Plus } from "lucide-react"
 import { Footer } from "@/components/footer"
@@ -21,6 +21,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { toast } from '@/hooks/use-toast'
 import { useAuthStore } from '@/lib/store'
 import { ProductCard } from '@/components/product-card'
+import { PromotionsSection } from '@/components/promotions-section'
 
 export default function HomePage() {
   // Verificar se é a primeira visita
@@ -47,6 +48,15 @@ export default function HomePage() {
   const [quantityMap, setQuantityMap] = useState<{ [id: string]: number }>({}) // Para quantidade
   const [modalProduct, setModalProduct] = useState<any | null>(null) // Para modal do olhinho
   const [showCartPopup, setShowCartPopup] = useState(false)
+  const [banners, setBanners] = useState({
+    hero: {
+      title: "Atacadão Guanabara",
+      subtitle: "Os melhores produtos com preços que cabem no seu bolso",
+      image: "/images/hero-banner.jpg",
+      isActive: true
+    },
+    promotional: []
+  })
   const [lastAddTime, setLastAddTime] = useState<number>(0)
   const [productPromotions, setProductPromotions] = useState<Array<{
     id: string
@@ -118,13 +128,14 @@ export default function HomePage() {
     const loadData = async () => {
       try {
         // Carregar promoções
-        const promotionsResponse = await fetch('/api/admin/product-promotions')
+        const promotionsResponse = await fetch('/api/promotions')
         if (promotionsResponse.ok) {
           const promotionsData = await promotionsResponse.json()
-          setProductPromotions(promotionsData)
+          const promotions = promotionsData.data || promotionsData || []
+          setProductPromotions(promotions)
           
           // Aplicar promoções aos produtos
-          const productsWithPromotions = applyPromotionsToProducts(productsData, promotionsData)
+          const productsWithPromotions = applyPromotionsToProducts(products, promotions)
           setProducts(productsWithPromotions)
           
           // Produtos em destaque (primeiros 8 com promoções aplicadas)
@@ -132,9 +143,10 @@ export default function HomePage() {
         }
       } catch (error) {
         console.error('Erro ao carregar dados:', error)
-        // Fallback para dados originais
-        setProducts(productsData)
-        setFeaturedProducts(productsData.slice(0, 8))
+        // Fallback para dados do JSON
+        const jsonProducts = await getCatalogProducts()
+        setProducts(jsonProducts)
+        setFeaturedProducts(jsonProducts.slice(0, 8))
       } finally {
         setIsLoading(false)
       }
@@ -158,10 +170,11 @@ export default function HomePage() {
           console.log('Produtos carregados:', productsData.length)
         } else {
           console.error('Erro ao carregar produtos:', productsResponse.status)
-          // Usar dados locais como fallback
-          console.log('Usando produtos estáticos como fallback')
-          setProducts(productsData)
-          setFeaturedProducts(productsData.slice(0, 15))
+          // Usar dados do JSON como fallback
+          console.log('Usando produtos do JSON como fallback')
+          const jsonProducts = await getCatalogProducts()
+          setProducts(jsonProducts)
+          setFeaturedProducts(jsonProducts.slice(0, 15))
         }
 
         // Carregar promoções
@@ -180,12 +193,26 @@ export default function HomePage() {
           // Usar dados locais como fallback
           setProductPromotions([])
         }
+
+        // Carregar banners
+        console.log('Carregando banners da API...')
+        const bannersResponse = await fetch('/api/banners')
+        if (bannersResponse.ok) {
+          const bannersResult = await bannersResponse.json()
+          if (bannersResult.success) {
+            setBanners(bannersResult.banners)
+            console.log('Banners carregados:', bannersResult.banners)
+          }
+        } else {
+          console.log('Erro ao carregar banners, usando padrão')
+        }
       } catch (error) {
         console.error('Erro ao carregar dados:', error)
-        // Usar dados locais como fallback
-        console.log('Erro geral - usando produtos estáticos como fallback')
-        setProducts(productsData)
-        setFeaturedProducts(productsData.slice(0, 15))
+        // Usar dados do JSON como fallback
+        console.log('Erro geral - usando produtos do JSON como fallback')
+        const jsonProducts = await getCatalogProducts()
+        setProducts(jsonProducts)
+        setFeaturedProducts(jsonProducts.slice(0, 15))
         setProductPromotions([])
       }
     }
@@ -274,14 +301,11 @@ export default function HomePage() {
                 </Badge>
 
                 <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">
-                  Atacadão{" "}
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-secondary to-secondary-400 animate-float">
-                    Guanabara
-                  </span>
+                  {banners.hero.title}
                 </h1>
 
                 <p className="text-lg sm:text-xl md:text-2xl text-gray-200 leading-relaxed">
-                  Os melhores produtos com preços que cabem no seu bolso.
+                  {banners.hero.subtitle}
                   <span className="text-secondary font-semibold"> Preço baixo</span> e
                   <span className="text-secondary font-semibold"> qualidade!</span>
                 </p>
@@ -365,18 +389,24 @@ export default function HomePage() {
       </section>
 
       {/* Promotions Banner */}
-      <section className="py-8 sm:py-12 lg:py-16 bg-gradient-to-r from-secondary to-secondary-600 text-white">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center space-x-8 animate-fade-in">
-            <Zap className="h-8 w-8 animate-pulse" />
-            <div className="text-center">
-              <h2 className="text-2xl font-bold">Super Ofertas da Semana!</h2>
-              <p className="text-secondary-100">Até 40% OFF em produtos selecionados</p>
-            </div>
-            <Zap className="h-8 w-8 animate-pulse" />
+      {banners.promotional.filter(b => b.isActive).length > 0 && (
+        <section className="py-8 sm:py-12 lg:py-16 bg-gradient-to-r from-secondary to-secondary-600 text-white">
+          <div className="container mx-auto px-4">
+            {banners.promotional.filter(b => b.isActive).map((banner) => (
+              <Link key={banner.id} href={banner.link || '/catalog'}>
+                <div className="flex items-center justify-center space-x-8 animate-fade-in cursor-pointer hover:opacity-90 transition-opacity">
+                  <Zap className="h-8 w-8 animate-pulse" />
+                  <div className="text-center">
+                    <h2 className="text-2xl font-bold">{banner.title}</h2>
+                    <p className="text-secondary-100">{banner.subtitle}</p>
+                  </div>
+                  <Zap className="h-8 w-8 animate-pulse" />
+                </div>
+              </Link>
+            ))}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
 
 
@@ -437,6 +467,9 @@ export default function HomePage() {
       )}
 
       {/* Featured Products */}
+      {/* Promoções */}
+      <PromotionsSection />
+
       <section className="py-8 sm:py-12 lg:py-16 bg-gradient-to-br from-gray-50 to-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">

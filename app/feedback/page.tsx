@@ -142,14 +142,28 @@ export default function FeedbackPage() {
         body: JSON.stringify(feedbackData),
       })
 
-      if (response.ok) {
+      // Parse seguro da resposta
+      let responseData = null
+      try {
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          const text = await response.text()
+          if (text && text.trim() !== '') {
+            responseData = JSON.parse(text)
+          }
+        }
+      } catch (parseError) {
+        console.error('Erro ao parsear resposta:', parseError)
+      }
+
+      if (response.ok && responseData?.success) {
         setIsSuccess(true)
         setTimeout(() => {
           router.push('/')
         }, 3000)
       } else {
-        const errorData = await response.json()
-        setErrors([errorData.error || 'Erro ao enviar feedback. Tente novamente.'])
+        const errorMessage = responseData?.error || 'Erro ao enviar feedback. Tente novamente.'
+        setErrors([errorMessage])
       }
     } catch (error) {
       console.error('Erro:', error)

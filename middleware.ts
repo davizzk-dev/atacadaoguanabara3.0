@@ -4,21 +4,8 @@ import type { NextRequest } from 'next/server'
 export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
   
-  // Verifica se o usuário está autenticado como dev através do cookie
-  const devAuth = request.cookies.get('dev_authenticated')?.value
-  
-  // Se não está autenticado como dev e não está tentando acessar a página de desenvolvimento
-  if (devAuth !== 'true' && url.pathname !== '/desenvolvimento') {
-    // Redireciona para a página de desenvolvimento
-    url.pathname = '/desenvolvimento'
-    return NextResponse.redirect(url)
-  }
-  
-  // Se está na página de desenvolvimento e está autenticado, redireciona para home
-  if (url.pathname === '/desenvolvimento' && devAuth === 'true') {
-    url.pathname = '/'
-    return NextResponse.redirect(url)
-  }
+  // Permitir acesso livre a todas as rotas - desenvolvimento desativado permanentemente
+  console.log('🌐 Middleware: Permitindo acesso livre a:', url.pathname)
   
   // Adicionar headers para evitar cache em APIs admin
   if (url.pathname.startsWith('/api/admin/')) {

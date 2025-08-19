@@ -1,1 +1,18 @@
-[]
+[
+  {
+    "id": "1755171827864",
+    "startTime": "2025-08-14T11:43:47.864Z",
+    "startedAt": "2025-08-14T11:42:49.217Z",
+    "finishedAt": "2025-08-14T11:43:49.377Z",
+    "status": "error",
+    "error": "Erro na API: 504"
+  },
+  {
+    "id": "1755172207959",
+    "startTime": "2025-08-14T11:50:07.959Z",
+    "startedAt": "2025-08-14T11:49:09.244Z",
+    "finishedAt": "2025-08-14T11:50:09.497Z",
+    "status": "error",
+    "error": "Erro na API: 504"
+  }
+]

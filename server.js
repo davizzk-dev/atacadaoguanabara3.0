@@ -149,22 +149,6 @@ nextApp.prepare().then(() => {
     next();
   });
 
-<<<<<<< HEAD
-  // Rota para sincronizar produtos
-  // Nova rota: sincronizar produtos usando sync-with-formatting.js
-  app.post('/api/sync-products', async (req, res) => {
-    try {
-  // Executa o sync-and-format do scripts/sync-with-formatting.js
-  const syncModule = require(path.join(__dirname, 'scripts', 'sync-with-formatting.js'));
-  const result = await syncModule.syncAndFormatProducts();
-  res.json({ success: true, ...result });
-    } catch (error) {
-      console.error('Erro na sincronização:', error);
-      res.status(500).json({ 
-        success: false,
-        error: 'Erro ao sincronizar produtos',
-        details: error.message 
-=======
   app.use('/api/test-varejo-facil', (req, res, next) => {
     console.log(`${req.method} ${req.url}`);
     next();
@@ -270,7 +254,6 @@ nextApp.prepare().then(() => {
         success: false,
         error: 'Erro interno do servidor',
         details: error.message
->>>>>>> 51c583dc6aed85819b3d4fc1c5ef7f1a58749f03
       });
     }
   });

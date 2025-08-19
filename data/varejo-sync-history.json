@@ -1,5 +1,19 @@
 [
   {
+    "id": "1755172272659",
+    "startedAt": "2025-08-14T11:49:07.845Z",
+    "finishedAt": "2025-08-14T11:51:12.659Z",
+    "durationMs": 124814,
+    "totals": {
+      "products": 6272,
+      "sections": 15,
+      "brands": 1,
+      "genres": 100
+    },
+    "message": "Sincronização concluída",
+    "status": "success"
+  },
+  {
     "id": "1755013002922",
     "startedAt": "2025-08-12T15:34:53.359Z",
     "finishedAt": "2025-08-12T15:36:42.922Z",

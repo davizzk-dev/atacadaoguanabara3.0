@@ -3612,5 +3612,189 @@
       "method": "pix",
       "wantsChange": false
     }
+  },
+  {
+    "id": "1755135613850",
+    "items": [
+      {
+        "product": {
+          "id": "777",
+          "name": " REFRIGERANTE SPRITE 250ML",
+          "price": 1.99,
+          "originalPrice": 1.99,
+          "image": "https://i.imgur.com/lZzMCo1.jpeg",
+          "category": "REFIGERANTES E OUTROS LIQUIDOS",
+          "description": "SPRITE 250ML",
+          "stock": 418,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 18,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "refigerantes e outros liquidos",
+            "bebidas, líquidos alcoólicos",
+            "varejo-facil"
+          ],
+          "prices": {
+            "price1": 1.99,
+            "offerPrice1": 0,
+            "price2": 1.83,
+            "offerPrice2": 0,
+            "minQuantityPrice2": 12,
+            "price3": 0,
+            "offerPrice3": 0,
+            "minQuantityPrice3": 0
+          },
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 15,
+            "generoId": 22,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2023-07-07T03:00:00.000+00:00",
+            "dataAlteracao": "2025-08-06T18:23:50.206+00:00",
+            "estoque": {
+              "saldo": 418,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:50.808+00:00",
+              "atualizadoEm": "2025-08-12T18:16:26.477+00:00"
+            },
+            "precos": {
+              "id": 1034,
+              "precoVenda1": 1.99,
+              "precoOferta1": 0,
+              "precoVenda2": 1.83,
+              "precoOferta2": 0,
+              "quantidadeMinimaPreco2": 12,
+              "precoVenda3": 0,
+              "precoOferta3": 0,
+              "quantidadeMinimaPreco3": 0,
+              "descontoMaximo": 0,
+              "permiteDesconto": true
+            }
+          }
+        },
+        "quantity": 66
+      }
+    ],
+    "total": 137.88,
+    "customerInfo": {
+      "name": "Administrador",
+      "email": "admin@gmail.com",
+      "phone": "(85) 98828-6178",
+      "address": {
+        "street": "Rua Coronel Luiz David de Souza",
+        "number": "382",
+        "complement": "Apto",
+        "neighborhood": "Presidente Kennedy",
+        "city": "Fortaleza",
+        "state": "CE",
+        "zipCode": "60355-337"
+      }
+    },
+    "status": "delivered",
+    "createdAt": "2025-08-14T01:40:13.850Z",
+    "estimatedDelivery": "2025-08-14T02:04:13.850Z",
+    "shippingCost": 17.1,
+    "shippingDistance": 5.7,
+    "payment": {
+      "method": "pix",
+      "wantsChange": false
+    },
+    "updatedAt": "2025-08-14T01:41:42.206Z"
+  },
+  {
+    "id": "1755616743875",
+    "items": [
+      {
+        "product": {
+          "id": "4930",
+          "name": "ABSORVENTE CONFORTO NOTURNO SECA SEMPRE LIVRE C/ABAS C/8",
+          "price": 7.9,
+          "originalPrice": 7.9,
+          "image": "https://i.imgur.com/wlFx05c.jpeg",
+          "category": "PRODUTOS DE LIMPEZA",
+          "description": "ABS NOT SEMPLIVR C/A",
+          "stock": 1,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 77,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "produtos de limpeza",
+            "óleos essenciais e resinóides",
+            "varejo-facil"
+          ],
+          "prices": {
+            "price1": 7.9,
+            "offerPrice1": 0,
+            "price2": 0,
+            "offerPrice2": 0,
+            "minQuantityPrice2": 0,
+            "price3": 0,
+            "offerPrice3": 0,
+            "minQuantityPrice3": 0
+          },
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 6,
+            "generoId": 33,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2024-10-26T03:00:00.000+00:00",
+            "dataAlteracao": "2025-02-17T03:00:00.000+00:00",
+            "estoque": {
+              "saldo": 1,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:52.762+00:00",
+              "atualizadoEm": "2025-07-12T18:22:10.870+00:00"
+            },
+            "precos": {
+              "id": 5119,
+              "precoVenda1": 7.9,
+              "precoOferta1": 0,
+              "precoVenda2": 0,
+              "precoOferta2": 0,
+              "quantidadeMinimaPreco2": 0,
+              "precoVenda3": 0,
+              "precoOferta3": 0,
+              "quantidadeMinimaPreco3": 0,
+              "descontoMaximo": 0,
+              "permiteDesconto": true
+            }
+          },
+          "updatedAt": "2025-08-12T23:31:37.602Z",
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 13
+      }
+    ],
+    "total": 119.80000000000001,
+    "customerInfo": {
+      "name": "JOSE ARIMATEA COSTA ALEXANDRE",
+      "email": "davikalebe20020602@gmail.com",
+      "phone": "(85) 98828-6178",
+      "address": {
+        "street": "Rua Coronel Luiz David de Souza",
+        "number": "72",
+        "complement": "Apto",
+        "neighborhood": "Presidente Kennedy",
+        "city": "Fortaleza",
+        "state": "Ceará",
+        "zipCode": "60355-337"
+      }
+    },
+    "status": "pending",
+    "createdAt": "2025-08-19T15:19:03.875Z",
+    "estimatedDelivery": "2025-08-19T15:43:03.875Z",
+    "shippingCost": 17.1,
+    "shippingDistance": 5.7,
+    "payment": {
+      "method": "pix",
+      "wantsChange": false
+    }
   }
 ]

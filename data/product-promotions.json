@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "id": "1755183548670",
+    "productId": "1530",
+    "productName": "BATATA BEM BRASIL MAIS BATATA 2KG",
+    "originalPrice": 29.9,
+    "newPrice": 26.611,
+    "discount": 11,
+    "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+    "isActive": true,
+    "createdAt": "2025-08-14T14:59:08.671Z",
+    "validUntil": "+111111-11-11T03:00:00.000Z"
+  }
+]

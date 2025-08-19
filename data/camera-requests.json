@@ -33,7 +33,7 @@
     "id": "1753385365751",
     "createdAt": "2025-07-24T19:29:25.751Z",
     "status": "completed",
-    "updatedAt": "2025-08-12T18:05:23.875Z",
+    "updatedAt": "2025-08-14T12:25:40.751Z",
     "messages": [
       {
         "id": "1754957995854",
@@ -54,6 +54,13 @@
         "sender": "admin",
         "message": "Oi",
         "timestamp": "2025-08-12T18:05:23.875Z",
+        "type": "text"
+      },
+      {
+        "id": "1755174340751",
+        "sender": "user",
+        "message": "Posso enviar mais detalhes e fotos?",
+        "timestamp": "2025-08-14T12:25:40.751Z",
         "type": "text"
       }
     ]
@@ -384,8 +391,47 @@
         "type": "image",
         "mediaUrl": "/api/uploads/chat/1754944937991_1755022113847.jpg",
         "mediaName": "1000002863.jpg"
+      },
+      {
+        "id": "1755174346086",
+        "sender": "user",
+        "message": "Quero entender o status da minha solicitação.",
+        "timestamp": "2025-08-14T12:25:46.086Z",
+        "type": "text"
       }
     ],
-    "updatedAt": "2025-08-12T18:08:33.851Z"
+    "updatedAt": "2025-08-14T12:25:46.086Z"
+  },
+  {
+    "id": "1755135831825",
+    "name": "Kikikiki",
+    "phone": "65555555555",
+    "rg": "000999900",
+    "cause": "Celular",
+    "moment": "14:30",
+    "period": "tarde",
+    "additionalInfo": "Aqui aqui aqui ",
+    "userId": null,
+    "userEmail": null,
+    "createdAt": "2025-08-14T01:43:51.825Z",
+    "status": "completed",
+    "reviewed": false,
+    "messages": [
+      {
+        "id": "1755135858649",
+        "sender": "admin",
+        "message": "oi",
+        "timestamp": "2025-08-14T01:44:18.649Z",
+        "type": "text"
+      },
+      {
+        "id": "1755135910227",
+        "sender": "admin",
+        "message": "Olá! Estou analisando sua solicitação.",
+        "timestamp": "2025-08-14T01:45:10.227Z",
+        "type": "text"
+      }
+    ],
+    "updatedAt": "2025-08-14T01:45:10.227Z"
   }
 ]

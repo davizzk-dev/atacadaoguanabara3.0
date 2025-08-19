@@ -813,9 +813,30 @@
         "message": "a",
         "timestamp": "2025-08-12T21:09:30.321Z",
         "type": "text"
+      },
+      {
+        "id": "1755135455074",
+        "sender": "user",
+        "message": "Quero entender o status da minha solicitação.",
+        "timestamp": "2025-08-14T01:37:35.074Z",
+        "type": "text"
+      },
+      {
+        "id": "1755135984271",
+        "sender": "admin",
+        "message": "aaaaaaaaaaaaaaa",
+        "timestamp": "2025-08-14T01:46:24.271Z",
+        "type": "text"
+      },
+      {
+        "id": "1755135993080",
+        "sender": "admin",
+        "message": "oi filipinho",
+        "timestamp": "2025-08-14T01:46:33.080Z",
+        "type": "text"
       }
     ],
-    "updatedAt": "2025-08-12T21:09:30.321Z"
+    "updatedAt": "2025-08-14T01:46:33.080Z"
   },
   {
     "id": "1755038247035",

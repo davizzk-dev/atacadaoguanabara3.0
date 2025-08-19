@@ -3,11 +3,8 @@
 import { useSession } from 'next-auth/react'
 
 export function useSessionWrapper() {
-<<<<<<< HEAD
   // Verificar se estamos no servidor ou se NextAuth não está configurado
-=======
   // Evitar uso no servidor
->>>>>>> 51c583dc6aed85819b3d4fc1c5ef7f1a58749f03
   if (typeof window === 'undefined') {
     return {
       data: null,

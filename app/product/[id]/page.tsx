@@ -1,21 +1,5 @@
 "use client"
 
-<<<<<<< HEAD
-import { useEffect, useState } from "react"
-import { useParams } from "next/navigation"
-import Header from "@/components/header"
-import { Footer } from "@/components/footer"
-import { ProductCard } from "@/components/product-card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { products } from "@/lib/data"
-import { useCartStore, useFavoritesStore } from "@/lib/store"
-import { Heart, Share2, ShoppingCart, Truck, Shield, RotateCcw, Check, ArrowLeft } from "lucide-react"
-// Note: using native <img> and <a> to avoid type issues across workspaces
- 
-=======
 import { useState, useEffect, useRef } from "react"
 import { useParams } from "next/navigation"
 import { ArrowLeft, Heart, ShoppingCart, Minus, Plus, Share2, Star, Package, Barcode, Hash, Eye, TrendingDown, Calculator } from "lucide-react"
@@ -40,7 +24,6 @@ interface PriceData {
   descontoMaximo: number
   permiteDesconto: boolean
 }
->>>>>>> 51c583dc6aed85819b3d4fc1c5ef7f1a58749f03
 
 export default function ProductPage() {
   const params = useParams()
@@ -50,37 +33,14 @@ export default function ProductPage() {
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [quantity, setQuantity] = useState(1)
-<<<<<<< HEAD
-  const [showAddAnimation, setShowAddAnimation] = useState(false)
-  const [showNotification, setShowNotification] = useState(false)
-  const [whatsNumber, setWhatsNumber] = useState<string | null>(null)
-=======
   const [isAdding, setIsAdding] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [currentPrice, setCurrentPrice] = useState(0)
   const confettiRef = useRef<HTMLCanvasElement | null>(null)
->>>>>>> 51c583dc6aed85819b3d4fc1c5ef7f1a58749f03
 
   const { addItem, items } = useCartStore()
   const { addFavorite, removeFavorite, isFavorite } = useFavoritesStore()
 
-<<<<<<< HEAD
-  // Carrega número do WhatsApp de settings via API
-  useEffect(() => {
-    let mounted = true
-    if (!whatsNumber) {
-      fetch('/api/settings')
-        .then((r) => r.json())
-        .then((s) => {
-          if (mounted && s?.whatsapp_number) setWhatsNumber(String(s.whatsapp_number))
-        })
-        .catch(() => {})
-    }
-    return () => { mounted = false }
-  }, [whatsNumber])
-
-  if (!product) {
-=======
   useEffect(() => {
     const fetchProduct = async () => {
       try {
@@ -361,7 +321,6 @@ export default function ProductPage() {
   const cartQuantity = cartItem?.quantity || 0
 
   if (loading) {
->>>>>>> 51c583dc6aed85819b3d4fc1c5ef7f1a58749f03
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-white/80 backdrop-blur shadow-lg border border-gray-100">
@@ -378,80 +337,6 @@ export default function ProductPage() {
     )
   }
 
-<<<<<<< HEAD
-  const handleAddToCart = () => {
-    for (let i = 0; i < quantity; i++) {
-      addItem(product)
-    }
-    
-    // Mostrar animação
-    setShowAddAnimation(true)
-    setShowNotification(true)
-    
-    // Esconder animação após 2 segundos
-    setTimeout(() => {
-      setShowAddAnimation(false)
-    }, 2000)
-    
-    // Esconder notificação após 3 segundos
-    setTimeout(() => {
-      setShowNotification(false)
-    }, 3000)
-  }
-
-  const handleToggleFavorite = () => {
-    if (isFavorite(product.id)) {
-      removeFavorite(product.id)
-    } else {
-      addFavorite(product.id)
-    }
-  }
-
-  const handleShareWhatsApp = () => {
-    const price = `R$ ${product.price.toFixed(2)}`
-    const unit = product.unit ? ` (${product.unit})` : ""
-    const store = "Atacadão Guanabara"
-    const productUrl = typeof window !== 'undefined' ? window.location.href : ''
-    const text = [
-      "🛒 Olá! Gostaria de mais informações e disponibilidade deste produto: ",
-      `• Produto: ${product.name}${unit}`,
-      product.brand ? `• Marca: ${product.brand}` : null,
-      `• Preço: ${price}`,
-      product.category ? `• Categoria: ${product.category}` : null,
-      productUrl ? `• Link: ${productUrl}` : null,
-      "",
-      `Agradeço desde já! ${store} 🙏✨`
-    ].filter(Boolean).join("\n")
-
-    const phone = whatsNumber || '5585985147067'
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
-    if (typeof window !== 'undefined') {
-      window.open(url, '_blank')
-    }
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      
-      {/* Notificação flutuante */}
-      {showNotification && (
-        <div className="fixed top-20 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-slide-in">
-          <div className="flex items-center space-x-2">
-            <Check className="w-5 h-5" />
-            <span className="font-medium">Produto adicionado ao carrinho!</span>
-          </div>
-        </div>
-      )}
-
-      <div className="container mx-auto px-4 py-8">
-        {/* Botão Voltar ao Catálogo */}
-        <div className="mb-6">
-          <a href="/catalog">
-            <Button variant="outline" className="flex items-center gap-2">
-              <ArrowLeft className="w-4 h-4" />
-              Voltar ao Catálogo
-=======
   if (!product) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
@@ -462,9 +347,8 @@ export default function ProductPage() {
             <Button className="bg-blue-600 hover:bg-blue-700">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar ao catálogo
->>>>>>> 51c583dc6aed85819b3d4fc1c5ef7f1a58749f03
             </Button>
-          </a>
+          </Link>
         </div>
       </div>
     )
@@ -504,38 +388,6 @@ export default function ProductPage() {
           </div>
         </div>
 
-<<<<<<< HEAD
-        {/* Product Details */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
-          {/* Images */}
-          <div className="space-y-4">
-            <div className="aspect-square bg-white rounded-2xl shadow-lg overflow-hidden">
-              <img
-                src={product.image || "/placeholder.svg"}
-                alt={product.name}
-                width={600}
-                height={600}
-                className="w-full h-full object-cover"
-              />
-            </div>
-
-            {/* Thumbnail images would go here */}
-            <div className="grid grid-cols-4 gap-2">
-              {[...Array(4)].map((_, i) => (
-                <button
-                  key={i}
-                  className={`aspect-square bg-white rounded-lg overflow-hidden border-2 transition-colors ${
-                    selectedImage === i ? "border-primary" : "border-gray-200"
-                  }`}
-                  onClick={() => setSelectedImage(i)}
-                >
-                  <img
-                    src={product.image || "/placeholder.svg"}
-                    alt={`${product.name} ${i + 1}`}
-                    width={150}
-                    height={150}
-                    className="w-full h-full object-cover"
-=======
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
           {/* Imagem do produto */}
           <div className="flex justify-center">
@@ -546,7 +398,6 @@ export default function ProductPage() {
                     src={product.image}
                     alt={product.name}
                     className="max-w-full max-h-full object-contain"
->>>>>>> 51c583dc6aed85819b3d4fc1c5ef7f1a58749f03
                   />
                 </div>
               </CardContent>
@@ -806,34 +657,6 @@ export default function ProductPage() {
                       </div>
                     </div>
                   )}
-<<<<<<< HEAD
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={handleToggleFavorite}
-                  className={`px-6 py-4 ${isFavorite(product.id) ? "text-red-600 border-red-600" : ""}`}
-                >
-                  <Heart className={`h-5 w-5 ${isFavorite(product.id) ? "fill-current" : ""}`} />
-                </Button>
-
-                <Button variant="outline" className="px-6 py-4 bg-transparent" onClick={handleShareWhatsApp} title="Compartilhar no WhatsApp">
-                  <Share2 className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Features */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6 border-t">
-              <div className="flex items-center space-x-3">
-                <div className="bg-green-100 p-2 rounded-full">
-                  <Truck className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Entrega Rápida</p>
-                  <p className="text-xs text-gray-600">Em até 2 horas</p>
-=======
->>>>>>> 51c583dc6aed85819b3d4fc1c5ef7f1a58749f03
                 </div>
 
                 {cartQuantity > 0 && (
@@ -907,37 +730,11 @@ export default function ProductPage() {
                 </div>
               )}
 
-<<<<<<< HEAD
-              <TabsContent value="details" className="p-6">
-                <div className="space-y-4">
-                  <h3 className="text-xl font-bold">Informações que importam para você</h3>
-                  <div>
-                    <h4 className="font-semibold mb-2">Especificações principais</h4>
-                    <ul className="space-y-2 text-gray-700">
-                      {product.brand && (
-                        <li>
-                          <strong>Marca:</strong> {product.brand}
-                        </li>
-                      )}
-                      {product.unit && (
-                        <li>
-                          <strong>Unidade:</strong> {product.unit}
-                        </li>
-                      )}
-                      {product.category && (
-                        <li>
-                          <strong>Categoria:</strong> {product.category}
-                        </li>
-                      )}
-                    </ul>
-                  </div>
-=======
               {(product as any).varejoFacilData?.idExterno && (
                 <div className="flex items-center gap-2">
                   <Hash className="w-4 h-4 text-blue-500" />
                   <span className="text-sm text-gray-600">ID Externo:</span>
                   <span className="font-semibold">{(product as any).varejoFacilData.idExterno}</span>
->>>>>>> 51c583dc6aed85819b3d4fc1c5ef7f1a58749f03
                 </div>
               )}
 

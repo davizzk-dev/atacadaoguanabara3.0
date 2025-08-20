@@ -422,7 +422,7 @@ export default function CartPage() {
         console.log('Mensagem WhatsApp:', message)
 
         // Buscar número do WhatsApp em settings
-        let phone = '5585985147067'
+        let phone = '5585985694642'
         try {
           const s = await fetch('/api/settings', { cache: 'no-store' }).then(r => r.ok ? r.json() : null)
           if (s?.whatsapp_number) phone = String(s.whatsapp_number)

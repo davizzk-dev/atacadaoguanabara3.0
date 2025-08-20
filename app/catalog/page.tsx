@@ -171,8 +171,10 @@ export default function CatalogPage() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search)
       const searchParam = urlParams.get('search')
-      
-      if (searchParam) {
+      const qParam = urlParams.get('q')
+      if (qParam) {
+        setSearchTerm(qParam)
+      } else if (searchParam) {
         setSearchTerm(searchParam)
       }
     }
@@ -421,52 +423,6 @@ export default function CatalogPage() {
       <PromotionalBanner />
       
       <div className="container mx-auto px-4 py-8">
-        {/* Abas de Navegação */}
-        <div className="w-full mb-8">
-          <div className="flex flex-wrap gap-2 justify-center">
-            <button
-              onClick={() => setSelectedCategory("Todos")}
-              className={`px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
-                selectedCategory === "Todos"
-                  ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Todos os Produtos
-            </button>
-            <button
-              onClick={() => setSelectedCategory("Promoções")}
-              className={`px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
-                selectedCategory === "Promoções"
-                  ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              🔥 Promoções
-            </button>
-            <button
-              onClick={() => setSelectedCategory("Mais Vendidos")}
-              className={`px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
-                selectedCategory === "Mais Vendidos"
-                  ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              ⭐ Mais Vendidos
-            </button>
-            <button
-              onClick={() => setSelectedCategory("Novidades")}
-              className={`px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
-                selectedCategory === "Novidades"
-                  ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              🆕 Novidades
-            </button>
-          </div>
-        </div>
-
         {/* Carrossel de Categorias - De ponta a ponta */}
         <div className="w-full mb-8 -mx-4">
           <div className="px-4">
@@ -475,7 +431,6 @@ export default function CatalogPage() {
               selectedCategory={selectedCategory}
               onCategorySelect={(category) => {
                 setSelectedCategory(category)
-                // Scroll suave para a seção de produtos
                 setTimeout(() => {
                   const productsSection = document.getElementById('products-section')
                   if (productsSection) {
@@ -486,6 +441,68 @@ export default function CatalogPage() {
             />
           </div>
         </div>
+          {/* Limpar pesquisa - aparece só quando há busca */}
+          {searchTerm && (
+            <div className="flex justify-end mb-4">
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 px-4 py-2 text-sm border border-gray-300 hover:bg-gray-100"
+                onClick={() => {
+                  setSearchTerm("");
+                  window.location.href = "/catalog";
+                }}
+              >
+                <X className="w-4 h-4 text-red-500" /> Limpar pesquisa
+              </Button>
+            </div>
+          )}
+
+        {/* Botões de navegação menores abaixo do carrossel */}
+        <div className="w-full mb-6 flex flex-wrap gap-2 justify-center">
+          <button
+            onClick={() => setSelectedCategory("Todos")}
+            className={`px-3 py-2 rounded-md text-sm font-semibold transition-all duration-300 ${
+              selectedCategory === "Todos"
+                ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <Package className="w-4 h-4 inline-block mr-1" /> Todos
+          </button>
+          <button
+            onClick={() => setSelectedCategory("Promoções")}
+            className={`px-3 py-2 rounded-md text-sm font-semibold transition-all duration-300 ${
+              selectedCategory === "Promoções"
+                ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <Zap className="w-4 h-4 inline-block mr-1 text-orange-500" /> Promoções
+          </button>
+          <button
+            onClick={() => setSelectedCategory("Mais Vendidos")}
+            className={`px-3 py-2 rounded-md text-sm font-semibold transition-all duration-300 ${
+              selectedCategory === "Mais Vendidos"
+                ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <Target className="w-4 h-4 inline-block mr-1 text-blue-500" /> Mais Vendidos
+          </button>
+          <button
+            onClick={() => setSelectedCategory("Novidades")}
+            className={`px-3 py-2 rounded-md text-sm font-semibold transition-all duration-300 ${
+              selectedCategory === "Novidades"
+                ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 inline-block mr-1 text-green-500" /> Novidades
+          </button>
+        </div>
+
+
+     
 
         {/* Seções Especiais - Apenas quando não há filtros ativos */}
         {!searchTerm && selectedCategory === "Todos" && (

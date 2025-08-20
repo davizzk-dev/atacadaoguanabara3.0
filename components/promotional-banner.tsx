@@ -80,7 +80,7 @@ export default function PromotionalBanner() {
       <div className="w-full">
         <div className="relative overflow-hidden shadow-lg">
                      {/* Banner atual */}
-           <div className="relative h-32 md:h-40 lg:h-48">
+           <div className="relative w-full max-w-[1920px] h-[370px] mx-auto">
             <img
               src={banners[currentIndex].image}
               alt={banners[currentIndex].title}

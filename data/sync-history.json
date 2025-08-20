@@ -14,5 +14,33 @@
     "finishedAt": "2025-08-14T11:50:09.497Z",
     "status": "error",
     "error": "Erro na API: 504"
+  },
+  {
+    "id": "1755698083131",
+    "startTime": "2025-08-20T13:54:43.131Z",
+    "startedAt": "2025-08-20T13:52:54.757Z",
+    "finishedAt": "2025-08-20T13:54:43.118Z",
+    "durationMs": 108361,
+    "status": "success",
+    "totals": {
+      "products": 6302,
+      "sections": 15,
+      "brands": 1,
+      "genres": 100
+    }
+  },
+  {
+    "id": "1755698546348",
+    "startTime": "2025-08-20T14:02:26.348Z",
+    "startedAt": "2025-08-20T14:00:16.872Z",
+    "finishedAt": "2025-08-20T14:02:26.337Z",
+    "durationMs": 129465,
+    "status": "success",
+    "totals": {
+      "products": 6303,
+      "sections": 15,
+      "brands": 1,
+      "genres": 100
+    }
   }
 ]

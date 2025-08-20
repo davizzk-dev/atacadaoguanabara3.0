@@ -1,747 +1,417 @@
-'use client'
+"use client";
+import * as React from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Menu, X, ShoppingCart, Heart, User, Home, Package, MessageSquare, Camera, FileText, HelpCircle, Settings, LogOut, Info, Search, RefreshCw, Gift, Star, Sun, Moon } from "lucide-react";
+import { useCartStore, useFavoritesStore, useAuthStore } from "@/lib/store";
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { Menu, X, ShoppingCart, Heart, User, Home, Package, MessageSquare, Camera, FileText, HelpCircle, Settings, LogOut, Info, Search, RefreshCw } from 'lucide-react'
-import { useCartStore, useFavoritesStore, useAuthStore } from '@/lib/store'
+export default function Header(): JSX.Element {
+  // Next.js navigation
+  const router = (typeof window !== 'undefined' && require('next/navigation').useRouter) ? require('next/navigation').useRouter() : null;
 
-export default function Header() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [showSearchResults, setShowSearchResults] = useState(false)
-  const [searchResults, setSearchResults] = useState<any[]>([])
-  const [lastOrderId, setLastOrderId] = useState<string | null>(null)
-  const [lastOrderDelivered, setLastOrderDelivered] = useState(false)
-  const [pendingOrders, setPendingOrders] = useState(0)
-  const [pendingReturns, setPendingReturns] = useState(0)
-  const [pendingCameraRequests, setPendingCameraRequests] = useState(0)
-  const { getItemCount } = useCartStore()
-  const { favorites } = useFavoritesStore()
-  const { user, logout } = useAuthStore()
-  
-  const cartItemCount = getItemCount()
-  const favoritesCount = favorites.length
+  // Função de busca
+  function handleSearch(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      if (router) {
+        router.push(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`);
+        setShowSearchResults(false);
+      }
+    }
+  }
 
-  // Verificar pendências se o usuário estiver logado
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [pendingOrders, setPendingOrders] = useState(0);
+  const [pendingCameraRequests, setPendingCameraRequests] = useState(0);
+  const { getItemCount } = useCartStore();
+  const { favorites } = useFavoritesStore();
+  const { user, logout } = useAuthStore();
+  // Quantidade de itens no carrinho
+  const cartItemCount = typeof getItemCount === 'function' ? getItemCount() : 0;
+  // Quantidade de favoritos
+  const favoritesCount = Array.isArray(favorites) ? favorites.length : 0;
+  // Função de logout
+  function handleLogout() {
+    if (typeof logout === 'function') logout();
+  }
+
+  // Apenas lógica, funções e hooks aqui
+
+  // Função para buscar produtos
+  let searchTimeout: any = null;
+  function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const value = e.target.value;
+    setSearchQuery(value);
+    setShowSearchResults(!!value);
+    if (searchTimeout) clearTimeout(searchTimeout);
+    if (value.length > 1) {
+      searchTimeout = setTimeout(() => {
+        fetch(`/api/products?search=${encodeURIComponent(value)}`)
+          .then(res => res.json())
+          .then(data => {
+            const arr = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
+            // Filtrar sugestões exatas ou que começam com o termo
+            const normalized = value.trim().toLowerCase();
+            const filtered = arr.filter((produto: any) => {
+              const name = (produto.name || '').toLowerCase();
+              // Só mostra se o nome começa com o termo ou contém o termo completo como palavra
+              return name.startsWith(normalized) || name.split(' ').includes(normalized);
+            });
+            setSearchResults(filtered.slice(0, 6));
+          });
+      }, 300);
+    } else {
+      setSearchResults([]);
+    }
+  }
+
+  function handleProductClick(id: string) {
+    setShowSearchResults(false);
+    setIsMenuOpen(false);
+    // Adicione navegação para o produto se necessário
+  }
+
+  function checkPendingItems() {
+    setPendingOrders(0);
+    setPendingCameraRequests(0);
+  }
+
   useEffect(() => {
     if (user?.email) {
-      checkPendingItems()
+      checkPendingItems();
     }
-  }, [user])
+  }, [user]);
 
-  // Ler último pedido salvo localmente (qualquer usuário)
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('lastOrderId')
-      if (saved) setLastOrderId(saved)
-    } catch {}
-  }, [])
+  // O JSX do header está dentro do return abaixo
 
-  // Verificar status do último pedido salvo e esconder o botão quando entregue
-  useEffect(() => {
-    const checkLastOrderStatus = async () => {
-      if (!lastOrderId) return
-      try {
-        const res = await fetch(`/api/orders/${lastOrderId}`)
-        if (!res.ok) return
-        const data = await res.json()
-        const order = data?.order || data
-        if (order && order.status === 'delivered') {
-          // marcar como entregue e limpar id salvo
-          setLastOrderDelivered(true)
-          setLastOrderId(null)
-          try { localStorage.removeItem('lastOrderId') } catch {}
-        }
-      } catch (e) {
-        console.warn('Falha ao checar status do pedido:', e)
-      }
-    }
-    checkLastOrderStatus()
-  }, [lastOrderId])
-
-  const checkPendingItems = async () => {
-    try {
-      // Verificar pedidos pendentes
-      const ordersResponse = await fetch('/api/orders')
-      if (ordersResponse.ok) {
-        const ordersData = await ordersResponse.json()
-        if (ordersData.success && ordersData.orders) {
-          const userOrders = ordersData.orders.filter((order: any) => 
-            order.customerInfo?.email === user?.email && 
-            ['pending', 'confirmed', 'preparing', 'delivering'].includes(order.status)
-          )
-          setPendingOrders(userOrders.length)
-        }
-      }
-
-      // Verificar solicitações de troca/devolução pendentes
-      const returnsResponse = await fetch('/api/return-requests', {
-        headers: user?.email ? { 'x-user-email': user.email, 'x-user-id': user.id } as any : undefined
-      })
-      if (returnsResponse.ok) {
-        const returnsData = await returnsResponse.json()
-        if (returnsData.success && returnsData.data) {
-          // Contar todas as solicitações pendentes (para mostrar no badge)
-          const pendingReturns = returnsData.data.filter((returnReq: any) => 
-            returnReq.status === 'pending'
-          )
-          setPendingReturns(pendingReturns.length)
-        }
-      }
-
-      // Verificar solicitações de câmera pendentes
-      const cameraResponse = await fetch('/api/camera-requests', {
-        headers: user?.email ? { 'x-user-email': user.email, 'x-user-id': user.id } as any : undefined
-      })
-      if (cameraResponse.ok) {
-        const cameraData = await cameraResponse.json()
-        if (cameraData.success && cameraData.data) {
-          const pendingCameras = cameraData.data.filter((camera: any) => 
-            camera.status === 'pending' && 
-            (camera.userId === user?.id || camera.userEmail === user?.email)
-          )
-          setPendingCameraRequests(pendingCameras.length)
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao verificar pendências:', error)
-    }
-  }
-
-  const handleLogout = () => {
-    logout()
-    setIsMenuOpen(false)
-  }
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (searchQuery.trim()) {
-      // Redirecionar para o catálogo com a busca
-      window.location.href = `/catalog?search=${encodeURIComponent(searchQuery.trim())}`
-    }
-  }
-
-  // Busca em tempo real
-  const handleSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value
-    setSearchQuery(query)
-    
-    if (query.trim().length > 1) {
-      try {
-        const response = await fetch(`/api/products?search=${encodeURIComponent(query)}`)
-        if (response.ok) {
-          const products = await response.json()
-          setSearchResults(products.slice(0, 8)) // Limitar a 8 resultados
-          setShowSearchResults(true)
-        }
-      } catch (error) {
-        console.error('Erro na busca:', error)
-      }
-    } else {
-      setShowSearchResults(false)
-      setSearchResults([])
-    }
-  }
-
-  const handleProductClick = (productId: string) => {
-    window.location.href = `/product/${productId}`
-    setShowSearchResults(false)
-    setSearchQuery('')
-  }
-
-  return (
-    <header className="bg-orange-500 shadow-sm border-b border-gray-200 sticky top-0 z-50 min-h-[64px]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2 flex-shrink-0">
-          <img
-            src="https://i.ibb.co/fGSnH3hd/logoatacad-o.jpg"
-              alt="Atacadão Guanabara"
-              className="h-12 w-auto"
-            />
-            <span className="text-xl font-bold hidden sm:block">
-              <span className="text-white">Atacadão</span> <span className="text-blue-900">Guanabara</span>
-            </span>
-          </Link>
-
-          {/* Barra de Pesquisa Desktop - Apenas para PC grande */}
-          <div className="hidden lg:flex flex-1 max-w-2xl xl:max-w-3xl mx-4 lg:mx-6 relative">
-            <form onSubmit={handleSearch} className="w-full relative">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="🔍 Buscar produtos, marcas, categorias..."
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  onFocus={() => searchQuery.length > 1 && setShowSearchResults(true)}
-                  onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
-                  className="w-full px-5 py-3.5 md:py-4 pl-12 pr-14 text-base md:text-lg bg-white border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-3 focus:ring-orange-300 focus:border-orange-500 shadow-lg hover:shadow-xl transition-all duration-300 placeholder-gray-400 font-medium"
-                />
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
-                <button
-                  type="submit"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white p-2.5 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
-                >
-                  <Search className="w-4 h-4" />
-                </button>
-              </div>
-              
-              {/* Resultados da busca - Largura adequada para tablets */}
-              {/* Resultados da busca - Mobile optimized */}
-              {/* Resultados da busca - Desktop enhanced */}
-              {showSearchResults && searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-2xl z-50 max-h-96 overflow-hidden">
-                  <div className="sticky top-0 bg-gradient-to-r from-orange-50 to-orange-100 px-6 py-4 border-b border-orange-200">
-                    <div className="text-lg font-bold text-gray-800 flex items-center">
-                      <Search className="w-5 h-5 mr-3 text-orange-600" />
-                      Resultados para "{searchQuery}"
-                    </div>
-                  </div>
-                  <div className="overflow-y-auto max-h-80 search-scrollbar search-scrollable">
-                    {searchResults.map((product) => (
-                      <button
-                        key={product.id}
-                        onClick={() => handleProductClick(product.id)}
-                        className="w-full text-left hover:bg-gradient-to-r hover:from-orange-50 hover:to-orange-100 p-6 md:p-8 transition-all duration-200 border-b border-gray-100 last:border-b-0 flex items-center space-x-6 group"
-                      >
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="w-20 h-20 md:w-24 md:h-24 object-cover rounded-xl border-2 border-gray-200 group-hover:border-orange-300 flex-shrink-0 shadow-sm group-hover:shadow-md transition-all duration-200"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-gray-900 text-lg md:text-xl line-clamp-2 mb-3 group-hover:text-orange-800 transition-colors">{product.name}</div>
-                          <div className="flex items-center justify-between flex-wrap gap-3">
-                            <span className="text-orange-600 font-bold text-xl md:text-2xl">R$ {product.price.toFixed(2)}</span>
-                            {product.stock > 0 ? (
-                              <span className="text-green-700 text-base bg-green-100 px-4 py-2 rounded-full font-medium border border-green-200">✓ Disponível</span>
-                            ) : (
-                              <span className="text-red-700 text-base bg-red-100 px-4 py-2 rounded-full font-medium border border-red-200">✗ Indisponível</span>
+                return (
+                <header className="w-full bg-white shadow-lg sticky top-0 z-40">
+                    <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
+                      <Link href="/" className="flex items-center justify-center">
+                        <img src="https://i.ibb.co/TBGDxS4M/guanabara-1.png" alt="Logo" className="h-12 w-56 object-contain" />
+                      </Link>
+                      <form onSubmit={handleSearch} className="hidden lg:flex flex-1 mx-4 relative" style={{maxWidth:'400px'}}>
+                        <div className="w-full relative">
+                          <input
+                            type="text"
+                            placeholder="Buscar produtos..."
+                            value={searchQuery}
+                            onChange={handleSearchChange}
+                            className="w-full px-4 py-2 pl-10 pr-10 border-2 border-blue-400 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400/30 focus:border-blue-500 bg-white shadow transition-all duration-300 text-gray-900 font-semibold"
+                          />
+                          <Search className="absolute left-2 top-2 h-5 w-5 text-blue-500" />
+                          {searchQuery && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSearchQuery("");
+                                setShowSearchResults(false);
+                                setSearchResults([]);
+                              }}
+                              className="absolute right-2 top-2 h-5 w-5 text-pink-500 hover:text-red-500 transition-colors"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                          {showSearchResults && searchResults.length > 0 && (
+                            <div className="absolute left-0 right-0 top-12 bg-white rounded-xl shadow-xl border border-blue-200 mt-2 max-h-64 overflow-y-auto z-50 flex flex-col" style={{minWidth:'220px', maxWidth:'100%', width:'100%'}}>
+                              {searchResults.map((produto: any) => (
+                                <button
+                                  key={produto.id}
+                                  onClick={() => {
+                                    if (router) {
+                                      router.push(`/product/${produto.id}`);
+                                      setShowSearchResults(false);
+                                    }
+                                  }}
+                                  className="w-full flex items-center px-3 py-3 sm:px-4 sm:py-3 hover:bg-blue-50 border-b border-gray-100 last:border-b-0 text-left transition-all duration-200 focus:bg-blue-100 active:bg-blue-200"
+                                  style={{fontSize:'1rem', minHeight:'48px', gap:'0.75rem'}}
+                                >
+                                  <img 
+                                    src={produto.image || '/placeholder.png'} 
+                                    alt={produto.name} 
+                                    className="object-cover rounded-lg mr-3 shadow-sm" 
+                                    style={{width:'60px',height:'60px',minWidth:'60px',minHeight:'60px',maxWidth:'60px',maxHeight:'60px',objectFit:'cover',display:'block',boxSizing:'border-box',margin:'0'}} 
+                                  />
+                                  <div className="flex-1 min-w-0 pl-2">
+                                    <p className="font-semibold text-gray-900 text-base truncate">{produto.name}</p>
+                                    <p className="text-sm text-gray-500 font-medium truncate">{produto.brand}</p>
+                                    <p className="text-sm text-blue-600 font-bold">R$ {produto.price?.toFixed(2).replace('.', ',')}</p>
+                                  </div>
+                                </button>
+                              ))}
+                              <button
+                                className="w-full py-3 text-center text-blue-600 font-semibold bg-blue-50 hover:bg-blue-100 border-t border-blue-100 rounded-b-xl text-base sm:text-lg"
+                                style={{cursor:'pointer'}}
+                                onClick={() => {
+                                  if (router && searchQuery.trim()) {
+                                    router.push(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`);
+                                    setShowSearchResults(false);
+                                    setTimeout(() => {
+                                      window.location.reload();
+                                      setTimeout(() => {
+                                        const el = document.getElementById('products-section');
+                                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                      }, 700);
+                                    }, 300);
+                                  }
+                                }}
+                              >
+                                Ver mais resultados
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </form>
+                      <div className="hidden lg:flex items-center space-x-3">
+                        <Link href="/cart" className="relative p-3 text-gray-700 hover:text-blue-600 transition-all duration-300 rounded-full hover:bg-blue-50">
+                          <div className="relative">
+                            <ShoppingCart className="h-7 w-7 drop-shadow-sm" />
+                            {cartItemCount > 0 && (
+                              <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold shadow-lg border-2 border-white animate-bounce">
+                                {cartItemCount}
+                              </span>
                             )}
                           </div>
-                          {product.category && (
-                            <div className="text-base text-gray-600 mt-2 bg-gray-100 px-3 py-1.5 rounded-full inline-block">{product.category}</div>
+                        </Link>
+                        <Link href="/favorites" className="relative p-3 text-gray-700 hover:text-red-600 transition-all duration-300 rounded-full hover:bg-red-50">
+                          <Heart className="h-6 w-6" />
+                          {favoritesCount > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow-lg">
+                              {favoritesCount}
+                            </span>
                           )}
-                        </div>
+                        </Link>
+                        <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-3 text-gray-700 hover:text-blue-600 transition-all duration-300 rounded-full hover:bg-blue-50">
+                          <Menu className="h-6 w-6" />
+                        </button>
+                        {user ? (
+                          <div className="flex items-center space-x-3 ml-2">
+                            <div className="text-right">
+                              <span className="text-sm font-semibold text-gray-800 block">Olá, {user.name}</span>
+                              <span className="text-xs text-gray-500">Bem-vindo de volta!</span>
+                            </div>
+                            <button onClick={handleLogout} className="p-3 text-gray-700 hover:text-red-600 transition-all duration-300 rounded-full hover:bg-red-50">
+                              <LogOut className="h-5 w-5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2 ml-2">
+                            <Link href="/login" className="flex items-center space-x-2 px-4 py-2 text-sm font-semibold text-blue-600 bg-blue-50 rounded-full hover:bg-blue-100 transition-all duration-300 border-2 border-blue-200 hover:border-blue-300">
+                              <User className="h-4 w-4" />
+                              <span>Entrar</span>
+                            </Link>
+                            <Link href="/register" className="flex items-center space-x-2 px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-full hover:bg-green-700 transition-all duration-300 shadow-lg hover:shadow-xl">
+                              <User className="h-4 w-4" />
+                              <span>Criar Conta</span>
+                            </Link>
+                          </div>
+                        )}
+                      </div>
+                      <button className="lg:hidden p-2 text-gray-700 hover:text-gray-900 transition-colors" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+                        {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                       </button>
-                    ))}
-                  </div>
-                  <div className="sticky bottom-0 bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-t-2 border-gray-200">
-                    <button
-                      onClick={() => window.location.href = `/catalog?search=${encodeURIComponent(searchQuery)}`}
-                      className="w-full text-center bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-lg py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
-                    >
-                      🔍 Ver todos os resultados ({searchResults.length}+)
-                    </button>
-                  </div>
-                </div>
-              )}
-            </form>
-          </div>
-
-
-
-          {/* Desktop Actions - Agora incluindo tablets */}
-          <div className="flex items-center space-x-2 sm:space-x-4">
-                        <Link href="/favorites" className="relative p-2 sm:p-3 text-gray-700 hover:text-orange-600 transition-all duration-300 hover:scale-110 hidden sm:block group">
-              <Heart className="w-6 sm:w-7 h-6 sm:h-7 group-hover:animate-bounce" />
-              {favoritesCount > 0 && (
-                <span className="absolute -top-1 sm:-top-1 -right-1 sm:-right-1 bg-orange-500 text-white text-sm font-bold rounded-full w-5 sm:w-6 h-5 sm:h-6 flex items-center justify-center animate-bounce-in">
-                  {favoritesCount}
-                </span>
-              )}
-            </Link>
-            <Link href="/cart" className="relative p-2 sm:p-3 text-gray-700 hover:text-blue-600 transition-all duration-300 hover:scale-110 hidden sm:block group">
-              <ShoppingCart className="w-6 sm:w-7 h-6 sm:h-7 group-hover:animate-bounce" />
-              {cartItemCount > 0 && (
-                <span className="absolute -top-1 sm:-top-1 -right-1 sm:-right-1 bg-blue-600 text-white text-sm font-bold rounded-full w-5 sm:w-6 h-5 sm:h-6 flex items-center justify-center animate-bounce-in">
-                  {cartItemCount}
-                </span>
-              )}
-            </Link>
-            {user ? (
-              <div className="flex items-center space-x-2 sm:space-x-3">
-                <span className="text-sm sm:text-base text-gray-700 hidden sm:block max-w-32 sm:max-w-none truncate font-medium">Olá, {user.name}</span>
-                <button
-                  onClick={handleLogout}
-                  className="text-gray-700 hover:text-red-600 transition-colors p-2"
-                >
-                  <LogOut className="w-5 sm:w-6 h-5 sm:h-6" />
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4">
-                <Link href="/login" className="text-white hover:text-orange-200 transition-colors font-medium text-sm sm:text-base lg:text-lg px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2">
-                  Entrar
-                </Link>
-                <Link href="/register" className="bg-blue-600 text-white px-3 py-2 sm:px-4 sm:py-2.5 lg:px-5 lg:py-3 rounded-lg hover:bg-orange-700 transition-colors font-medium text-sm sm:text-base lg:text-lg">
-                  Criar Conta
-                </Link>
-              </div>
-            )}
-
-            {/* Menu hamburguer para todas as telas */}
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="relative p-3 text-gray-700 hover:text-orange-600 transition-all duration-300 hover:scale-110 mobile-tap-highlight group"
-          >
-              {isMenuOpen ? (
-                <X className="w-7 h-7 group-hover:animate-bounce" />
-              ) : (
-                <Menu className="w-7 h-7 group-hover:animate-bounce" />
-              )}
-              
-              {/* Indicador de notificações no menu */}
-              {(cartItemCount > 0 || favoritesCount > 0) && (
-                <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-sm font-bold rounded-full min-w-[18px] h-5 flex items-center justify-center animate-pulse-glow">
-                  {cartItemCount + favoritesCount > 9 ? '9+' : cartItemCount + favoritesCount}
-                </span>
-              )}
-          </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Search Bar Tablets - Barra separada para tablets */}
-      <div className="hidden sm:block lg:hidden border-t-2 border-orange-400 bg-gradient-to-r from-orange-500 to-orange-600">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <form onSubmit={handleSearch} className="relative">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="🔍 Buscar produtos, marcas..."
-                value={searchQuery}
-                onChange={handleSearchChange}
-                onFocus={() => searchQuery.length > 1 && setShowSearchResults(true)}
-                onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
-                className="w-full px-5 py-4 pl-12 pr-5 text-base bg-white border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-3 focus:ring-orange-300 focus:border-orange-500 placeholder-gray-400 font-medium shadow-lg"
-              />
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
-            </div>
-            
-            {/* Resultados da busca tablets - Design Bonito e Scrollável */}
-            {showSearchResults && searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-2xl z-50 max-h-96 overflow-hidden">
-                <div className="sticky top-0 bg-gradient-to-r from-orange-50 to-orange-100 px-4 py-3 border-b border-orange-200">
-                  <div className="text-sm font-bold text-gray-800 flex items-center">
-                    <Search className="w-4 h-4 mr-2 text-orange-600" />
-                    Resultados para "{searchQuery}"
-                  </div>
-                </div>
-                <div className="overflow-y-auto max-h-80 search-scrollbar search-scrollable">
-                  {searchResults.map((product) => (
-                    <button
-                      key={product.id}
-                      onClick={() => handleProductClick(product.id)}
-                      className="w-full text-left hover:bg-gradient-to-r hover:from-orange-50 hover:to-orange-100 p-5 transition-all duration-200 border-b border-gray-100 last:border-b-0 flex items-center space-x-5 group"
-                    >
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="w-20 h-20 object-cover rounded-xl border-2 border-gray-200 group-hover:border-orange-300 flex-shrink-0 shadow-sm group-hover:shadow-md transition-all duration-200"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-gray-900 text-lg line-clamp-2 mb-3 group-hover:text-orange-800 transition-colors">{product.name}</div>
-                        <div className="flex items-center justify-between flex-wrap gap-3">
-                          <span className="text-orange-600 font-bold text-xl">R$ {product.price.toFixed(2)}</span>
-                          {product.stock > 0 ? (
-                            <span className="text-green-700 text-base bg-green-100 px-3 py-1.5 rounded-full font-medium border border-green-200">✓ Disponível</span>
-                          ) : (
-                            <span className="text-red-700 text-base bg-red-100 px-3 py-1.5 rounded-full font-medium border border-red-200">✗ Indisponível</span>
-                          )}
-                        </div>
-                        {product.category && (
-                          <div className="text-base text-gray-600 mt-2 bg-gray-100 px-3 py-1.5 rounded-full inline-block">{product.category}</div>
+                    </div>
+                    <div className="lg:hidden pb-4 px-4">
+                      <form onSubmit={handleSearch} className="relative">
+                        <input
+                          type="text"
+                          placeholder="Buscar produtos..."
+                          value={searchQuery}
+                          onChange={handleSearchChange}
+                          className="w-full px-4 py-3 pl-12 pr-12 border-2 border-gray-200 rounded-full focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 bg-white/95 backdrop-blur-sm shadow-lg transition-all duration-300"
+                        />
+                        <Search className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
+                        {searchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSearchQuery("");
+                              setShowSearchResults(false);
+                              setSearchResults([]);
+                            }}
+                            className="absolute right-4 top-3.5 h-5 w-5 text-gray-400 hover:text-red-500 transition-colors"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
                         )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-                <div className="sticky bottom-0 bg-gradient-to-r from-gray-50 to-gray-100 px-5 py-4 border-t-2 border-gray-200">
-                  <button
-                    onClick={() => window.location.href = `/catalog?search=${encodeURIComponent(searchQuery)}`}
-                    className="w-full text-center bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-lg py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
-                  >
-                    🔍 Ver todos os resultados ({searchResults.length}+)
-                  </button>
-                </div>
-              </div>
-            )}
-          </form>
-        </div>
-      </div>
-
-      {/* Search Bar Mobile - Design Bonito */}
-      <div className="sm:hidden border-t-2 border-orange-400 bg-gradient-to-r from-orange-500 to-orange-600">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <form onSubmit={handleSearch} className="relative">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="🔍 Buscar produtos, marcas..."
-                value={searchQuery}
-                onChange={handleSearchChange}
-                onFocus={() => searchQuery.length > 1 && setShowSearchResults(true)}
-                onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
-                className="w-full px-5 py-4 pl-12 pr-5 text-base bg-white border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-3 focus:ring-orange-300 focus:border-orange-500 placeholder-gray-400 font-medium shadow-lg"
-              />
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
-            </div>
-            
-            {/* Resultados da busca mobile - Design Bonito e Largura Adequada */}
-            {showSearchResults && searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-2xl z-50 max-h-96 overflow-hidden">
-                <div className="sticky top-0 bg-gradient-to-r from-orange-50 to-orange-100 px-4 py-3 border-b border-orange-200">
-                  <div className="text-sm font-bold text-gray-800 flex items-center">
-                    <Search className="w-4 h-4 mr-2 text-orange-600" />
-                    Resultados para "{searchQuery}"
-                  </div>
-                </div>
-                <div className="overflow-y-auto max-h-80 search-scrollbar search-scrollable">
-                  {searchResults.map((product) => (
-                    <button
-                      key={product.id}
-                      onClick={() => handleProductClick(product.id)}
-                      className="w-full text-left hover:bg-gradient-to-r hover:from-orange-50 hover:to-orange-100 p-5 transition-all duration-200 border-b border-gray-100 last:border-b-0 flex items-center space-x-5 group"
-                    >
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="w-20 h-20 object-cover rounded-xl border-2 border-gray-200 group-hover:border-orange-300 flex-shrink-0 shadow-sm group-hover:shadow-md transition-all duration-200"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-gray-900 text-lg line-clamp-2 mb-3 group-hover:text-orange-800 transition-colors">{product.name}</div>
-                        <div className="flex items-center justify-between flex-wrap gap-3">
-                          <span className="text-orange-600 font-bold text-xl">R$ {product.price.toFixed(2)}</span>
-                          {product.stock > 0 ? (
-                            <span className="text-green-700 text-base bg-green-100 px-3 py-1.5 rounded-full font-medium border border-green-200">✓ Disponível</span>
-                          ) : (
-                            <span className="text-red-700 text-base bg-red-100 px-3 py-1.5 rounded-full font-medium border border-red-200">✗ Indisponível</span>
-                          )}
+                      </form>
+                      {showSearchResults && searchResults.length > 0 && (
+                        <div
+                          className="absolute left-4 right-4 bg-white rounded-xl shadow-2xl border-2 border-gray-100 mt-2 z-50 backdrop-blur-lg"
+                          style={{
+                            maxHeight: '260px',
+                            minWidth: '0',
+                            width: '100%',
+                            overflowY: 'auto',
+                            boxSizing: 'border-box',
+                          }}
+                        >
+                          {searchResults.map((produto: any) => (
+                            <button
+                              key={produto.id}
+                              onClick={() => {
+                                if (router) {
+                                  router.push(`/product/${produto.id}`);
+                                  setShowSearchResults(false);
+                                }
+                              }}
+                              className="w-full flex items-center px-2 py-2 sm:px-4 sm:py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 border-b border-gray-100 last:border-b-0 text-left transition-all duration-300"
+                              style={{ minHeight: '44px', gap: '0.5rem' }}
+                            >
+                              <img
+                                src={produto.image || '/placeholder.png'}
+                                alt={produto.name}
+                                className="object-cover rounded-lg shadow-sm"
+                                style={{
+                                  width: '60px',
+                                  height: '60px',
+                                  minWidth: '60px',
+                                  minHeight: '60px',
+                                  maxWidth: '60px',
+                                  maxHeight: '60px',
+                                  objectFit: 'cover',
+                                  display: 'block',
+                                  boxSizing: 'border-box',
+                                  margin: '0',
+                                }}
+                              />
+                              <div className="flex-1 min-w-0 pl-2">
+                                <p className="font-semibold text-gray-900 text-sm truncate" style={{ fontSize: '0.95rem' }}>{produto.name}</p>
+                                <p className="text-xs text-gray-500 font-medium truncate">{produto.brand}</p>
+                                <p className="text-xs text-blue-600 font-bold">R$ {produto.price?.toFixed(2).replace('.', ',')}</p>
+                              </div>
+                            </button>
+                          ))}
+                          <button
+                            className="w-full py-3 text-center text-blue-600 font-semibold bg-blue-50 hover:bg-blue-100 border-t border-blue-100 rounded-b-xl text-base sm:text-lg"
+                            style={{cursor:'pointer'}}
+                            onClick={() => {
+                              if (router && searchQuery.trim()) {
+                                router.push(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`);
+                                setShowSearchResults(false);
+                                window.onload = () => {
+                                  setTimeout(() => {
+                                    const el = document.getElementById('products-section');
+                                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                  }, 400);
+                                };
+                              }
+                            }}
+                          >
+                            Ver mais resultados
+                          </button>
                         </div>
-                        {product.category && (
-                          <div className="text-base text-gray-600 mt-2 bg-gray-100 px-3 py-1.5 rounded-full inline-block">{product.category}</div>
-                        )}
+                      )}
+                    </div>
+                    {isMenuOpen && (
+                      <div className="fixed inset-0 z-50 bg-black/60" onClick={() => setIsMenuOpen(false)}>
+                        <div className="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex flex-col h-full">
+                            <div className="p-4 bg-blue-600 text-white">
+                              <div className="flex items-center justify-between">
+                                <h2 className="text-lg font-bold">Menu</h2>
+                                <button onClick={() => setIsMenuOpen(false)} className="p-2 hover:bg-blue-700 rounded-full transition-colors">
+                                  <X className="h-5 w-5" />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="flex-1 overflow-y-auto">
+                              <div className="p-4 space-y-2 flex flex-col">
+                                <Link href="/" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors order-1" onClick={() => setIsMenuOpen(false)}>
+                                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center"><Home className="w-5 h-5 text-blue-600" /></div>
+                                  <div><span className="font-medium text-gray-900">Início</span><p className="text-xs text-gray-500">Página principal</p></div>
+                                </Link>
+                                <Link href="/catalog" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors order-2" onClick={() => setIsMenuOpen(false)}>
+                                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center"><Package className="w-5 h-5 text-green-600" /></div>
+                                  <div><span className="font-medium text-gray-900">Produtos</span><p className="text-xs text-gray-500">Ver catálogo</p></div>
+                                </Link>
+                                <Link href="/cart" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors order-3" onClick={() => setIsMenuOpen(false)}>
+                                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center relative">
+                                    <ShoppingCart className="w-6 h-6 text-blue-600" />
+                                    {cartItemCount > 0 && (
+                                      <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold shadow-lg border-2 border-white animate-bounce">
+                                        {cartItemCount}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex-1"><span className="font-medium text-gray-900">Carrinho</span><p className="text-xs text-gray-500">Seus produtos</p></div>
+                                </Link>
+                                <Link href="/favorites" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors order-4" onClick={() => setIsMenuOpen(false)}>
+                                  <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center"><Heart className="w-5 h-5 text-red-600" /></div>
+                                  <div className="flex-1"><span className="font-medium text-gray-900">Favoritos</span><p className="text-xs text-gray-500">Produtos salvos</p></div>
+                                  {favoritesCount > 0 && (<span className="bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">{favoritesCount}</span>)}
+                                </Link>
+                                <Link href="/returns" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-yellow-50 transition-colors order-5" onClick={() => setIsMenuOpen(false)}>
+                                  <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center"><RefreshCw className="w-5 h-5 text-yellow-600" /></div>
+                                  <div className="flex-1"><span className="font-medium text-gray-900">Trocas e Devoluções</span><p className="text-xs text-gray-500">Solicite trocas ou devoluções</p></div>
+                                </Link>
+                                <Link href="/returns/minhas" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-yellow-50 transition-colors order-6" onClick={() => setIsMenuOpen(false)}>
+                                  <div className="w-10 h-10 bg-yellow-200 rounded-lg flex items-center justify-center"><RefreshCw className="w-5 h-5 text-yellow-700" /></div>
+                                  <div className="flex-1"><span className="font-medium text-gray-900">Minhas Solicitações de Troca/Devolução</span><p className="text-xs text-gray-500">Acompanhe suas solicitações</p></div>
+                                </Link>
+                                <Link href="/camera-request" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-indigo-50 transition-colors order-7" onClick={() => setIsMenuOpen(false)}>
+                                  <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center"><Camera className="w-5 h-5 text-indigo-600" /></div>
+                                  <div className="flex-1"><span className="font-medium text-gray-900">Solicitar Câmera</span><p className="text-xs text-gray-500">Perdeu algo?</p></div>
+                                </Link>
+                                <Link href="/camera-request/minhas" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-indigo-50 transition-colors order-8" onClick={() => setIsMenuOpen(false)}>
+                                  <div className="w-10 h-10 bg-indigo-200 rounded-lg flex items-center justify-center"><Camera className="w-5 h-5 text-indigo-700" /></div>
+                                  <div className="flex-1"><span className="font-medium text-gray-900">Minhas Solicitações de Câmera</span><p className="text-xs text-gray-500">Acompanhe suas solicitações</p></div>
+                                </Link>
+                                <Link href="/orders" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-purple-50 transition-colors order-9" onClick={() => setIsMenuOpen(false)}>
+                                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center"><FileText className="w-5 h-5 text-purple-600" /></div>
+                                  <div className="flex-1"><span className="font-medium text-gray-900">Histórico de Pedidos</span><p className="text-xs text-gray-500">Veja seus pedidos</p></div>
+                                </Link>
+                                <Link href="/feedback" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-yellow-50 transition-colors order-10" onClick={() => setIsMenuOpen(false)}>
+                                  <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center"><MessageSquare className="w-5 h-5 text-yellow-600" /></div>
+                                  <div className="flex-1"><span className="font-medium text-gray-900">Feedback</span><p className="text-xs text-gray-500">Envie sua opinião</p></div>
+                                </Link>
+                                <Link href="/about" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors order-11" onClick={() => setIsMenuOpen(false)}>
+                                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center"><Info className="w-5 h-5 text-orange-600" /></div>
+                                  <div><span className="font-medium text-gray-900">Sobre Nós</span><p className="text-xs text-gray-500">Nossa história</p></div>
+                                </Link>
+                                <Link href="/faq" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors order-12" onClick={() => setIsMenuOpen(false)}>
+                                  <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center"><HelpCircle className="w-5 h-5 text-teal-600" /></div>
+                                  <div><span className="font-medium text-gray-900">Ajuda</span><p className="text-xs text-gray-500">FAQ</p></div>
+                                </Link>
+                                {/* Removido duplicação de links extras */}
+                                
+                                
+                                
+                                {user?.role === "admin" && (
+                                  <Link href="/admin" className="flex items-center space-x-3 p-3 rounded-xl bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg" onClick={() => setIsMenuOpen(false)}>
+                                    <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center"><Settings className="w-5 h-5 text-white" /></div>
+                                    <div><span className="font-bold text-white">Admin</span><p className="text-xs text-orange-100">Painel</p></div>
+                                  </Link>
+                                )}
+                              </div>
+                            </div>
+                            <div className="border-t border-gray-200 p-4 bg-gray-50">
+                              {user ? (
+                                <button onClick={handleLogout} className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-red-500 to-red-600 text-white py-3 px-4 rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-300 shadow-lg hover:shadow-xl">
+                                  <LogOut className="w-5 h-5" />
+                                  <span className="font-semibold">Sair da Conta</span>
+                                </button>
+                              ) : (
+                                <div className="space-y-3">
+                                  <Link href="/login" className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl" onClick={() => setIsMenuOpen(false)}>
+                                    <User className="w-5 h-5" />
+                                    <span className="font-semibold">Entrar</span>
+                                  </Link>
+                                  <Link href="/register" className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-4 rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-300 shadow-lg hover:shadow-xl" onClick={() => setIsMenuOpen(false)}>
+                                    <User className="w-5 h-5" />
+                                    <span className="font-semibold">Criar Conta</span>
+                                  </Link>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </button>
-                  ))}
-                </div>
-                <div className="sticky bottom-0 bg-gradient-to-r from-gray-50 to-gray-100 px-5 py-4 border-t-2 border-gray-200">
-                  <button
-                    onClick={() => window.location.href = `/catalog?search=${encodeURIComponent(searchQuery)}`}
-                    className="w-full text-center bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-lg py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
-                  >
-                    🔍 Ver todos os resultados ({searchResults.length}+)
-                  </button>
-                </div>
-              </div>
-            )}
-          </form>
-        </div>
-      </div>
-
-      {/* Menu hamburguer para todas as telas */}
-        {isMenuOpen && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-50">
-          <div className="absolute right-0 top-0 h-full w-80 bg-white shadow-xl">
-            {/* Header do menu */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Menu de Navegação</h2>
-          <button
-                onClick={() => setIsMenuOpen(false)}
-                className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
-          >
-                <X className="w-5 h-5" />
-          </button>
-            </div>
-
-            {/* Conteúdo com scroll */}
-            <div className="h-full overflow-y-auto">
-              <div className="p-4 space-y-6">
-                {/* User Info */}
-                {user && (
-                  <div className="bg-gradient-to-r from-orange-50 to-blue-50 rounded-xl p-4 border border-orange-200">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-                        <User className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-900">{user.name}</p>
-                        <p className="text-sm text-gray-600">{user.email}</p>
-                      </div>
-                    </div>
-          </div>
-                )}
-
-                {/* Navigation Links */}
-                <div className="space-y-2">
-                  {lastOrderId && !lastOrderDelivered && (
-                    <Link 
-                      href={`/order-status/${lastOrderId}`} 
-                      className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors mobile-tap-highlight group hover-scale-small"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center group-hover:bg-orange-200 transition-colors">
-                        <RefreshCw className="w-5 h-5 text-orange-600 group-hover:animate-bounce" />
-                      </div>
-                      <div className="flex-1">
-                        <span className="font-medium text-gray-900">Acompanhar Pedido</span>
-                        <p className="text-xs text-gray-500">Pedido #{lastOrderId}</p>
-                      </div>
-                    </Link>
-                  )}
-                  <Link 
-                    href="/" 
-                    className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors mobile-tap-highlight group hover-scale-small"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                      <Home className="w-5 h-5 text-blue-600 group-hover:animate-bounce" />
-                    </div>
-                    <div className="flex-1">
-                      <span className="font-medium text-gray-900">Início</span>
-                      <p className="text-xs text-gray-500">Página principal</p>
-                    </div>
-                  </Link>
-
-                  <Link 
-                    href="/catalog" 
-                    className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors mobile-tap-highlight group hover-scale-small"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
-                      <Package className="w-5 h-5 text-green-600 group-hover:animate-bounce" />
-                    </div>
-                    <div className="flex-1">
-                      <span className="font-medium text-gray-900">Produtos</span>
-                      <p className="text-xs text-gray-500">Ver todos os produtos</p>
-                    </div>
-                </Link>
-
-                  <Link 
-                    href="/cart" 
-                    className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors mobile-tap-highlight group relative hover-scale-small"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                      <ShoppingCart className="w-5 h-5 text-blue-600 group-hover:animate-bounce" />
-                    </div>
-                    <div className="flex-1">
-                      <span className="font-medium text-gray-900">Carrinho</span>
-                      <p className="text-xs text-gray-500">Seus produtos selecionados</p>
-                    </div>
-                  {cartItemCount > 0 && (
-                      <span className="bg-blue-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center animate-bounce-in">
-                      {cartItemCount}
-                    </span>
-                  )}
-                </Link>
-
-                  <Link 
-                    href="/favorites" 
-                    className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors mobile-tap-highlight group relative hover-scale-small"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-colors">
-                      <Heart className="w-5 h-5 text-red-600 group-hover:animate-bounce" />
-                    </div>
-                    <div className="flex-1">
-                      <span className="font-medium text-gray-900">Favoritos</span>
-                      <p className="text-xs text-gray-500">Produtos salvos</p>
-                    </div>
-                    {favoritesCount > 0 && (
-                      <span className="bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center animate-bounce-in">
-                        {favoritesCount}
-                      </span>
                     )}
-                  </Link>
-
-                  <Link 
-                    href="/orders" 
-                    className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors mobile-tap-highlight group hover-scale-small"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                      <FileText className="w-5 h-5 text-purple-600 group-hover:animate-bounce" />
-                    </div>
-                    <div className="flex-1">
-                      <span className="font-medium text-gray-900">Meus Pedidos</span>
-                      <p className="text-xs text-gray-500">Histórico de pedidos</p>
-                    </div>
-                    {pendingOrders > 0 && (
-                      <span className="bg-orange-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center animate-bounce-in">
-                        {pendingOrders}
-                      </span>
-                    )}
-                  </Link>
-
-                  <Link 
-                    href="/feedback" 
-                    className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors mobile-tap-highlight group"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center group-hover:bg-yellow-200 transition-colors">
-                      <MessageSquare className="w-5 h-5 text-yellow-600" />
-                    </div>
-                    <div className="flex-1">
-                      <span className="font-medium text-gray-900">Feedback</span>
-                      <p className="text-xs text-gray-500">Envie sua opinião</p>
-                    </div>
-                  </Link>
-
-                  <Link 
-                    href="/camera-request/form" 
-                    className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors mobile-tap-highlight group"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
-                      <Camera className="w-5 h-5 text-indigo-600" />
-                    </div>
-                    <div className="flex-1">
-                      <span className="font-medium text-gray-900">Solicitar Câmera</span>
-                      <p className="text-xs text-gray-500">Perdeu algo? Solicite</p>
-                    </div>
-                    {pendingCameraRequests > 0 && (
-                      <span className="bg-indigo-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center animate-bounce-in">
-                        {pendingCameraRequests}
-                      </span>
-                    )}
-                  </Link>
-
-                  {/* Minhas solicitações de câmera (acesso ao chat) */}
-                  <Link 
-                    href="/camera-request/minhas" 
-                    className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors mobile-tap-highlight group"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
-                      <Camera className="w-5 h-5 text-indigo-600" />
-                    </div>
-                    <div className="flex-1">
-                      <span className="font-medium text-gray-900">Minhas Solicitações de Câmera</span>
-                      <p className="text-xs text-gray-500">Ver e conversar com o suporte</p>
-                    </div>
-                  </Link>
-
-                  <Link 
-                    href="/faq" 
-                    className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors mobile-tap-highlight group"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center group-hover:bg-teal-200 transition-colors">
-                      <HelpCircle className="w-5 h-5 text-teal-600" />
-                    </div>
-                    <div className="flex-1">
-                      <span className="font-medium text-gray-900">Ajuda</span>
-                      <p className="text-xs text-gray-500">Perguntas frequentes</p>
-                    </div>
-                  </Link>
-
-                  <Link 
-                    href="/returns" 
-                    className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors mobile-tap-highlight group"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
-                      <RefreshCw className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div className="flex-1">
-                      <span className="font-medium text-gray-900">Trocas e Devoluções</span>
-                      <p className="text-xs text-gray-500">Solicitar troca ou devolução</p>
-                    </div>
-                    {pendingReturns > 0 && (
-                      <span className="bg-green-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center animate-bounce-in">
-                        {pendingReturns}
-                      </span>
-                    )}
-                  </Link>
-
-                  {/* Minhas trocas/devoluções (acesso ao chat) */}
-                  <Link 
-                    href="/returns/minhas" 
-                    className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors mobile-tap-highlight group"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center group-hover:bg-green-100 transition-colors">
-                      <RefreshCw className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div className="flex-1">
-                      <span className="font-medium text-gray-900">Minhas Trocas/Devoluções</span>
-                      <p className="text-xs text-gray-500">Acompanhar e conversar</p>
-                    </div>
-                  </Link>
-
-                  <Link 
-                    href="/about" 
-                    className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors mobile-tap-highlight group"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center group-hover:bg-orange-200 transition-colors">
-                      <Info className="w-5 h-5 text-orange-600" />
-                    </div>
-                    <div className="flex-1">
-                      <span className="font-medium text-gray-900">Sobre Nós</span>
-                      <p className="text-xs text-gray-500">Conheça nossa história</p>
-                    </div>
-                </Link>
-
-                  {/* Botão ADMIN - só aparece para admin logado */}
-                  {user?.role === "admin" && (
-                    <Link
-                      href="/admin"
-                      className="flex items-center space-x-3 p-3 rounded-xl bg-gradient-to-r from-orange-400 to-blue-400 shadow-lg hover:from-orange-500 hover:to-blue-500 transition-colors mobile-tap-highlight group border-2 border-orange-500"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center group-hover:bg-orange-600 transition-colors shadow">
-                        <Settings className="w-5 h-5 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <span className="font-bold text-white drop-shadow">Painel Administrativo</span>
-                        <p className="text-xs text-orange-100">Acesso restrito</p>
-                      </div>
-                    </Link>
-                  )}
-          </div>
-
-                {/* Auth Section */}
-                <div className="border-t border-gray-200 pt-6">
-                {user ? (
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center justify-center space-x-2 bg-red-500 text-white py-3 px-4 rounded-xl hover:bg-red-600 transition-colors mobile-tap-highlight"
-                    >
-                      <LogOut className="w-5 h-5" />
-                      <span>Sair da Conta</span>
-                    </button>
-                  ) : (
-                    <div className="space-y-3">
-                      <Link
-                        href="/login"
-                        className="w-full flex items-center justify-center space-x-2 bg-orange-500 text-white py-3 px-4 rounded-xl hover:bg-orange-600 transition-colors mobile-tap-highlight"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <User className="w-5 h-5" />
-                        <span>Entrar</span>
-                      </Link>
-                      <Link
-                        href="/register"
-                        className="w-full flex items-center justify-center space-x-2 bg-blue-500 text-white py-3 px-4 rounded-xl hover:bg-blue-600 transition-colors mobile-tap-highlight"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <User className="w-5 h-5" />
-                        <span>Criar Conta</span>
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-              </div>
-          </div>
-        )}
-
-
-    </header>
-  )
-} 
+                  </header>
+                );
+              }

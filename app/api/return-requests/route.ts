@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     let filtered = returnRequests
     if (!isAdmin && userEmail) {
       filtered = returnRequests.filter((r:any) =>
-        r.userEmail === userEmail || r.userId === userId || r.contactEmail === userEmail
+        r.userEmail === userEmail || r.userId === userId || r.contactEmail === userEmail || r.userName === request.headers.get('x-user-name')
       )
     }
     if (!isAdmin && !userEmail) {

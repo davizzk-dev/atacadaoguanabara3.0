@@ -1,5 +1,33 @@
 [
   {
+    "id": "1755698546329",
+    "startedAt": "2025-08-20T14:00:16.878Z",
+    "finishedAt": "2025-08-20T14:02:26.329Z",
+    "durationMs": 129451,
+    "totals": {
+      "products": 6303,
+      "sections": 15,
+      "brands": 1,
+      "genres": 100
+    },
+    "message": "Sincronização concluída",
+    "status": "success"
+  },
+  {
+    "id": "1755698083108",
+    "startedAt": "2025-08-20T13:52:54.852Z",
+    "finishedAt": "2025-08-20T13:54:43.108Z",
+    "durationMs": 108256,
+    "totals": {
+      "products": 6302,
+      "sections": 15,
+      "brands": 1,
+      "genres": 100
+    },
+    "message": "Sincronização concluída",
+    "status": "success"
+  },
+  {
     "id": "1755172272659",
     "startedAt": "2025-08-14T11:49:07.845Z",
     "finishedAt": "2025-08-14T11:51:12.659Z",

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState } from "react";
 import { useAuthStore } from "@/lib/store";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import ChatInterface from "@/components/admin/ChatInterface";
 import { RefreshCw } from "lucide-react";
 
@@ -16,47 +16,45 @@ interface ReturnRequest {
   messages?: any[];
 }
 
-function MinhasDevolucoesInner() {
+export default function MinhasDevolucoes() {
   const { user } = useAuthStore();
   const [requests, setRequests] = useState<ReturnRequest[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Abrir chat automaticamente se ?open=ID
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const openId = params.get('open');
+      if (openId) {
+        setSelectedId(openId);
+      }
+    }
+  }, [requests]);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
-    const emailParam = searchParams?.get('email');
-    // Se não há usuário logado e também não há email via URL, exigir login
-    if (!user && !emailParam) {
+    if (!user) {
       router.push("/login?callback=/returns/minhas");
       return;
     }
     setLoading(true);
-    // Montar headers baseado em user OU email da URL
-    const headers: Record<string, string> = {}
-    if (user?.email) headers["x-user-email"] = user.email
-    if (user?.id) headers["x-user-id"] = user.id
-    if (!user && emailParam) headers["x-user-email"] = emailParam
-
     fetch(`/api/return-requests?t=${Date.now()}`, {
-      headers,
+      headers: {
+        "x-user-email": user.email,
+        "x-user-id": user.id,
+        "x-user-name": user.name,
+      },
       cache: 'no-store'
     })
       .then((res) => res.json())
-      .then((data) => {
-        const list = Array.isArray(data.data) ? data.data : []
-        setRequests(list)
-        // Auto-seleção via query param ?open=
-        const openId = searchParams?.get('open')
-        if (openId && list.some((r:any) => r.id === openId)) {
-          setSelectedId(openId)
-        }
-      })
+      .then((data) => setRequests(Array.isArray(data.data) ? data.data : []))
       .finally(() => setLoading(false));
-  }, [user, router, searchParams]);
+  }, [user, router]);
 
-  // Se não há user mas temos email na URL, permitir renderizar
-  if (!user && !searchParams?.get('email')) return null;
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
@@ -110,43 +108,26 @@ function MinhasDevolucoesInner() {
               requestName={requests.find((r) => r.id === selectedId)?.reason || ""}
               requestStatus={requests.find((r) => r.id === selectedId)?.status || "pending"}
               onStatusChange={() => {}}
+              sender="user"
+              onBack={() => setSelectedId(null)}
               onMessageSent={() => {
-                // Recarrega lista para trazer novas mensagens imediatamente
                 setLoading(true)
-                const emailParam = searchParams?.get('email')
-                const headers: Record<string, string> = {}
-                if (user?.email) headers["x-user-email"] = user.email
-                if (user?.id) headers["x-user-id"] = user.id
-                if (!user && emailParam) headers["x-user-email"] = emailParam as string
-
                 fetch(`/api/return-requests?t=${Date.now()}`, {
-                  headers,
+                  headers: {
+                    "x-user-email": user!.email,
+                    "x-user-id": user!.id,
+                    "x-user-name": user!.name,
+                  },
                   cache: 'no-store'
                 })
                   .then((res) => res.json())
                   .then((data) => setRequests(Array.isArray(data.data) ? data.data : []))
                   .finally(() => setLoading(false))
               }}
-              sender="user"
-              onBack={() => setSelectedId(null)}
             />
           </div>
         )}
       </div>
     </div>
-  );
-}
-
-export default function MinhasDevolucoes() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-gray-50 py-8 px-4">
-          <div className="max-w-3xl mx-auto text-center text-gray-500">Carregando...</div>
-        </div>
-      }
-    >
-      <MinhasDevolucoesInner />
-    </Suspense>
   );
 }

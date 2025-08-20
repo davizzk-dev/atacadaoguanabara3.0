@@ -53,16 +53,31 @@ export default function Header(): JSX.Element {
           .then(res => res.json())
           .then(data => {
             const arr = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
-            // Filtrar sugestões exatas ou que começam com o termo
-            const normalized = value.trim().toLowerCase();
+            // Filtrar e ordenar sugestões por relevância
+            const normalized = value.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             const filtered = arr.filter((produto: any) => {
-              const name = (produto.name || '').toLowerCase();
-              // Só mostra se o nome começa com o termo ou contém o termo completo como palavra
-              return name.startsWith(normalized) || name.split(' ').includes(normalized);
+              const name = (produto.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+              const brand = (produto.brand || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+              const category = (produto.category || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+              
+              return name.includes(normalized) || brand.includes(normalized) || category.includes(normalized);
+            }).sort((a: any, b: any) => {
+              const nameA = (a.name || '').toLowerCase();
+              const nameB = (b.name || '').toLowerCase();
+              
+              // Priorizar matches que começam com o termo
+              const startsWithA = nameA.startsWith(normalized) ? 0 : 1;
+              const startsWithB = nameB.startsWith(normalized) ? 0 : 1;
+              
+              return startsWithA - startsWithB;
             });
-            setSearchResults(filtered.slice(0, 6));
+            setSearchResults(filtered.slice(0, 8));
+          })
+          .catch(err => {
+            console.error('Erro na busca:', err);
+            setSearchResults([]);
           });
-      }, 300);
+      }, 200);
     } else {
       setSearchResults([]);
     }
@@ -97,12 +112,14 @@ export default function Header(): JSX.Element {
                         <div className="w-full relative">
                           <input
                             type="text"
-                            placeholder="Buscar produtos..."
+                            placeholder="🔍 Digite aqui para buscar produtos..."
                             value={searchQuery}
                             onChange={handleSearchChange}
-                            className="w-full px-4 py-2 pl-10 pr-10 border-2 border-blue-400 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400/30 focus:border-blue-500 bg-white shadow transition-all duration-300 text-gray-900 font-semibold"
+                            onFocus={() => searchQuery && setShowSearchResults(true)}
+                            className="w-full px-4 py-3 pl-12 pr-12 border-2 border-blue-300 rounded-full focus:outline-none focus:ring-4 focus:ring-blue-400/20 focus:border-blue-500 bg-white shadow-lg transition-all duration-300 text-gray-900 font-medium placeholder-gray-500 text-base"
+                            style={{minWidth:'400px'}}
                           />
-                          <Search className="absolute left-2 top-2 h-5 w-5 text-blue-500" />
+                          <Search className="absolute left-3 top-3.5 h-6 w-6 text-blue-500" />
                           {searchQuery && (
                             <button
                               type="button"
@@ -111,13 +128,13 @@ export default function Header(): JSX.Element {
                                 setShowSearchResults(false);
                                 setSearchResults([]);
                               }}
-                              className="absolute right-2 top-2 h-5 w-5 text-pink-500 hover:text-red-500 transition-colors"
+                              className="absolute right-3 top-3.5 h-6 w-6 text-gray-400 hover:text-red-500 transition-colors rounded-full hover:bg-red-50 p-1"
                             >
                               <X className="h-4 w-4" />
                             </button>
                           )}
                           {showSearchResults && searchResults.length > 0 && (
-                            <div className="absolute left-0 right-0 top-12 bg-white rounded-xl shadow-xl border border-blue-200 mt-2 max-h-64 overflow-y-auto z-50 flex flex-col" style={{minWidth:'220px', maxWidth:'100%', width:'100%'}}>
+                            <div className="absolute left-0 right-0 top-12 bg-white rounded-xl shadow-2xl border-2 border-blue-200 mt-1 max-h-80 overflow-y-auto z-[60] flex flex-col" style={{minWidth:'400px', maxWidth:'500px', width:'100%'}}>
                               {searchResults.map((produto: any) => (
                                 <button
                                   key={produto.id}
@@ -125,42 +142,36 @@ export default function Header(): JSX.Element {
                                     if (router) {
                                       router.push(`/product/${produto.id}`);
                                       setShowSearchResults(false);
+                                      setSearchQuery("");
                                     }
                                   }}
-                                  className="w-full flex items-center px-3 py-3 sm:px-4 sm:py-3 hover:bg-blue-50 border-b border-gray-100 last:border-b-0 text-left transition-all duration-200 focus:bg-blue-100 active:bg-blue-200"
-                                  style={{fontSize:'1rem', minHeight:'48px', gap:'0.75rem'}}
+                                  className="w-full flex items-center px-4 py-4 hover:bg-blue-50 border-b border-gray-100 last:border-b-0 text-left transition-all duration-200 focus:bg-blue-100 active:bg-blue-200 group"
+                                  style={{fontSize:'1rem', minHeight:'72px', gap:'1rem'}}
                                 >
                                   <img 
                                     src={produto.image || '/placeholder.png'} 
                                     alt={produto.name} 
-                                    className="object-cover rounded-lg mr-3 shadow-sm" 
-                                    style={{width:'60px',height:'60px',minWidth:'60px',minHeight:'60px',maxWidth:'60px',maxHeight:'60px',objectFit:'cover',display:'block',boxSizing:'border-box',margin:'0'}} 
+                                    className="object-cover rounded-lg shadow-sm group-hover:scale-105 transition-transform" 
+                                    style={{width:'56px',height:'56px',minWidth:'56px',minHeight:'56px',maxWidth:'56px',maxHeight:'56px',objectFit:'cover',display:'block',boxSizing:'border-box'}} 
                                   />
-                                  <div className="flex-1 min-w-0 pl-2">
-                                    <p className="font-semibold text-gray-900 text-base truncate">{produto.name}</p>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-gray-900 text-base truncate group-hover:text-blue-600">{produto.name}</p>
                                     <p className="text-sm text-gray-500 font-medium truncate">{produto.brand}</p>
-                                    <p className="text-sm text-blue-600 font-bold">R$ {produto.price?.toFixed(2).replace('.', ',')}</p>
+                                    <p className="text-base text-green-600 font-bold">R$ {produto.price?.toFixed(2).replace('.', ',')}</p>
                                   </div>
                                 </button>
                               ))}
                               <button
-                                className="w-full py-3 text-center text-blue-600 font-semibold bg-blue-50 hover:bg-blue-100 border-t border-blue-100 rounded-b-xl text-base sm:text-lg"
+                                className="w-full py-4 text-center text-blue-600 font-semibold bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border-t-2 border-blue-200 rounded-b-xl text-base transition-all duration-200"
                                 style={{cursor:'pointer'}}
                                 onClick={() => {
                                   if (router && searchQuery.trim()) {
                                     router.push(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`);
                                     setShowSearchResults(false);
-                                    setTimeout(() => {
-                                      window.location.reload();
-                                      setTimeout(() => {
-                                        const el = document.getElementById('products-section');
-                                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                      }, 700);
-                                    }, 300);
                                   }
                                 }}
                               >
-                                Ver mais resultados
+                                🔍 Ver todos os resultados para "{searchQuery}"
                               </button>
                             </div>
                           )}

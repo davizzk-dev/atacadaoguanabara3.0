@@ -41,20 +41,14 @@ export function ProductCard({ product }: ProductCardProps) {
   const handleAddToCart = async () => {
     setIsAdding(true)
     setLastAddTime(Date.now()) // Reset timer
-    
-    // Animação de loading
     await new Promise((resolve) => setTimeout(resolve, 300))
-    
-    // Adicionar usando o produto original (sem modificar o preço)
-    // O cálculo dinâmico será feito no store e no carrinho
+    // Adiciona ao carrinho já com o preço dinâmico calculado
+    const dynamicProduct = { ...product, price: calculatePrice() }
     for (let i = 0; i < selectedQuantity; i++) {
-      addItem(product)
+      addItem(dynamicProduct)
     }
-    
     setIsAdding(false)
     setShowSuccess(true)
-    
-    // Mostrar sucesso por mais tempo
     setTimeout(() => setShowSuccess(false), 2000)
   }
 
@@ -79,14 +73,23 @@ export function ProductCard({ product }: ProductCardProps) {
   }
 
   // Função para verificar se o produto tem preços escalonados válidos
-  const hasValidScaledPrices = () => {
+  const getScaledPrices = () => {
     const productData = product as any
-    return (
-      productData.prices?.price2 && 
-      productData.prices.price2 > 0 && 
-      productData.prices.minQuantityPrice2 && 
-      productData.prices.minQuantityPrice2 > 0
-    )
+    // Prioriza o campo prices, mas se estiver zerado, busca em varejoFacilData.precos
+    const precoVenda2 = productData.prices?.precoVenda2 > 0
+      ? productData.prices.precoVenda2
+      : productData.varejoFacilData?.precos?.precoVenda2 || 0
+    const quantidadeMinimaPreco2 = productData.prices?.quantidadeMinimaPreco2 > 1
+      ? productData.prices.quantidadeMinimaPreco2
+      : productData.varejoFacilData?.precos?.quantidadeMinimaPreco2 || 0
+    const price3 = productData.prices?.price3 || productData.varejoFacilData?.precos?.precoVenda3 || 0
+    const minQuantityPrice3 = productData.prices?.minQuantityPrice3 || productData.varejoFacilData?.precos?.quantidadeMinimaPreco3 || 0
+    return { precoVenda2, quantidadeMinimaPreco2, price3, minQuantityPrice3 }
+  }
+
+  const hasValidScaledPrices = () => {
+    const { precoVenda2, quantidadeMinimaPreco2 } = getScaledPrices()
+    return precoVenda2 > 0 && quantidadeMinimaPreco2 > 1
   }
 
   // Função para calcular o preço baseado na quantidade
@@ -94,14 +97,11 @@ export function ProductCard({ product }: ProductCardProps) {
     if (!hasValidScaledPrices()) {
       return product.price
     }
-
-    const productData = product as any
-    const { price2, price3, minQuantityPrice2, minQuantityPrice3 } = productData.prices
-
+    const { precoVenda2, price3, quantidadeMinimaPreco2, minQuantityPrice3 } = getScaledPrices()
     if (price3 && minQuantityPrice3 && selectedQuantity >= minQuantityPrice3) {
       return price3
-    } else if (price2 && minQuantityPrice2 && selectedQuantity >= minQuantityPrice2) {
-      return price2
+    } else if (precoVenda2 && quantidadeMinimaPreco2 && selectedQuantity >= quantidadeMinimaPreco2) {
+      return precoVenda2
     } else {
       return product.price
     }
@@ -214,52 +214,62 @@ export function ProductCard({ product }: ProductCardProps) {
           <div className="text-xs text-gray-500 mt-1">{product.unit}</div>
           
           {/* Preços escalonados - sempre visível de forma compacta */}
-          {hasValidScaledPrices() && (
-            <div className="mt-2 space-y-1">
-              {/* Preço atual com destaque */}
-              <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full inline-block">
-                <span className="font-medium">
-                  💰 {selectedQuantity >= (product as any).prices.minQuantityPrice2 ? 'Preço especial ativo!' : `${(product as any).prices.minQuantityPrice2 - selectedQuantity} mais = R$ ${(product as any).prices.price2.toFixed(2)}`}
-                </span>
-              </div>
-              
-              {/* Lista compacta de preços */}
-              <div className="text-xs text-gray-600 space-y-0.5">
-                <div className="flex justify-between items-center">
-                  <span>1-{(product as any).prices.minQuantityPrice2 - 1} unid:</span>
-                  <span className={selectedQuantity < (product as any).prices.minQuantityPrice2 ? 'font-medium text-blue-600' : ''}>
-                    R$ {product.price.toFixed(2)}
+          {hasValidScaledPrices() && (() => {
+            const { precoVenda2, quantidadeMinimaPreco2, price3, minQuantityPrice3 } = getScaledPrices()
+            return (
+              <div className="mt-2 space-y-1">
+                {/* Preço atual com destaque */}
+                <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full inline-block">
+                  <span className="font-medium">
+                    {selectedQuantity >= quantidadeMinimaPreco2
+                      ? <>
+                          💰 Preço especial ativo!
+                          <Button size="sm" variant="outline" className="ml-2 px-2 py-0 text-xs" onClick={() => setSelectedQuantity(1)}>
+                            Voltar ao preço unitário
+                          </Button>
+                        </>
+                      : <>
+                          Mais {quantidadeMinimaPreco2 - selectedQuantity} produto{(quantidadeMinimaPreco2 - selectedQuantity) > 1 ? 's' : ''} para ativar <span className="font-bold">R$ {precoVenda2.toFixed(2)}</span>
+                        </>
+                    }
                   </span>
                 </div>
-                
-                <div className="flex justify-between items-center">
-                  <span>{(product as any).prices.minQuantityPrice2}+ unid:</span>
-                  <span className={
-                    selectedQuantity >= (product as any).prices.minQuantityPrice2 && 
-                    (!((product as any).prices.price3) || selectedQuantity < (product as any).prices.minQuantityPrice3)
-                      ? 'font-medium text-green-600' 
-                      : 'text-gray-500'
-                  }>
-                    R$ {(product as any).prices.price2.toFixed(2)}
-                  </span>
-                </div>
-                
-                {/* Preço 3 (se existir) */}
-                {(product as any).prices.price3 && (product as any).prices.minQuantityPrice3 && (
+                {/* Lista compacta de preços */}
+                <div className="text-xs text-gray-600 space-y-0.5">
                   <div className="flex justify-between items-center">
-                    <span>{(product as any).prices.minQuantityPrice3}+ unid:</span>
+                    <span>1 até {quantidadeMinimaPreco2 - 1} unid:</span>
+                    <span className={selectedQuantity < quantidadeMinimaPreco2 ? 'font-medium text-blue-600' : ''}>
+                      R$ {product.price.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>{quantidadeMinimaPreco2}+ unid:</span>
                     <span className={
-                      selectedQuantity >= (product as any).prices.minQuantityPrice3 
+                      selectedQuantity >= quantidadeMinimaPreco2 && 
+                      (!(price3) || selectedQuantity < minQuantityPrice3)
                         ? 'font-medium text-green-600' 
                         : 'text-gray-500'
                     }>
-                      R$ {(product as any).prices.price3.toFixed(2)}
+                      R$ {precoVenda2.toFixed(2)}
                     </span>
                   </div>
-                )}
+                  {/* Preço 3 (se existir) */}
+                  {price3 && minQuantityPrice3 && (
+                    <div className="flex justify-between items-center">
+                      <span>{minQuantityPrice3}+ unid:</span>
+                      <span className={
+                        selectedQuantity >= minQuantityPrice3 
+                          ? 'font-medium text-green-600' 
+                          : 'text-gray-500'
+                      }>
+                        R$ {price3.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )
+          })()}
         </div>
       </div>
 

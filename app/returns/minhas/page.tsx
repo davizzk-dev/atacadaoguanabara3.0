@@ -20,6 +20,9 @@ export default function MinhasDevolucoes() {
   const { user } = useAuthStore();
   const [requests, setRequests] = useState<ReturnRequest[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
   // Abrir chat automaticamente se ?open=ID
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -30,8 +33,6 @@ export default function MinhasDevolucoes() {
       }
     }
   }, [requests]);
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
     if (!user) {

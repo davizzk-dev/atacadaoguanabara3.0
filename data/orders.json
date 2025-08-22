@@ -3796,5 +3796,447 @@
       "method": "pix",
       "wantsChange": false
     }
+  },
+  {
+    "id": "1755782160071",
+    "items": [
+      {
+        "product": {
+          "id": "5994",
+          "name": " DEO COLONIA AMOR DE MAINHA 225 ML",
+          "price": 14.99,
+          "originalPrice": 14.99,
+          "image": "https://i.imgur.com/WQkYD9X.jpeg",
+          "category": "PRODUTOS DE LIMPEZA",
+          "description": " D COL AMOR 225ML",
+          "stock": 1,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 25,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "produtos de limpeza",
+            "sabões, agentes orgânicos",
+            "varejo-facil"
+          ],
+          "prices": {
+            "price1": 14.99,
+            "offerPrice1": 0,
+            "price2": 0,
+            "offerPrice2": 0,
+            "minQuantityPrice2": 0,
+            "price3": 0,
+            "offerPrice3": 0,
+            "minQuantityPrice3": 0
+          },
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 6,
+            "generoId": 34,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2025-06-19T13:48:15.697+00:00",
+            "dataAlteracao": "2025-06-19T13:48:15.697+00:00",
+            "estoque": {
+              "saldo": 1,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-06-19T13:48:15.695+00:00",
+              "atualizadoEm": "2025-08-08T11:08:54.108+00:00"
+            },
+            "precos": {
+              "id": 11071,
+              "precoVenda1": 14.99,
+              "precoOferta1": 0,
+              "precoVenda2": 0,
+              "precoOferta2": 0,
+              "quantidadeMinimaPreco2": 0,
+              "precoVenda3": 0,
+              "precoOferta3": 0,
+              "quantidadeMinimaPreco3": 0,
+              "permiteDesconto": false
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 1
+      },
+      {
+        "product": {
+          "id": "2033",
+          "name": "ABSORVENTE INTIMOS SEM ABAS COM 8 UND TRIPLA PROTEÇAO",
+          "price": 4.79,
+          "originalPrice": 4.79,
+          "image": "https://i.imgur.com/Y8VgOkM.jpeg",
+          "category": "PRODUTOS DE LIMPEZA",
+          "description": "ABSORVENTE INTIMOS S",
+          "stock": 4,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 24,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "produtos de limpeza",
+            "obras diversas",
+            "varejo-facil"
+          ],
+          "prices": {
+            "price1": 4.79,
+            "offerPrice1": 0,
+            "price2": 0,
+            "offerPrice2": 0,
+            "minQuantityPrice2": 0,
+            "price3": 0,
+            "offerPrice3": 0,
+            "minQuantityPrice3": 0
+          },
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 6,
+            "generoId": 96,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2023-08-03T03:00:00.000+00:00",
+            "dataAlteracao": "2025-02-17T03:00:00.000+00:00",
+            "estoque": {
+              "saldo": 4,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:51.390+00:00",
+              "atualizadoEm": "2025-07-12T20:06:58.159+00:00"
+            },
+            "precos": {
+              "id": 2255,
+              "precoVenda1": 4.79,
+              "precoOferta1": 0,
+              "precoVenda2": 0,
+              "precoOferta2": 0,
+              "quantidadeMinimaPreco2": 0,
+              "precoVenda3": 0,
+              "precoOferta3": 0,
+              "quantidadeMinimaPreco3": 0,
+              "descontoMaximo": 0,
+              "permiteDesconto": true
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 215
+      }
+    ],
+    "total": 1044.84,
+    "customerInfo": {
+      "name": "Administrador",
+      "email": "admin@gmail.com",
+      "phone": "(11) 11111-1111",
+      "address": {
+        "street": "Rua Coronel Luiz David de Souza",
+        "number": "",
+        "neighborhood": "Presidente Kennedy",
+        "city": "Fortaleza",
+        "state": "CE",
+        "zipCode": "60355-337"
+      }
+    },
+    "status": "pending",
+    "createdAt": "2025-08-21T13:16:00.071Z",
+    "estimatedDelivery": "2025-08-21T13:40:00.071Z",
+    "shippingCost": 0,
+    "shippingDistance": 5.7,
+    "payment": {
+      "method": "pix",
+      "wantsChange": false
+    }
+  },
+  {
+    "id": "1755800689294",
+    "items": [
+      {
+        "product": {
+          "id": "6289",
+          "name": " COTONETE YORK PALINETES 75 UNID",
+          "price": 4.49,
+          "originalPrice": 4.49,
+          "image": "https://images.unsplash.com/photo-1619983081563-430f8b5a893c?auto=format&fit=crop&w=400&q=80",
+          "category": "PRODUTOS DE LIMPEZA",
+          "description": " COTONETE YORK PALIN",
+          "stock": 12,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 102,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "produtos de limpeza",
+            "pastas (\"ouates\"), feltros",
+            "varejo-facil"
+          ],
+          "prices": {
+            "price1": 4.49,
+            "offerPrice1": 0,
+            "price2": 3.99,
+            "offerPrice2": 0,
+            "minQuantityPrice2": 5,
+            "price3": 0,
+            "offerPrice3": 0,
+            "minQuantityPrice3": 0
+          },
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 6,
+            "generoId": 56,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2025-08-19T19:30:45.051+00:00",
+            "dataAlteracao": "2025-08-19T19:30:45.051+00:00",
+            "estoque": {
+              "saldo": 12,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-08-19T19:30:45.049+00:00",
+              "atualizadoEm": "2025-08-19T19:46:06.153+00:00"
+            },
+            "precos": {
+              "id": 14201,
+              "precoVenda1": 4.49,
+              "precoOferta1": 0,
+              "precoVenda2": 3.99,
+              "precoOferta2": 0,
+              "quantidadeMinimaPreco2": 5,
+              "precoVenda3": 0,
+              "precoOferta3": 0,
+              "quantidadeMinimaPreco3": 0,
+              "permiteDesconto": false
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 42
+      }
+    ],
+    "total": 167.58,
+    "customerInfo": {
+      "name": "JOSE ARIMATEA COSTA ALEXANDRE",
+      "email": "davikalebe20020602@gmail.com",
+      "phone": "(85) 98828-6178",
+      "address": {
+        "street": "Rua Coronel Luiz David de Souza",
+        "number": "72",
+        "complement": "Apto",
+        "neighborhood": "Presidente Kennedy",
+        "city": "Fortaleza",
+        "state": "CE",
+        "zipCode": "60355-337"
+      }
+    },
+    "status": "cancelled",
+    "createdAt": "2025-08-21T18:24:49.294Z",
+    "estimatedDelivery": "2025-08-21T18:48:49.294Z",
+    "shippingCost": 0,
+    "shippingDistance": 5.7,
+    "payment": {
+      "method": "pix",
+      "wantsChange": false
+    },
+    "updatedAt": "2025-08-21T19:15:31.062Z"
+  },
+  {
+    "id": "1755883731825",
+    "items": [
+      {
+        "product": {
+          "id": "777",
+          "name": " REFRIGERANTE SPRITE 250ML",
+          "price": 1.83,
+          "originalPrice": 1.99,
+          "image": "https://i.imgur.com/lZzMCo1.jpeg",
+          "category": "REFRIGERANTESE OUTROS LIQUIDOS",
+          "description": "SPRITE 250ML",
+          "stock": 726,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 64,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "refrigerantese outros liquidos",
+            "bebidas, líquidos alcoólicos",
+            "varejo-facil"
+          ],
+          "prices": {
+            "price1": 0,
+            "offerPrice1": 0,
+            "price2": 0,
+            "offerPrice2": 0,
+            "minQuantityPrice2": 0
+          },
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 15,
+            "generoId": 22,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2023-07-07T03:00:00.000+00:00",
+            "dataAlteracao": "2025-08-06T18:23:50.206+00:00",
+            "estoque": {
+              "saldo": 726,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:50.808+00:00",
+              "atualizadoEm": "2025-08-21T16:27:43.851+00:00"
+            },
+            "precos": {
+              "id": 1034,
+              "lojaId": 1,
+              "produtoId": 777,
+              "precoVenda1": 1.99,
+              "precoOferta1": 0,
+              "margemPreco1": 0,
+              "dataUltimoReajustePreco1": "2024-09-28T03:00:00.000+00:00",
+              "precoVenda2": 1.83,
+              "precoOferta2": 0,
+              "margemPreco2": 0,
+              "quantidadeMinimaPreco2": 12,
+              "precoVenda3": 0,
+              "precoOferta3": 0,
+              "margemPreco3": 0,
+              "quantidadeMinimaPreco3": 0,
+              "descontoMaximo": 0,
+              "permiteDesconto": true,
+              "custoProduto": 1.72,
+              "precoMedioDeReposicao": 1.72,
+              "precoFiscalDeReposicao": 1.72,
+              "origem": "CADASTRO"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 59
+      }
+    ],
+    "total": 107.97,
+    "customerInfo": {
+      "name": "JOSE ARIMATEA COSTA ALEXANDRE",
+      "email": "davikalebe20020602@gmail.com",
+      "phone": "(85) 98828-6178",
+      "address": {
+        "street": "Rua Antônio Arruda",
+        "number": "72",
+        "neighborhood": "Vila Velha",
+        "city": "Fortaleza",
+        "state": "CE",
+        "zipCode": "60347-255"
+      }
+    },
+    "status": "pending",
+    "createdAt": "2025-08-22T17:28:51.825Z",
+    "estimatedDelivery": "2025-08-22T17:35:51.825Z",
+    "shippingCost": 0,
+    "shippingDistance": 0.8,
+    "payment": {
+      "method": "pix",
+      "wantsChange": false
+    }
+  },
+  {
+    "id": "1755886011654",
+    "items": [
+      {
+        "product": {
+          "id": "777",
+          "name": " REFRIGERANTE SPRITE 250ML",
+          "price": 1.83,
+          "originalPrice": 1.99,
+          "image": "https://i.imgur.com/lZzMCo1.jpeg",
+          "category": "REFRIGERANTESE OUTROS LIQUIDOS",
+          "description": "SPRITE 250ML",
+          "stock": 726,
+          "inStock": true,
+          "rating": 4.5,
+          "reviews": 64,
+          "brand": "Sem marca",
+          "unit": "UN",
+          "tags": [
+            "refrigerantese outros liquidos",
+            "bebidas, líquidos alcoólicos",
+            "varejo-facil"
+          ],
+          "prices": {
+            "price1": 0,
+            "offerPrice1": 0,
+            "price2": 0,
+            "offerPrice2": 0,
+            "minQuantityPrice2": 0
+          },
+          "varejoFacilData": {
+            "codigoInterno": "        ",
+            "secaoId": 15,
+            "generoId": 22,
+            "ativoNoEcommerce": false,
+            "dataInclusao": "2023-07-07T03:00:00.000+00:00",
+            "dataAlteracao": "2025-08-06T18:23:50.206+00:00",
+            "estoque": {
+              "saldo": 726,
+              "lojaId": 1,
+              "localId": 1,
+              "criadoEm": "2025-02-17T20:29:50.808+00:00",
+              "atualizadoEm": "2025-08-21T16:27:43.851+00:00"
+            },
+            "precos": {
+              "id": 1034,
+              "lojaId": 1,
+              "produtoId": 777,
+              "precoVenda1": 1.99,
+              "precoOferta1": 0,
+              "margemPreco1": 0,
+              "dataUltimoReajustePreco1": "2024-09-28T03:00:00.000+00:00",
+              "precoVenda2": 1.83,
+              "precoOferta2": 0,
+              "margemPreco2": 0,
+              "quantidadeMinimaPreco2": 12,
+              "precoVenda3": 0,
+              "precoOferta3": 0,
+              "margemPreco3": 0,
+              "quantidadeMinimaPreco3": 0,
+              "descontoMaximo": 0,
+              "permiteDesconto": true,
+              "custoProduto": 1.72,
+              "precoMedioDeReposicao": 1.72,
+              "precoFiscalDeReposicao": 1.72,
+              "origem": "CADASTRO"
+            }
+          },
+          "onPromotion": false,
+          "hasActivePromotion": false
+        },
+        "quantity": 74
+      }
+    ],
+    "total": 157.42000000000002,
+    "customerInfo": {
+      "name": "JOSE ARIMATEA COSTA ALEXANDRE",
+      "email": "davikalebe20020602@gmail.com",
+      "phone": "(85) 98828-6178",
+      "address": {
+        "street": "Rua Coronel Correia",
+        "number": "382",
+        "complement": "Apto",
+        "neighborhood": "Parque Soledade",
+        "city": "Caucaia",
+        "state": "CE",
+        "zipCode": "61603-005"
+      }
+    },
+    "status": "pending",
+    "createdAt": "2025-08-22T18:06:51.654Z",
+    "estimatedDelivery": "2025-08-22T18:28:51.654Z",
+    "shippingCost": 22,
+    "shippingDistance": 5.5,
+    "payment": {
+      "method": "pix",
+      "wantsChange": false
+    }
   }
 ]

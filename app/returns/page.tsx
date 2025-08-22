@@ -270,7 +270,8 @@ export default function ReturnsPage() {
 
       const result = await response.json()
       
-      if (result.success) {
+      const newId = result.id || (result.data && result.data.id)
+      if (result.success && newId) {
         toast.success('Solicitação de troca/devolução enviada com sucesso!')
         setShowSuccess(true)
         // Limpar formulário
@@ -287,11 +288,8 @@ export default function ReturnsPage() {
           description: '',
           photos: []
         })
-        // Recarregar lista
-        loadReturnRequests()
-        // Voltar para a aba de lista
-        setActiveTab('list')
-        setTimeout(() => setShowSuccess(false), 3000)
+        // Redirecionar para "minhas" e abrir chat da nova solicitação
+        router.push(`/returns/minhas?open=${newId}`)
       } else {
         throw new Error(result.message || 'Erro desconhecido')
       }

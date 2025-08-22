@@ -42,5 +42,37 @@
       "brands": 1,
       "genres": 100
     }
+  },
+  {
+    "id": "1755785994536",
+    "startTime": "2025-08-21T14:19:54.536Z",
+    "startedAt": "2025-08-21T14:18:54.384Z",
+    "finishedAt": "2025-08-21T14:19:54.508Z",
+    "status": "error",
+    "error": "Erro na API: 504"
+  },
+  {
+    "id": "1755875444963",
+    "startTime": "2025-08-22T15:10:44.963Z",
+    "startedAt": "2025-08-22T15:10:44.608Z",
+    "finishedAt": "2025-08-22T15:10:44.792Z",
+    "status": "error",
+    "error": "Erro na API: 500"
+  },
+  {
+    "id": "1755875624592",
+    "startTime": "2025-08-22T15:13:44.592Z",
+    "startedAt": "2025-08-22T15:12:44.152Z",
+    "finishedAt": "2025-08-22T15:13:44.405Z",
+    "status": "error",
+    "error": "Erro na API: 504"
+  },
+  {
+    "id": "1755883333807",
+    "startTime": "2025-08-22T17:22:13.807Z",
+    "startedAt": "2025-08-22T17:21:13.318Z",
+    "finishedAt": "2025-08-22T17:22:13.500Z",
+    "status": "error",
+    "error": "Erro na API: 504"
   }
 ]

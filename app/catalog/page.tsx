@@ -182,35 +182,35 @@ export default function CatalogPage() {
 
   // Sistema de busca ULTRA melhorado - 1000% melhor!
   const filteredProducts = useMemo(() => {
+    // Normalização melhorada para busca, remove acentos, caracteres especiais, ignora espaços extras
     const normalize = (s: string) => (s || '')
       .toLowerCase()
       .normalize('NFD')
-      .replace(/\p{Diacritic}|[\u0300-\u036f]/gu, '')
-      .trim()
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9 ]/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
 
     // Função de distância de Levenshtein otimizada
     const levenshtein = (a: string, b: string) => {
-      if (a.length === 0) return b.length
-      if (b.length === 0) return a.length
-      if (a === b) return 0
-
-      const matrix = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null))
-      
-      for (let i = 0; i <= a.length; i++) matrix[0][i] = i
-      for (let j = 0; j <= b.length; j++) matrix[j][0] = j
-
+      if (a.length === 0) return b.length;
+      if (b.length === 0) return a.length;
+      if (a === b) return 0;
+      const matrix = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
+      for (let i = 0; i <= a.length; i++) matrix[0][i] = i;
+      for (let j = 0; j <= b.length; j++) matrix[j][0] = j;
       for (let j = 1; j <= b.length; j++) {
         for (let i = 1; i <= a.length; i++) {
-          const cost = a[i - 1] === b[j - 1] ? 0 : 1
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
           matrix[j][i] = Math.min(
-            matrix[j - 1][i] + 1,     // deletion
-            matrix[j][i - 1] + 1,     // insertion
-            matrix[j - 1][i - 1] + cost // substitution
-          )
+            matrix[j - 1][i] + 1,
+            matrix[j][i - 1] + 1,
+            matrix[j - 1][i - 1] + cost
+          );
         }
       }
-      return matrix[b.length][a.length]
-    }
+      return matrix[b.length][a.length];
+    };
 
     const q = normalize(searchTerm.trim())
     if (!q) {
@@ -241,6 +241,10 @@ export default function CatalogPage() {
       const category = normalize(product.category)
       const description = normalize(product.description || '')
       const tags = normalize((product.tags || []).join(' '))
+      
+      // Adicional: incluir nome original para busca multi-palavra
+      const originalName = (product.name || '').toLowerCase()
+      const originalBrand = (product.brand || '').toLowerCase()
       
       // Criar índice de palavras do produto
       const allProductWords = [
@@ -287,7 +291,15 @@ export default function CatalogPage() {
         else if (description.includes(term)) { termScore += 80; termMatchType = 'contains_description' }
         else if (tags.includes(term)) { termScore += 60; termMatchType = 'contains_tags' }
 
-        // 6. BUSCA FUZZY - PARA TYPOS E VARIAÇÕES
+        // 6. BUSCA MULTI-PALAVRA: se todas as palavras do termo aparecem no nome original
+        else if (term.split(' ').length > 1 && term.split(' ').every(t => originalName.includes(t))) {
+          termScore += 350; termMatchType = 'multiword_name'
+        }
+        else if (term.split(' ').length > 1 && term.split(' ').every(t => originalBrand.includes(t))) {
+          termScore += 250; termMatchType = 'multiword_brand'
+        }
+
+        // 7. BUSCA FUZZY - PARA TYPOS E VARIAÇÕES
         else {
           // Fuzzy match para palavras do produto
           for (const word of allProductWords) {
@@ -420,6 +432,7 @@ export default function CatalogPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-orange-50 page-transition" style={{ overflow: 'visible' }}>
       <Header />
+      
       <PromotionalBanner />
       
       <div className="container mx-auto px-4 py-8">
@@ -604,42 +617,56 @@ export default function CatalogPage() {
         {/* Seção Todos os Produtos - Apenas quando não há filtros ativos */}
         {!searchTerm && selectedCategory === "Todos" && (
           <div className="mb-12 fade-in-up">
-            <div className="text-center mb-8">
-              <Badge className="bg-gradient-to-r from-green-500 to-blue-500 text-white border-0 mb-4 animate-pulse">
-                <Package className="h-4 w-4 mr-2" />
-                CATÁLOGO COMPLETO
-              </Badge>
-              <h2 className="text-4xl font-bold text-gray-900 mb-4 bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
-                📦 Todos os Nossos Produtos
-              </h2>
-              <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-                Explore nosso catálogo completo com milhares de produtos
-              </p>
-            </div>
-            
-            <div className={`grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 ${isLoadingMore ? 'opacity-90' : ''}`}>
-              {products.slice(0, visibleProducts).map((product: Product, index: number) => {
-                const isNew = index >= lastVisibleCount
-                return (
-                <div key={product.id} className={isNew ? 'pop-in' : 'fade-in-up'} style={{ animationDelay: `${index * 0.03}s` }}>
-                  <ProductCard product={product} />
-                </div>
-              )})}
-            </div>
-            
-            {/* Botão "Ver mais" para todos os produtos */}
-            {visibleProducts < products.length && (
-              <div className="text-center mt-8">
-                <Button
-                  onClick={loadMoreProducts}
-                  className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-8 py-3 rounded-lg font-semibold transition-all duration-300 hover:scale-105 shadow-lg"
-                >
-                  Ver Mais Produtos ({Math.min(50, products.length - visibleProducts)} produtos)
-                </Button>
-                <p className="text-gray-600 mt-2">
-                  Mostrando {visibleProducts} de {products.length} produtos
-                </p>
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-32 w-full">
+                <span className="animate-spin rounded-full h-24 w-24 border-t-8 border-b-8 border-orange-500 mb-10"></span>
+                <h2 className="text-4xl font-extrabold text-orange-600 mb-4">Carregando produtos...</h2>
+                <ul className="text-gray-600 text-xl space-y-2">
+                  <li>🔎 Solicite verificação de câmeras para objetos perdidos</li>
+                  <li>🔄 Faça sua troca ou devolução em nosso site</li>
+                  <li>💬 Fale com nosso suporte para dúvidas e sugestões</li>
+                  <li>🎁 Confira nossas promoções e novidades!</li>
+                </ul>
               </div>
+            ) : (
+              <>
+                <div className="text-center mb-8">
+                  <Badge className="bg-gradient-to-r from-green-500 to-blue-500 text-white border-0 mb-4 animate-pulse">
+                    <Package className="h-4 w-4 mr-2" />
+                    CATÁLOGO COMPLETO
+                  </Badge>
+                  <h2 className="text-4xl font-bold text-gray-900 mb-4 bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                    📦 Todos os Nossos Produtos
+                  </h2>
+                  <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+                    Explore nosso catálogo completo com milhares de produtos
+                  </p>
+                </div>
+                <div className={`grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 ${isLoadingMore ? 'opacity-90' : ''}`}>
+                  {products.slice(0, visibleProducts).map((product: Product, index: number) => {
+                    const isNew = index >= lastVisibleCount;
+                    return (
+                      <div key={product.id} className={isNew ? 'pop-in' : 'fade-in-up'} style={{ animationDelay: `${index * 0.03}s` }}>
+                        <ProductCard product={product} />
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Botão "Ver mais" para todos os produtos */}
+                {visibleProducts < products.length && (
+                  <div className="text-center mt-8">
+                    <Button
+                      onClick={loadMoreProducts}
+                      className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-8 py-3 rounded-lg font-semibold transition-all duration-300 hover:scale-105 shadow-lg"
+                    >
+                      Ver Mais Produtos ({Math.min(50, products.length - visibleProducts)} produtos)
+                    </Button>
+                    <p className="text-gray-600 mt-2">
+                      Mostrando {visibleProducts} de {products.length} produtos
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -807,4 +834,4 @@ export default function CatalogPage() {
       `}</style>
     </div>
   )
-} 
+}

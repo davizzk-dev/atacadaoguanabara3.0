@@ -29,6 +29,14 @@ export default function Header(): JSX.Element {
   const { getItemCount } = useCartStore();
   const { favorites } = useFavoritesStore();
   const { user, logout } = useAuthStore();
+  
+    const [isSearching, setIsSearching] = useState(false);
+  // Timeout para debounce da busca
+  const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  // Controlar interação com o dropdown de sugestões para evitar fechar indevidamente
+  const suggestionsInteractingRef = React.useRef(false);
+  const desktopDropdownRef = React.useRef<HTMLDivElement | null>(null);
+  const mobileDropdownRef = React.useRef<HTMLDivElement | null>(null);
   // Quantidade de itens no carrinho
   const cartItemCount = typeof getItemCount === 'function' ? getItemCount() : 0;
   // Quantidade de favoritos
@@ -41,36 +49,59 @@ export default function Header(): JSX.Element {
   // Apenas lógica, funções e hooks aqui
 
   // Função para buscar produtos
-  let searchTimeout: any = null;
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = e.target.value;
     setSearchQuery(value);
-    setShowSearchResults(!!value);
-    if (searchTimeout) clearTimeout(searchTimeout);
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
     if (value.length > 1) {
-      searchTimeout = setTimeout(() => {
-        fetch(`/api/products?search=${encodeURIComponent(value)}`)
+      setShowSearchResults(true);
+      setIsSearching(true);
+      searchTimeoutRef.current = setTimeout(() => {
+        fetch(`/api/products?search=${encodeURIComponent(value)}&limit=10`)
           .then(res => res.json())
           .then(data => {
             const arr = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
-            // Filtrar sugestões exatas ou que começam com o termo
-            const normalized = value.trim().toLowerCase();
+                const normalized = value.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
             const filtered = arr.filter((produto: any) => {
-              const name = (produto.name || '').toLowerCase();
-              // Só mostra se o nome começa com o termo ou contém o termo completo como palavra
-              return name.startsWith(normalized) || name.split(' ').includes(normalized);
+                  const name = (produto.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                  const brand = (produto.brand || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                  const category = (produto.category || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+              return name.includes(normalized) || brand.includes(normalized) || category.includes(normalized);
+            }).sort((a: any, b: any) => {
+              const nameA = (a.name || '').toLowerCase();
+              const nameB = (b.name || '').toLowerCase();
+              const startsWithA = nameA.startsWith(normalized) ? 0 : 1;
+              const startsWithB = nameB.startsWith(normalized) ? 0 : 1;
+              if (startsWithA !== startsWithB) {
+                return startsWithA - startsWithB;
+              }
+              const brandA = (a.brand || '').toLowerCase();
+              const brandB = (b.brand || '').toLowerCase();
+              const brandMatchA = brandA.includes(normalized) ? 0 : 1;
+              const brandMatchB = brandB.includes(normalized) ? 0 : 1;
+              return brandMatchA - brandMatchB;
             });
-            setSearchResults(filtered.slice(0, 6));
+            setSearchResults(filtered.slice(0, 8));
+            setIsSearching(false);
+          })
+          .catch(err => {
+            console.error('Erro na busca:', err);
+            setSearchResults([]);
+            setIsSearching(false);
           });
-      }, 300);
+      }, 150);
     } else {
       setSearchResults([]);
+      setIsSearching(false);
     }
   }
 
   function handleProductClick(id: string) {
     setShowSearchResults(false);
     setIsMenuOpen(false);
+    setIsSearching(false);
     // Adicione navegação para o produto se necessário
   }
 
@@ -93,16 +124,26 @@ export default function Header(): JSX.Element {
                       <Link href="/" className="flex items-center justify-center">
                         <img src="https://i.ibb.co/TBGDxS4M/guanabara-1.png" alt="Logo" className="h-12 w-56 object-contain" />
                       </Link>
-                      <form onSubmit={handleSearch} className="hidden lg:flex flex-1 mx-4 relative" style={{maxWidth:'400px'}}>
+                      <form onSubmit={handleSearch} className="hidden lg:flex flex-1 mx-4 relative max-w-2xl">
                         <div className="w-full relative">
                           <input
                             type="text"
-                            placeholder="Buscar produtos..."
+                            placeholder="🔍 Buscar produtos..."
                             value={searchQuery}
                             onChange={handleSearchChange}
-                            className="w-full px-4 py-2 pl-10 pr-10 border-2 border-blue-400 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400/30 focus:border-blue-500 bg-white shadow transition-all duration-300 text-gray-900 font-semibold"
+                            onFocus={() => searchQuery && setShowSearchResults(true)}
+                            onBlur={() => {
+                              // Só fecha se não estiver interagindo com as sugestões
+                              setTimeout(() => {
+                                if (!suggestionsInteractingRef.current) {
+                                  setShowSearchResults(false);
+                                }
+                              }, 300);
+                            }}
+                            className="w-full px-4 py-3 pl-12 pr-12 border-2 border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-md transition-all duration-200 text-gray-900 placeholder-gray-500"
+                            autoComplete="off"
                           />
-                          <Search className="absolute left-2 top-2 h-5 w-5 text-blue-500" />
+                          <Search className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
                           {searchQuery && (
                             <button
                               type="button"
@@ -111,57 +152,76 @@ export default function Header(): JSX.Element {
                                 setShowSearchResults(false);
                                 setSearchResults([]);
                               }}
-                              className="absolute right-2 top-2 h-5 w-5 text-pink-500 hover:text-red-500 transition-colors"
+                              className="absolute right-4 top-3.5 h-5 w-5 text-gray-400 hover:text-red-500 transition-colors"
                             >
                               <X className="h-4 w-4" />
                             </button>
                           )}
-                          {showSearchResults && searchResults.length > 0 && (
-                            <div className="absolute left-0 right-0 top-12 bg-white rounded-xl shadow-xl border border-blue-200 mt-2 max-h-64 overflow-y-auto z-50 flex flex-col" style={{minWidth:'220px', maxWidth:'100%', width:'100%'}}>
-                              {searchResults.map((produto: any) => (
-                                <button
-                                  key={produto.id}
-                                  onClick={() => {
-                                    if (router) {
-                                      router.push(`/product/${produto.id}`);
-                                      setShowSearchResults(false);
-                                    }
-                                  }}
-                                  className="w-full flex items-center px-3 py-3 sm:px-4 sm:py-3 hover:bg-blue-50 border-b border-gray-100 last:border-b-0 text-left transition-all duration-200 focus:bg-blue-100 active:bg-blue-200"
-                                  style={{fontSize:'1rem', minHeight:'48px', gap:'0.75rem'}}
-                                >
-                                  <img 
-                                    src={produto.image || '/placeholder.png'} 
-                                    alt={produto.name} 
-                                    className="object-cover rounded-lg mr-3 shadow-sm" 
-                                    style={{width:'60px',height:'60px',minWidth:'60px',minHeight:'60px',maxWidth:'60px',maxHeight:'60px',objectFit:'cover',display:'block',boxSizing:'border-box',margin:'0'}} 
-                                  />
-                                  <div className="flex-1 min-w-0 pl-2">
-                                    <p className="font-semibold text-gray-900 text-base truncate">{produto.name}</p>
-                                    <p className="text-sm text-gray-500 font-medium truncate">{produto.brand}</p>
-                                    <p className="text-sm text-blue-600 font-bold">R$ {produto.price?.toFixed(2).replace('.', ',')}</p>
-                                  </div>
-                                </button>
-                              ))}
-                              <button
-                                className="w-full py-3 text-center text-blue-600 font-semibold bg-blue-50 hover:bg-blue-100 border-t border-blue-100 rounded-b-xl text-base sm:text-lg"
-                                style={{cursor:'pointer'}}
-                                onClick={() => {
-                                  if (router && searchQuery.trim()) {
-                                    router.push(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`);
-                                    setShowSearchResults(false);
-                                    setTimeout(() => {
-                                      window.location.reload();
-                                      setTimeout(() => {
-                                        const el = document.getElementById('products-section');
-                                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                      }, 700);
-                                    }, 300);
-                                  }
-                                }}
-                              >
-                                Ver mais resultados
-                              </button>
+                          {showSearchResults && (
+                            <div
+                              ref={desktopDropdownRef}
+                              className="absolute left-0 right-0 top-full bg-white rounded-lg shadow-2xl border border-gray-200 mt-2 max-h-96 overflow-y-auto z-[60]"
+                              onMouseDown={(e) => {
+                                // Evita que o input perca o foco ao clicar dentro do dropdown
+                                e.preventDefault();
+                                suggestionsInteractingRef.current = true;
+                              }}
+                              onMouseUp={() => {
+                                // Libera o flag após o clique
+                                setTimeout(() => { suggestionsInteractingRef.current = false; }, 0);
+                              }}
+                              onMouseEnter={() => { suggestionsInteractingRef.current = true; }}
+                              onMouseLeave={() => { suggestionsInteractingRef.current = false; }}
+                            >
+                              {isSearching ? (
+                                <div className="flex flex-col items-center justify-center py-8">
+                                  <svg className="animate-spin h-8 w-8 text-blue-500 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                                  </svg>
+                                  <span className="text-gray-500">Buscando produtos...</span>
+                                </div>
+                              ) : (
+                                <>
+                                  {searchResults.length > 0 && searchResults.map((produto: any) => (
+                                    <button
+                                      key={produto.id}
+                                      onClick={() => {
+                                        if (router) {
+                                          router.push(`/product/${produto.id}`);
+                                          setShowSearchResults(false);
+                                          setSearchQuery("");
+                                        }
+                                      }}
+                                      className="w-full flex items-center px-4 py-3 hover:bg-blue-50 border-b border-gray-100 last:border-b-0 text-left transition-colors"
+                                    >
+                                      <img 
+                                        src={produto.image || '/placeholder.png'} 
+                                        alt={produto.name} 
+                                        className="w-12 h-12 object-cover rounded-md mr-3" 
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-gray-900 truncate">{produto.name}</p>
+                                        <p className="text-sm text-gray-500 truncate">{produto.brand}</p>
+                                        <p className="text-sm text-green-600 font-semibold">R$ {produto.price?.toFixed(2).replace('.', ',')}</p>
+                                      </div>
+                                    </button>
+                                  ))}
+                                  {searchResults.length > 0 && (
+                                    <button
+                                      className="w-full py-3 text-center text-blue-600 font-medium bg-blue-50 hover:bg-blue-100 transition-colors"
+                                      onClick={() => {
+                                        if (router && searchQuery.trim()) {
+                                          router.push(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`);
+                                          setShowSearchResults(false);
+                                        }
+                                      }}
+                                    >
+                                      Ver todos os resultados para "{searchQuery}"
+                                    </button>
+                                  )}
+                                </>
+                              )}
                             </div>
                           )}
                         </div>
@@ -219,10 +279,19 @@ export default function Header(): JSX.Element {
                       <form onSubmit={handleSearch} className="relative">
                         <input
                           type="text"
-                          placeholder="Buscar produtos..."
+                          placeholder="🔍 Buscar produtos..."
                           value={searchQuery}
                           onChange={handleSearchChange}
-                          className="w-full px-4 py-3 pl-12 pr-12 border-2 border-gray-200 rounded-full focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 bg-white/95 backdrop-blur-sm shadow-lg transition-all duration-300"
+                          onFocus={() => searchQuery && setShowSearchResults(true)}
+                          onBlur={() => {
+                            setTimeout(() => {
+                              if (!suggestionsInteractingRef.current) {
+                                setShowSearchResults(false);
+                              }
+                            }, 300);
+                          }}
+                          className="w-full px-4 py-3 pl-12 pr-12 border-2 border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-md transition-all duration-200"
+                          autoComplete="off"
                         />
                         <Search className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
                         {searchQuery && (
@@ -241,14 +310,12 @@ export default function Header(): JSX.Element {
                       </form>
                       {showSearchResults && searchResults.length > 0 && (
                         <div
-                          className="absolute left-4 right-4 bg-white rounded-xl shadow-2xl border-2 border-gray-100 mt-2 z-50 backdrop-blur-lg"
-                          style={{
-                            maxHeight: '260px',
-                            minWidth: '0',
-                            width: '100%',
-                            overflowY: 'auto',
-                            boxSizing: 'border-box',
-                          }}
+                          ref={mobileDropdownRef}
+                          className="absolute left-0 right-0 bg-white rounded-lg shadow-2xl border border-gray-200 mt-2 z-[70] max-h-64 overflow-y-auto"
+                          onMouseDown={(e) => { e.preventDefault(); suggestionsInteractingRef.current = true; }}
+                          onMouseUp={() => { setTimeout(() => { suggestionsInteractingRef.current = false; }, 0); }}
+                          onMouseEnter={() => { suggestionsInteractingRef.current = true; }}
+                          onMouseLeave={() => { suggestionsInteractingRef.current = false; }}
                         >
                           {searchResults.map((produto: any) => (
                             <button
@@ -257,48 +324,29 @@ export default function Header(): JSX.Element {
                                 if (router) {
                                   router.push(`/product/${produto.id}`);
                                   setShowSearchResults(false);
+                                  setSearchQuery("");
                                 }
                               }}
-                              className="w-full flex items-center px-2 py-2 sm:px-4 sm:py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 border-b border-gray-100 last:border-b-0 text-left transition-all duration-300"
-                              style={{ minHeight: '44px', gap: '0.5rem' }}
+                              className="w-full flex items-center px-3 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-b-0 text-left transition-colors"
                             >
                               <img
                                 src={produto.image || '/placeholder.png'}
                                 alt={produto.name}
-                                className="object-cover rounded-lg shadow-sm"
-                                style={{
-                                  width: '60px',
-                                  height: '60px',
-                                  minWidth: '60px',
-                                  minHeight: '60px',
-                                  maxWidth: '60px',
-                                  maxHeight: '60px',
-                                  objectFit: 'cover',
-                                  display: 'block',
-                                  boxSizing: 'border-box',
-                                  margin: '0',
-                                }}
+                                className="w-10 h-10 object-cover rounded-md mr-3"
                               />
-                              <div className="flex-1 min-w-0 pl-2">
-                                <p className="font-semibold text-gray-900 text-sm truncate" style={{ fontSize: '0.95rem' }}>{produto.name}</p>
-                                <p className="text-xs text-gray-500 font-medium truncate">{produto.brand}</p>
-                                <p className="text-xs text-blue-600 font-bold">R$ {produto.price?.toFixed(2).replace('.', ',')}</p>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-gray-900 text-sm truncate">{produto.name}</p>
+                                <p className="text-xs text-gray-500 truncate">{produto.brand}</p>
+                                <p className="text-xs text-green-600 font-semibold">R$ {produto.price?.toFixed(2).replace('.', ',')}</p>
                               </div>
                             </button>
                           ))}
                           <button
-                            className="w-full py-3 text-center text-blue-600 font-semibold bg-blue-50 hover:bg-blue-100 border-t border-blue-100 rounded-b-xl text-base sm:text-lg"
-                            style={{cursor:'pointer'}}
+                            className="w-full py-3 text-center text-blue-600 font-medium bg-blue-50 hover:bg-blue-100 transition-colors text-sm"
                             onClick={() => {
                               if (router && searchQuery.trim()) {
                                 router.push(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`);
                                 setShowSearchResults(false);
-                                window.onload = () => {
-                                  setTimeout(() => {
-                                    const el = document.getElementById('products-section');
-                                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                  }, 400);
-                                };
                               }
                             }}
                           >

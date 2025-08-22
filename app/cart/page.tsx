@@ -192,33 +192,37 @@ export default function CartPage() {
       return
     }
 
-    setIsLoading(true)
-
+    setIsLoading(true);
     try {
-      console.log('Iniciando processo de pedido...')
-      console.log('Usuário:', user)
-      console.log('Itens:', items)
+      console.log('Iniciando processo de pedido...');
+      console.log('Usuário:', user);
+      console.log('Itens:', items);
 
       // Obter dados do localStorage (dados salvos automaticamente)
-      let formData
+      let formData;
       try {
-        const savedData = localStorage.getItem('cartFormData')
-        formData = savedData ? JSON.parse(savedData) : {}
+        const savedData = localStorage.getItem('cartFormData');
+        formData = savedData ? JSON.parse(savedData) : {};
       } catch (error) {
-        console.error('Erro ao carregar dados do formulário:', error)
-        formData = {}
+        console.error('Erro ao carregar dados do formulário:', error);
+        formData = {};
       }
 
-      const customerName = formData.name || user?.name || ''
-      const customerPhone = formData.phone || user?.phone || ''
-      const customerEmail = formData.email || user?.email || ''
-      const street = formData.street || ''
-      const number = formData.number || ''
-      const complement = formData.complement || ''
-      const neighborhood = formData.neighborhood || ''
-      const city = formData.city || ''
-      const state = formData.state || ''
-      const zipCode = formData.zipCode || ''
+      const customerName = formData.name || user?.name || '';
+      const customerPhone = formData.phone || user?.phone || '';
+      const customerEmail = formData.email || user?.email || '';
+      const street = formData.street || '';
+      const number = formData.number || '';
+      const complement = formData.complement || '';
+      const neighborhood = formData.neighborhood || '';
+      const city = formData.city || '';
+      const state = formData.state || '';
+      const zipCode = formData.zipCode || '';
+      // Dados de retirada
+      const pickupFirstName = formData.pickupFirstName || '';
+      const pickupLastName = formData.pickupLastName || '';
+      const pickupPhone = formData.pickupPhone || '';
+      const pickupEmail = formData.pickupEmail || '';
 
       // Debug: mostrar valores obtidos
       console.log('Dados do formulário:', {
@@ -231,49 +235,53 @@ export default function CartPage() {
         city,
         state,
         zipCode
-      })
+      });
 
       // Debug: mostrar dados carregados
-      console.log('Dados carregados do localStorage:', formData)
+      console.log('Dados carregados do localStorage:', formData);
 
-      // Validar dados obrigatórios
-      if (!customerName.trim()) {
-        setError('Nome é obrigatório.')
-        setDebugInfo(`Nome obtido: "${customerName}"`)
-        return
-      }
-
-      if (!customerPhone.trim()) {
-        setError('Telefone é obrigatório.')
-        setDebugInfo(`Telefone obtido: "${customerPhone}"`)
-        return
-      }
-
-      // Email é opcional - não validar formato
-
-      // Validar endereço - verificar se os campos estão preenchidos
-      const addressFields = { street, number, neighborhood, city, state, zipCode }
-      const emptyFields = Object.entries(addressFields)
-        .filter(([key, value]) => !value || !value.trim())
-        .map(([key]) => key)
-
-      if (emptyFields.length > 0) {
-        const fieldNames = {
-          street: 'Rua',
-          number: 'Número',
-          neighborhood: 'Bairro',
-          city: 'Cidade',
-          state: 'Estado',
-          zipCode: 'CEP'
+      // Validação para retirada ou entrega
+      if (deliveryType === 'delivery') {
+        if (!customerName.trim()) {
+          setError('Nome é obrigatório.');
+          setDebugInfo(`Nome obtido: "${customerName}"`);
+          return;
         }
-        const missingFields = emptyFields.map(field => fieldNames[field as keyof typeof fieldNames]).join(', ')
-        setError(`Preencha os campos obrigatórios: ${missingFields}`)
-        setDebugInfo(`Campos vazios: ${emptyFields.join(', ')}`)
-        return
+        if (!customerPhone.trim()) {
+          setError('Telefone é obrigatório.');
+          setDebugInfo(`Telefone obtido: "${customerPhone}"`);
+          return;
+        }
+        // Email é opcional
+        // Validar endereço apenas para entrega
+        const addressFields = { street, number, neighborhood, city, state, zipCode };
+        const emptyFields = Object.entries(addressFields)
+          .filter(([key, value]) => !value || !value.trim())
+          .map(([key]) => key);
+        if (emptyFields.length > 0) {
+          const fieldNames = {
+            street: 'Rua',
+            number: 'Número',
+            neighborhood: 'Bairro',
+            city: 'Cidade',
+            state: 'Estado',
+            zipCode: 'CEP'
+          };
+          const missingFields = emptyFields.map(field => fieldNames[field as keyof typeof fieldNames]).join(', ');
+          setError(`Preencha os campos obrigatórios: ${missingFields}`);
+          setDebugInfo(`Campos vazios: ${emptyFields.join(', ')}`);
+          return;
+        }
+      } else if (deliveryType === 'pickup') {
+        if (!pickupFirstName.trim() || !pickupLastName.trim() || !pickupPhone.trim()) {
+          setError('Informações básicas do cliente são obrigatórias: nome e telefone');
+          setDebugInfo(`Nome: "${pickupFirstName}", Sobrenome: "${pickupLastName}", Telefone: "${pickupPhone}"`);
+          return;
+        }
       }
 
       // Obter referência do localStorage
-      const reference = formData.reference || ''
+      const reference = formData.reference || '';
 
       // Criar objeto de endereço
       const address: Address = {
@@ -285,39 +293,41 @@ export default function CartPage() {
         state,
         zipCode,
         reference: reference || undefined
-      }
+      };
 
       // Calcular frete se ainda não foi calculado
-      let shipping = shippingCalculation
+      let shipping = shippingCalculation;
       if (!shipping) {
-        shipping = await calculateShipping(address)
+        shipping = await calculateShipping(address);
         if (!shipping) {
-          return
+          return;
         }
       }
 
       // Verificar se o frete está disponível
       if (!shipping.available) {
-        setError('Desculpe, não entregamos neste endereço.')
-        return
+        if (deliveryType === 'delivery') {
+          setError('Desculpe, não entregamos neste endereço.');
+          return;
+        }
       }
 
-      const totalWithShipping = getTotal() + shipping.cost
+      const totalWithShipping = getTotal() + shipping.cost;
 
       // Ler pagamento salvo
-      const paymentMethod = (formData.paymentMethod as 'pix'|'debit'|'credit'|'cash') || 'pix'
-      const wantsChange = formData.wantsChange === true || formData.wantsChange === 'true'
-      const changeForValue = Number(formData.changeFor || 0)
+      const paymentMethod = (formData.paymentMethod as 'pix'|'debit'|'credit'|'cash') || 'pix';
+      const wantsChange = formData.wantsChange === true || formData.wantsChange === 'true';
+      const changeForValue = Number(formData.changeFor || 0);
 
       // Validações de pagamento (troco)
       if (paymentMethod === 'cash' && wantsChange) {
         if (!changeForValue || isNaN(changeForValue)) {
-          setError('Informe o valor para troco.')
-          return
+          setError('Informe o valor para troco.');
+          return;
         }
         if (changeForValue <= totalWithShipping) {
-          setError(`O valor para troco deve ser maior que o total (R$ ${totalWithShipping.toFixed(2)}).`)
-          return
+          setError(`O valor para troco deve ser maior que o total (R$ ${totalWithShipping.toFixed(2)}).`);
+          return;
         }
       }
 
@@ -337,125 +347,165 @@ export default function CartPage() {
         estimatedDelivery: new Date(Date.now() + shipping.duration * 60 * 1000),
         shippingCost: shipping.cost,
         shippingDistance: shipping.distance
+      };
+
+      // Adicionar dados de retirada ao pedido se for pickup
+      if (deliveryType === 'pickup') {
+        console.log('[DEBUG] Dados de retirada:', {
+          firstName: pickupFirstName,
+          lastName: pickupLastName,
+          phone: pickupPhone,
+          email: pickupEmail
+        });
+        (order as any).pickupInfo = {
+          firstName: pickupFirstName,
+          lastName: pickupLastName,
+          phone: pickupPhone,
+          email: pickupEmail
+        };
       }
 
       // Adicionar pagamento ao pedido
-      ;(order as any).payment = {
+      (order as any).payment = {
         method: paymentMethod,
         wantsChange,
         changeFor: paymentMethod === 'cash' && wantsChange ? changeForValue : undefined
-      }
+      };
 
       // Salvar pedido na API
-      console.log('📤 Enviando pedido para API:', JSON.stringify(order, null, 2))
-      
+      console.log('📤 Enviando pedido para API:', JSON.stringify(order, null, 2));
+
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(order)
-      })
+      });
 
-      console.log('📥 Resposta da API:', response.status, response.statusText)
-      
+      console.log('📥 Resposta da API:', response.status, response.statusText);
+
       if (response.ok) {
-        const responseText = await response.text()
-        console.log('📄 Resposta completa:', responseText)
-        
-        let savedOrder
+        const responseText = await response.text();
+        console.log('📄 Resposta completa:', responseText);
+
+        let savedOrder;
         try {
-          savedOrder = JSON.parse(responseText)
-          console.log('✅ Pedido salvo:', savedOrder)
+          savedOrder = JSON.parse(responseText);
+          console.log('✅ Pedido salvo:', savedOrder);
         } catch (parseError) {
-          console.error('❌ Erro ao fazer parse da resposta:', parseError)
-          setError('Erro ao processar resposta do servidor')
-          return
+          console.error('❌ Erro ao fazer parse da resposta:', parseError);
+          setError('Erro ao processar resposta do servidor');
+          return;
         }
-        
+
         // Salvar pedido no store local
-        addOrder(savedOrder.order || savedOrder)
-        
+        addOrder(savedOrder.order || savedOrder);
+
         // Armazenar ID do pedido para redirecionamento e acesso no menu
-        setOrderId(savedOrder.order?.id || savedOrder.id)
+        setOrderId(savedOrder.order?.id || savedOrder.id);
         try {
-          localStorage.setItem('lastOrderId', String(savedOrder.order?.id || savedOrder.id))
+          localStorage.setItem('lastOrderId', String(savedOrder.order?.id || savedOrder.id));
         } catch {}
 
         // Enviar para WhatsApp
         const orderItems = items.map(item => 
           `• ${item.product.name}  x${item.quantity} — R$ ${(calculateDynamicPrice(item.product, item.quantity) * item.quantity).toFixed(2)}`
-        ).join('\n')
+        ).join('\n');
 
-        const payLabel = paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'debit' ? 'Cartão de Débito' : paymentMethod === 'credit' ? 'Cartão de Crédito' : 'Dinheiro'
-        const changeLine = paymentMethod === 'cash' && wantsChange ? `\nTroco para: R$ ${changeForValue.toFixed(2)}` : ''
-
-        const message = [
-          '🧾 *PEDIDO — ATACADÃO GUANABARA*',
-          '',
-          `👤 Cliente: ${customerName}`,
-          `📞 Telefone: ${customerPhone}`,
-          customerEmail ? `📧 Email: ${customerEmail}` : null,
-          '',
-          '*📍 Endereço de entrega*',
-          `${street}, ${number}${complement ? ` - ${complement}` : ''}`,
-          `${neighborhood}, ${city} - ${state}`,
-          `CEP: ${zipCode}`,
-          '',
-          '*🛍️ Itens do pedido*',
-          orderItems,
-          '',
-          `Subtotal: R$ ${getTotal().toFixed(2)}`,
-          `Frete: R$ ${shipping.cost.toFixed(2)}`,
-          `Total: R$ ${totalWithShipping.toFixed(2)}`,
-          '',
-          '*💳 Pagamento*',
-          `Forma: ${payLabel}${changeLine}`,
-          '',
-          '*🚚 Entrega*',
-          `Distância: ${shipping.distance.toFixed(1)} km`,
-          `Tempo estimado: ${shipping.estimatedDelivery}`,
-          '',
-          'Agradeço desde já! Atacadão Guanabara 🙏✨'
-        ].filter(Boolean).join('\n')
-
-        console.log('Mensagem WhatsApp:', message)
-
-        // Buscar número do WhatsApp em settings
-        let phone = '5585985694642'
-        try {
-          const s = await fetch('/api/settings', { cache: 'no-store' }).then(r => r.ok ? r.json() : null)
-          if (s?.whatsapp_number) phone = String(s.whatsapp_number)
-        } catch {}
-        const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
-        console.log('URL WhatsApp:', whatsappUrl)
-
-        // Abrir WhatsApp em nova aba
-        const whatsappWindow = window.open(whatsappUrl, '_blank')
-        
-        if (!whatsappWindow) {
-          setError('Não foi possível abrir o WhatsApp. Verifique se o popup está bloqueado.')
-          return
+        let message = '';
+        if (deliveryType === 'pickup') {
+          message = [
+            '🧾 *PEDIDO PARA RETIRADA NA LOJA*',
+            '',
+            `👤 Cliente: ${pickupFirstName} ${pickupLastName}`,
+            `📞 Telefone: ${pickupPhone}`,
+            pickupEmail ? `📧 Email: ${pickupEmail}` : null,
+            '',
+            '*🛍️ Itens do pedido:*',
+            orderItems,
+            '',
+            `*Subtotal:* R$ ${getTotal().toFixed(2)}`,
+            '',
+            '*💳 Forma de pagamento:*',
+            `Método: ${paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'debit' ? 'Cartão de Débito' : paymentMethod === 'credit' ? 'Cartão de Crédito' : 'Dinheiro'}`,
+            paymentMethod === 'cash' && wantsChange ? `Troco para: R$ ${changeForValue.toFixed(2)}` : '',
+            '',
+            '*🏬 Retirada na Loja*',
+            'Endereço: R. Antônio Arruda, 1170 - Vila Velha, Fortaleza - CE',
+            'Horário de funcionamento: Segunda a Sábado: 8h às 19h | Domingo: 8h às 12h | Delivery: 8h às 16h',
+            'Telefone da loja: (85) 98514-7067',
+            '',
+            'Por favor, aguarde a confirmação do pedido antes de ir à loja.',
+            '',
+            'Obrigado por escolher o Atacadão Guanabara! 🙏✨'
+          ].filter(Boolean).join('\n');
+        } else {
+          const payLabel = paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'debit' ? 'Cartão de Débito' : paymentMethod === 'credit' ? 'Cartão de Crédito' : 'Dinheiro';
+          const changeLine = paymentMethod === 'cash' && wantsChange ? `\nTroco para: R$ ${changeForValue.toFixed(2)}` : '';
+          message = [
+            '🧾 *PEDIDO PARA ENTREGA EM DOMICÍLIO*',
+            '',
+            `👤 Cliente: ${customerName}`,
+            `📞 Telefone: ${customerPhone}`,
+            customerEmail ? `📧 Email: ${customerEmail}` : null,
+            '',
+            '*📍 Endereço de entrega:*',
+            `${street}, ${number}${complement ? ` - ${complement}` : ''}`,
+            `${neighborhood}, ${city} - ${state}`,
+            `CEP: ${zipCode}`,
+            '',
+            '*🛍️ Itens do pedido:*',
+            orderItems,
+            '',
+            `*Subtotal:* R$ ${getTotal().toFixed(2)}`,
+            `*Frete:* R$ ${shipping.cost.toFixed(2)}`,
+            `*Total:* R$ ${totalWithShipping.toFixed(2)}`,
+            '',
+            '*💳 Forma de pagamento:*',
+            `Método: ${payLabel}${changeLine}`,
+            '',
+            '*🚚 Informações da entrega:*',
+            `Distância: ${shipping.distance.toFixed(1)} km`,
+            `Tempo estimado: ${shipping.estimatedDelivery}`,
+            '',
+            'Por favor, aguarde a confirmação do pedido e o contato do entregador.',
+            '',
+            'Obrigado por comprar no Atacadão Guanabara! 🙏✨'
+          ].filter(Boolean).join('\n');
         }
 
+        // Buscar número do WhatsApp em settings
+        let phone = '5585985694642';
+        try {
+          const s = await fetch('/api/settings', { cache: 'no-store' }).then(r => r.ok ? r.json() : null);
+          if (s?.whatsapp_number) phone = String(s.whatsapp_number);
+        } catch {}
+        // Corrigir encoding para Windows/desktop
+        const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+        console.log('URL WhatsApp:', whatsappUrl);
+
+        // Abrir WhatsApp em nova aba
+        window.open(whatsappUrl, '_blank');
+
         // Limpar carrinho
-        clearCart()
-        
+        clearCart();
+
         // Mostrar popup de agradecimento
-        setShowThankYouDialog(true)
+        setShowThankYouDialog(true);
       } else {
-        const errorText = await response.text()
-        console.error('❌ Erro na API:', response.status, errorText)
-        setError(`Erro ao salvar pedido: ${response.status} - ${errorText}`)
-        return
+        const errorText = await response.text();
+        console.error('❌ Erro na API:', response.status, errorText);
+        setError(`Erro ao salvar pedido: ${response.status} - ${errorText}`);
+        return;
       }
     } catch (error) {
-      console.error('Erro completo:', error)
-      setError('Erro ao processar pedido. Tente novamente.')
+      console.error('Erro completo:', error);
+      setError('Erro ao processar pedido. Tente novamente.');
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  } // <-- Ensure this closes handleWhatsAppOrder
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-white to-orange-50">
@@ -484,28 +534,28 @@ export default function CartPage() {
               ) : (
                 <div className="flex flex-col gap-8">
                   {items.map(item => (
-                    <div key={item.product.id} className="flex items-center bg-gradient-to-r from-blue-50 via-white to-orange-50 rounded-2xl shadow-xl p-8 border border-orange-100 gap-8 min-h-[140px]">
-                      <img src={item.product.image} alt={item.product.name} className="w-32 h-32 rounded-2xl object-cover border-2 border-blue-200 shadow-md flex-shrink-0" />
+                    <div key={item.product.id} className="flex items-center bg-gradient-to-r from-blue-50 via-white to-orange-50 rounded-2xl shadow-xl p-4 md:p-8 border border-orange-100 gap-4 md:gap-8 min-h-[120px] md:min-h-[140px]">
+                      <img src={item.product.image} alt={item.product.name} className="w-20 h-20 md:w-32 md:h-32 rounded-2xl object-cover border-2 border-blue-200 shadow-md flex-shrink-0" />
                       <div className="flex-1 flex flex-col gap-2 min-w-0">
-                        <div className="font-bold text-gray-900 text-xl md:text-2xl leading-tight mb-2">{item.product.name}</div>
-                        <div className="text-gray-600 text-base mb-2">
-                          Quantidade: <span className="font-semibold text-blue-700 text-lg">{item.quantity} unidade(s)</span>
+                        <div className="font-bold text-gray-900 text-base md:text-xl leading-tight mb-2">{item.product.name}</div>
+                        <div className="text-gray-600 text-sm md:text-base mb-2">
+                          Quantidade: <span className="font-semibold text-blue-700 text-base md:text-lg">{item.quantity} unidade(s)</span>
                         </div>
-                        <div className="text-[#FF6600] font-extrabold text-xl md:text-2xl">
+                        <div className="text-[#FF6600] font-extrabold text-lg md:text-2xl">
                           R$ {((calculateDynamicPrice(item.product, item.quantity)) * (Number(item.quantity) || 0)).toFixed(2)}
                         </div>
-                        <div className="text-gray-500 text-sm">
+                        <div className="text-gray-500 text-xs md:text-sm">
                           Preço unitário: R$ {calculateDynamicPrice(item.product, item.quantity).toFixed(2)}
                         </div>
                       </div>
-                      <div className="flex flex-col gap-2 items-center">
+                      <div className="flex flex-row md:flex-col gap-2 items-center">
                         <button 
                           onClick={() => updateQuantity(item.product.id, Math.max(1, item.quantity - 1))} 
                           className="text-blue-600 hover:text-white hover:bg-blue-600 p-2 rounded-full bg-blue-50 shadow transition-all border border-blue-200"
                         >
                           <Minus className="w-5 h-5" />
                         </button>
-                        <span className="font-bold text-lg px-3 py-1 bg-gray-100 rounded-lg">{item.quantity}</span>
+                        <span className="font-bold text-base md:text-lg px-2 py-1 bg-gray-100 rounded-lg">{item.quantity}</span>
                         <button 
                           onClick={() => updateQuantity(item.product.id, item.quantity + 1)} 
                           className="text-green-600 hover:text-white hover:bg-green-600 p-2 rounded-full bg-green-50 shadow transition-all border border-green-200"
@@ -678,15 +728,21 @@ export default function CartPage() {
                       <span className="font-semibold">{shippingCalculation.estimatedDelivery}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Custo do frete:</span>
-                      <span className={`font-semibold ${shippingCalculation.cost === 0 ? 'text-green-600' : 'text-orange-600'}`}>
-                        {shippingCalculation.cost === 0 ? 'GRÁTIS' : `R$ ${shippingCalculation.cost.toFixed(2)}`}
-                      </span>
+                      {deliveryType === 'delivery' && (
+                        <>
+                          <span className="text-gray-600">Custo do frete:</span>
+                          <span className={`font-semibold ${shippingCalculation.cost === 0 ? 'text-green-600' : 'text-orange-600'}`}>
+                            {shippingCalculation.cost === 0 ? 'GRÁTIS' : `R$ ${shippingCalculation.cost.toFixed(2)}`}
+                          </span>
+                        </>
+                      )}
                     </div>
                     {!shippingCalculation.available && (
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                        <p className="text-red-700 text-sm">Desculpe, não entregamos neste endereço.</p>
-                      </div>
+                      deliveryType === 'delivery' && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                          <p className="text-red-700 text-sm">Desculpe, não entregamos neste endereço.</p>
+                        </div>
+                      )
                     )}
                   </div>
                 )}
@@ -980,6 +1036,16 @@ export default function CartPage() {
 
 // Formulário com máscaras e validação
 function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' | 'pickup' }) {
+  // Validação de nome: não pode ter números
+  function isValidName(value: string) {
+    return /^[A-Za-zÀ-ú\s]+$/.test(value.trim())
+  }
+
+  // Validação de telefone: só números e tamanho 10 ou 11
+  function isValidPhone(value: string) {
+    const numbers = value.replace(/\D/g, '')
+    return numbers.length >= 10 && numbers.length <= 11
+  }
   const [phone, setPhone] = useState(user?.phone || '')
   const [zipCode, setZipCode] = useState('')
   const [email, setEmail] = useState(user?.email || '')
@@ -1091,6 +1157,22 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
   
   return (
     <form className="flex flex-col gap-5 bg-blue-50 rounded-xl p-6 border border-blue-100 shadow-md">
+      {/* Validações globais */}
+      {deliveryType === 'delivery' && name && !isValidName(name) && (
+        <span className="text-xs text-red-500 mb-2">Digite um nome válido (sem números).</span>
+      )}
+      {deliveryType === 'delivery' && phone && !isValidPhone(phone) && (
+        <span className="text-xs text-red-500 mb-2">Digite um telefone válido.</span>
+      )}
+      {deliveryType === 'pickup' && pickupFirstName && !isValidName(pickupFirstName) && (
+        <span className="text-xs text-red-500 mb-2">Digite um nome válido (sem números).</span>
+      )}
+      {deliveryType === 'pickup' && pickupLastName && !isValidName(pickupLastName) && (
+        <span className="text-xs text-red-500 mb-2">Digite um sobrenome válido (sem números).</span>
+      )}
+      {deliveryType === 'pickup' && pickupPhone && !isValidPhone(pickupPhone) && (
+        <span className="text-xs text-red-500 mb-2">Digite um telefone válido.</span>
+      )}
       <h3 className="text-lg font-semibold text-blue-900 mb-2">
         {deliveryType === 'delivery' ? 'Dados para Entrega' : 'Dados para Retirada na Loja'}
       </h3>
@@ -1105,7 +1187,7 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
               name="pickupFirstName"
               value={pickupFirstName}
               onChange={(e) => setPickupFirstName(e.target.value)}
-              className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition text-base" 
+              className={`rounded-lg border px-4 py-3 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition text-base ${pickupFirstName && !isValidName(pickupFirstName) ? 'border-red-400' : 'border-gray-300'}`}
               placeholder="Seu nome" 
               required 
             />
@@ -1117,7 +1199,7 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
               name="pickupLastName"
               value={pickupLastName}
               onChange={(e) => setPickupLastName(e.target.value)}
-              className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition text-base" 
+              className={`rounded-lg border px-4 py-3 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition text-base ${pickupLastName && !isValidName(pickupLastName) ? 'border-red-400' : 'border-gray-300'}`}
               placeholder="Seu sobrenome" 
               required 
             />
@@ -1127,7 +1209,7 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
             <input
               type="tel"
               name="pickupPhone"
-              className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition text-base"
+              className={`rounded-lg border px-4 py-3 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition text-base ${pickupPhone && !isValidPhone(pickupPhone) ? 'border-red-400' : 'border-gray-300'}`}
               placeholder="(85) 99999-9999"
               value={pickupPhone}
               onChange={e => setPickupPhone(formatPhone(e.target.value))}
@@ -1157,11 +1239,11 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
               Informações para Retirada
             </h4>
             <div className="text-sm text-green-700 space-y-1">
-              <p><strong>Endereço:</strong> R. Exemplo, 123 - Centro, Fortaleza - CE</p>
-              <p><strong>Horário:</strong> Segunda a Sexta: 8h às 18h | Sábado: 8h às 12h</p>
-              <p><strong>Telefone:</strong> (85) 3333-4444</p>
+              <p><strong>Endereço:</strong> R. Antônio Arruda, 1170 - Vila velha, Fortaleza - CE</p>
+              <p><strong>Horário:</strong> Segunda a Sábado: 8h às 19h | Domingo: 8h às 12h | Delivery: 8h às 16h</p>
+              <p><strong>Telefone:</strong> (85) 98514-7067</p>
               <p className="text-xs mt-2 text-green-600">
-                💡 Leve um documento com foto para retirar o pedido
+                
               </p>
             </div>
           </div>
@@ -1176,7 +1258,7 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
             name="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base" 
+            className={`rounded-lg border px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base ${name && !isValidName(name) ? 'border-red-400' : 'border-gray-300'}`}
             placeholder="Seu nome completo" 
             required 
           />
@@ -1186,7 +1268,7 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
           <input
             type="tel"
             name="phone"
-            className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base"
+            className={`rounded-lg border px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base ${phone && !isValidPhone(phone) ? 'border-red-400' : 'border-gray-300'}`}
             placeholder="(85) 99999-9999"
             value={phone}
             onChange={e => setPhone(formatPhone(e.target.value))}

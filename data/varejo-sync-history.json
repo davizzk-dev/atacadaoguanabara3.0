@@ -1,5 +1,61 @@
 [
   {
+    "id": "1755883424904",
+    "startedAt": "2025-08-22T17:21:13.643Z",
+    "finishedAt": "2025-08-22T17:23:44.904Z",
+    "durationMs": 151261,
+    "totals": {
+      "products": 6308,
+      "sections": 15,
+      "brands": 1,
+      "genres": 100
+    },
+    "message": "Sincronização concluída",
+    "status": "success"
+  },
+  {
+    "id": "1755875818482",
+    "startedAt": "2025-08-22T15:12:44.344Z",
+    "finishedAt": "2025-08-22T15:16:58.482Z",
+    "durationMs": 254138,
+    "totals": {
+      "products": 6308,
+      "sections": 15,
+      "brands": 1,
+      "genres": 100
+    },
+    "message": "Sincronização concluída",
+    "status": "success"
+  },
+  {
+    "id": "1755875444801",
+    "startedAt": "2025-08-22T15:10:44.796Z",
+    "finishedAt": "2025-08-22T15:10:44.801Z",
+    "durationMs": 5,
+    "totals": {
+      "products": 0,
+      "sections": 0,
+      "brands": 0,
+      "genres": 0
+    },
+    "message": "Cannot find module 'node-fetch'\nRequire stack:\n- /root/atacadao/Atacad-o-guanabara/scripts/sync-with-formatting.js\n- /root/atacadao/Atacad-o-guanabara/server.js",
+    "status": "error"
+  },
+  {
+    "id": "1755786062767",
+    "startedAt": "2025-08-21T14:18:54.426Z",
+    "finishedAt": "2025-08-21T14:21:02.767Z",
+    "durationMs": 128341,
+    "totals": {
+      "products": 6305,
+      "sections": 15,
+      "brands": 1,
+      "genres": 100
+    },
+    "message": "Sincronização concluída",
+    "status": "success"
+  },
+  {
     "id": "1755698546329",
     "startedAt": "2025-08-20T14:00:16.878Z",
     "finishedAt": "2025-08-20T14:02:26.329Z",

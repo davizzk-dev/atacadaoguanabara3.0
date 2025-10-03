@@ -1,33 +1,36 @@
 'use client'
-
-export const dynamic = 'force-dynamic'
-
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useSession, signOut } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useAuthStore } from '@/lib/store'
+import ChatInterface from "../../components/admin/ChatInterface"
+import AdminBairrosFrete from "../../components/admin/AdminBairrosFrete"
 import { 
   Users, Package, ShoppingCart, DollarSign, Settings, 
   Bell, LogOut, Search, Plus, Edit, Trash, Eye,
   BarChart3, TrendingUp, Activity, Globe, Store,
   MessageCircle, Camera, RefreshCw, RotateCcw,
   CheckCircle, AlertCircle, Clock, Zap, Star, Tag,
-  PieChart, BarChart, ImageIcon, Upload
+  PieChart, BarChart, ImageIcon, Upload, Smartphone
 } from 'lucide-react'
-import AnalyticsDashboard from '@/components/admin/AnalyticsDashboard'
-import ChatInterface from '@/components/admin/ChatInterface'
-import { varejoFacilClient } from '@/lib/varejo-facil-client'
-import {
-  generateSalesReportPDF,
-  generateProductsPDF,
-  generatePromotionsPDF,
-  generateOrdersPDF,
-  generateCustomersPDF,
-  generateUsersPDF,
-  generateFeedbackPDF,
-  generateCameraRequestsPDF,
-  generateReturnsPDF
-} from '@/lib/utils'
-import { useSession, signOut } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import { useAuthStore } from '@/lib/store'
+
+// Hook personalizado para debounce
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+
+  return debouncedValue
+}
 
 // Interfaces
 interface DashboardStats {
@@ -54,19 +57,33 @@ interface Order {
   id: string
   userId: string
   userName: string
+  userEmail: string
   customerInfo?: {
     name: string
     email: string
     phone: string
+  }
+  address?: {
+    street: string
+    number: string
+    complement?: string
+    neighborhood: string
+    city: string
+    state: string
+    zipCode: string
   }
   items: Array<{
     productId: string
     name: string
     price: number
     quantity: number
+    image?: string
+    category?: string
   }>
   total: number
   status: 'pending' | 'confirmed' | 'preparing' | 'delivering' | 'delivered' | 'cancelled'
+  paymentMethod?: string
+  observations?: string
   createdAt: string
 }
 
@@ -74,8 +91,17 @@ interface User {
   id: string
   name: string
   email: string
-  phone: string
-  role: string
+  phone?: string
+  role: 'user' | 'manager' | 'admin'
+  address?: {
+    street: string
+    number: string
+    complement?: string
+    neighborhood: string
+    city: string
+    state: string
+    zipCode: string
+  }
   createdAt: string
 }
 
@@ -87,6 +113,8 @@ interface Feedback {
   rating: number
   createdAt: string
   status: 'pending' | 'reviewed' | 'resolved'
+  userId?: string
+  category?: string
 }
 
 interface CameraRequest {
@@ -126,13 +154,17 @@ interface SyncProgress {
 
 export default function AdminPage() {
   const { data: session, status } = useSession()
-  const user = session?.user
+  const user = session?.user || null
   const router = useRouter()
   const storeUser = useAuthStore((s) => s.user)
 
-  // Estados principais - DEVEM vir antes de qualquer return
+  // Estados principais
   const [activeTab, setActiveTab] = useState('dashboard')
   const [isMainLoading, setIsMainLoading] = useState(true)
+  const [isDataLoading, setIsDataLoading] = useState(false)
+  const [lastLoadTime, setLastLoadTime] = useState(0)
+  
+  // Estados de dados
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalProducts: 0,
@@ -142,19 +174,29 @@ export default function AdminPage() {
     pendingFeedback: 0,
     pendingReturns: 0
   })
-
-  // Estados de dados
   const [products, setProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<Order[]>([])
-  const [isRefreshingOrders, setIsRefreshingOrders] = useState(false)
-  const [newOrdersCount, setNewOrdersCount] = useState(0)
-  const [highlightOrderIds, setHighlightOrderIds] = useState<Set<string>>(new Set())
   const [users, setUsers] = useState<User[]>([])
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([])
   const [cameraRequests, setCameraRequests] = useState<CameraRequest[]>([])
   const [returnRequests, setReturnRequests] = useState<ReturnRequest[]>([])
   const [promotions, setPromotions] = useState<any[]>([])
   const [productPromotions, setProductPromotions] = useState<any[]>([])
+
+  // Estados de pesquisa e filtro
+  const [searchTerm, setSearchTerm] = useState('')
+  const [searchTermAdmin, setSearchTermAdmin] = useState("")
+  const debouncedSearchTermAdmin = useDebounce(searchTermAdmin, 300) // Debounce de 300ms
+  const [selectedCategoryAdmin, setSelectedCategoryAdmin] = useState("Todos")
+  const [categoriesAdmin, setCategoriesAdmin] = useState<string[]>([])
+  const [maisVendidosAdmin, setMaisVendidosAdmin] = useState<{ nome: string, quantidade?: string }[]>([])
+  const [productSearchTerm, setProductSearchTerm] = useState('')
+  const debouncedProductSearchTerm = useDebounce(productSearchTerm, 300) // Debounce de 300ms
+  const [dateRange, setDateRange] = useState('7d')
+  const [currentPageAdmin, setCurrentPageAdmin] = useState(1)
+  const [productsPerPageAdmin] = useState(100)
+  const [onlySoldLast2Months, setOnlySoldLast2Months] = useState(false)
+  const [isSearching, setIsSearching] = useState(false)
 
   // Estados de Varejo Fácil
   const [varejoFacilProducts, setVarejoFacilProducts] = useState<any[]>([])
@@ -181,6 +223,11 @@ export default function AdminPage() {
   const [autoSync, setAutoSync] = useState(false)
   const [showSyncModal, setShowSyncModal] = useState(false)
   const [syncHistory, setSyncHistory] = useState<any[]>([])
+
+  // Estados de pedidos
+  const [isRefreshingOrders, setIsRefreshingOrders] = useState(false)
+  const [newOrdersCount, setNewOrdersCount] = useState(0)
+  const [highlightOrderIds, setHighlightOrderIds] = useState<Set<string>>(new Set())
 
   // Estados de imagens do site
   const [categoryImages, setCategoryImages] = useState<{[key: string]: string}>({})
@@ -209,6 +256,10 @@ export default function AdminPage() {
   // Estados de chat
   const [selectedChat, setSelectedChat] = useState<string | null>(null)
   const [chatMessage, setChatMessage] = useState('')
+  
+  // Estados das abas das seções
+  const [cameraSubTab, setCameraSubTab] = useState('list')
+  const [returnSubTab, setReturnSubTab] = useState('list')
 
   // Estados de promoções
   const [showPromotionModal, setShowPromotionModal] = useState(false)
@@ -216,19 +267,20 @@ export default function AdminPage() {
   const [promotionForm, setPromotionForm] = useState({
     title: '',
     description: '',
-    type: 'promotion', // Apenas promoção
-    discountType: 'percentage', // 'percentage' ou 'fixed'
+    type: 'promotion',
+    discountType: 'percentage',
     discount: '',
     startDate: '',
     endDate: '',
     isActive: true,
     image: '',
     products: [] as any[],
-    selectedProduct: null as any // Produto selecionado
+    selectedProduct: null as any
   })
   const [showProductSearch, setShowProductSearch] = useState(false)
   const [productSearchQuery, setProductSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
+  const [isSubmittingPromotion, setIsSubmittingPromotion] = useState(false)
 
   // Estados de edição de produtos
   const [showProductModal, setShowProductModal] = useState(false)
@@ -241,74 +293,234 @@ export default function AdminPage() {
     image: '',
     inStock: true
   })
-
-  // Estados de filtros
-  const [searchTerm, setSearchTerm] = useState('')
-  const [dateRange, setDateRange] = useState('7d')
-  const [productSearchTerm, setProductSearchTerm] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [productsPerPage] = useState(50)
-  const [onlySoldLast2Months, setOnlySoldLast2Months] = useState(false)
-  const [isDataLoading, setIsDataLoading] = useState(false)
-  const [lastLoadTime, setLastLoadTime] = useState(0)
-  const [isSubmittingPromotion, setIsSubmittingPromotion] = useState(false)
   const [isSubmittingProduct, setIsSubmittingProduct] = useState(false)
+
   // Estados de criação de usuário
   const [showUserModal, setShowUserModal] = useState(false)
+  const [showUserDetailsModal, setShowUserDetailsModal] = useState(false)
+  const [showOrderDetailsModal, setShowOrderDetailsModal] = useState(false)
+  const [showFeedbackDetailsModal, setShowFeedbackDetailsModal] = useState(false)
+  const [editingUser, setEditingUser] = useState<any>(null)
+  const [viewingUser, setViewingUser] = useState<any>(null)
+  const [viewingOrder, setViewingOrder] = useState<any>(null)
+  const [viewingFeedback, setViewingFeedback] = useState<any>(null)
   const [isSubmittingUser, setIsSubmittingUser] = useState(false)
   const [userForm, setUserForm] = useState({
     name: '',
     email: '',
     role: 'user' as 'user' | 'manager' | 'admin',
-    phone: ''
+    phone: '',
+    password: '',
+    confirmPassword: '',
+    address: {
+      street: '',
+      number: '',
+      complement: '',
+      neighborhood: '',
+      city: 'Fortaleza',
+      state: 'Ceará',
+      zipCode: ''
+    }
   })
 
-  // Verificação de autenticação - APÓS todos os hooks
-  useEffect(() => {
-    if (status === 'loading') return // Aguardando carregar
+  // Lista de bairros de Fortaleza
+  const bairrosFortaleza = [
+    'Jardim Guanabara', 'Vila Velha', 'Quintino Cunha', 'Olavo Oliveira', 'Jardim Iracema',
+    'Padre Andrade', 'Floresta', 'Antonio Bezerra', 'Barra do Ceara', 'Cristo Redentor',
+    'Alvaro Wayne', 'Carlito', 'Pirambu', 'Monte Castelo', 'Elery', 'Alagadiço',
+    'Parquelandia', 'Parque Araxá', 'Rodolgo Teofilo', 'Amadeu Furtado', 'Bela Vista',
+    'Pici', 'Dom Lustosa', 'Autran Nunes', 'Genibau', 'Tabapuá', 'Iparana',
+    'Parque Albano', 'Parque Leblon', 'Jacarecanga', 'Centro', 'Moura brasil',
+    'Farias Brito', 'Benfica', 'Damas', 'Jardim America', 'Bom Futuro', 'Montese',
+    'Pan Americano', 'Couto Fernandes', 'Democrito Rocha', 'Joquei Clube',
+    'Henrique Jorge', 'Joao XXIII', 'Conj Ceara', 'Parangaba', 'Itaoca'
+  ]
 
-    const nextAuthEmail = user?.email || null
-    const isNextAuthAdmin = nextAuthEmail === 'davikalebe20020602@gmail.com'
-    const isStoreAdmin = !!(storeUser && (storeUser.role === 'admin' || storeUser.email === 'admin' || storeUser.email === 'davikalebe20020602@gmail.com'))
-    const isLoggedIn = status === 'authenticated' || !!storeUser
+  // Função de normalização para busca
+  const normalizeAdmin = useCallback((s: string): string => (s || "")
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[^a-z0-9 ]/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim(), [])
 
-    if (!isLoggedIn) {
-      router.push('/login?admin=true&callback=%2Fadmin')
-      return
-    }
-
-    if (!(isNextAuthAdmin || isStoreAdmin)) {
-      router.push('/')
-      return
-    }
-  }, [user, status, storeUser, router])
-
-  // Se não é admin, renderizar tela de acesso negado
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando...</p>
-        </div>
-      </div>
-    )
-  }
-  
-  // Se não atender os critérios de admin (nem sessão NextAuth admin nem store admin), bloqueia
+  // Verificações de autenticação e permissões
   const nextAuthEmail = user?.email || null
   const isNextAuthAdmin = nextAuthEmail === 'davikalebe20020602@gmail.com'
   const isStoreAdmin = !!(storeUser && (storeUser.role === 'admin' || storeUser.email === 'admin' || storeUser.email === 'davikalebe20020602@gmail.com'))
-  if (!(isNextAuthAdmin || isStoreAdmin)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">Acesso Negado</h1>
-          <p className="text-gray-600">Você precisa ser um administrador para acessar esta página.</p>
-        </div>
-      </div>
-    )
-  }
+  const isAdmin = isNextAuthAdmin || isStoreAdmin
+
+  // Carregar categorias
+  useEffect(() => {
+    const loadCategoriesAdmin = async () => {
+      try {
+        const categoriesResponse = await fetch('/api/categories')
+        if (categoriesResponse.ok) {
+          const categoriesData = await categoriesResponse.json()
+          setCategoriesAdmin(['Todos', ...categoriesData])
+        } else {
+          setCategoriesAdmin(['Todos', 'Promoções', 'Mais Vendidos', 'Novidades'])
+        }
+      } catch (error) {
+        setCategoriesAdmin(['Todos', 'Promoções', 'Mais Vendidos', 'Novidades'])
+      }
+    }
+    loadCategoriesAdmin()
+  }, [])
+
+  // Carregar mais vendidos
+  useEffect(() => {
+    const fetchMaisVendidosAdmin = async () => {
+      try {
+        const res = await fetch('/api/mais-vendidos')
+        if (res.ok) {
+          const data = await res.json()
+          setMaisVendidosAdmin(data.slice().reverse())
+        } else {
+          setMaisVendidosAdmin([])
+        }
+      } catch (error) {
+        setMaisVendidosAdmin([])
+      }
+    }
+    fetchMaisVendidosAdmin()
+  }, [])
+
+  // Reset da paginação quando categoria ou busca mudam
+  useEffect(() => {
+    setCurrentPageAdmin(1)
+  }, [selectedCategoryAdmin, debouncedSearchTermAdmin])
+
+  // Controlar estado de carregamento da busca
+  useEffect(() => {
+    if (searchTermAdmin !== debouncedSearchTermAdmin) {
+      setIsSearching(true)
+    } else {
+      setIsSearching(false)
+    }
+  }, [searchTermAdmin, debouncedSearchTermAdmin])
+
+  // Função para encontrar produtos do CSV nos produtos disponíveis
+  const getProdutosDoCSVAdmin = useMemo(() => {
+    return (produtosOriginais: Product[], categoria?: string, maxCount?: number) => {
+      if (!produtosOriginais.length) return []
+      const produtosMap = new Map<string, Product>()
+      produtosOriginais.forEach(prod => {
+        if (prod.inStock && (!categoria || prod.category === categoria)) {
+          produtosMap.set(normalizeAdmin(prod.name), prod)
+        }
+      })
+      const produtosEncontrados: Product[] = []
+      const produtosNaoEncontrados: string[] = []
+      const maisVendidosLote = maxCount ? maisVendidosAdmin.slice(0, maxCount) : maisVendidosAdmin
+      maisVendidosLote.forEach((itemCSV) => {
+        const nomeNormalizadoCSV = normalizeAdmin(itemCSV.nome)
+        const produtoEncontrado = produtosMap.get(nomeNormalizadoCSV)
+        if (produtoEncontrado) {
+          produtosEncontrados.push(produtoEncontrado)
+        } else {
+          produtosNaoEncontrados.push(itemCSV.nome)
+        }
+      })
+      // Para produtos não encontrados, tenta encontrar correspondências parciais
+      produtosNaoEncontrados.forEach((nomeProduto) => {
+        const nomeNormalizadoCSV = normalizeAdmin(nomeProduto)
+        for (const [nome, prod] of produtosMap.entries()) {
+          if ((nome.includes(nomeNormalizadoCSV) || nomeNormalizadoCSV.includes(nome)) && 
+              prod.inStock && 
+              !produtosEncontrados.some(p => p.id === prod.id)) {
+            produtosEncontrados.push(prod)
+            break
+          }
+        }
+      })
+      // Adiciona os produtos da categoria que não estão no CSV no final
+      const idsCSV = produtosEncontrados.map(p => p.id)
+      const outros = Array.from(produtosMap.values()).filter(p => !idsCSV.includes(p.id))
+      return [...produtosEncontrados, ...outros]
+    }
+  }, [maisVendidosAdmin, normalizeAdmin])
+
+  // Produtos filtrados por categoria e ordenados por mais vendidos
+  const produtosFiltradosAdmin = useMemo(() => {
+    if (!products.length) return []
+    if (selectedCategoryAdmin === "Todos") {
+      return getProdutosDoCSVAdmin(products)
+    } else if (selectedCategoryAdmin === "Promoções") {
+      const produtosComPromocao = products.filter(p => (p as any).salePrice !== undefined && (p as any).salePrice < p.price)
+      return getProdutosDoCSVAdmin(produtosComPromocao)
+    } else if (selectedCategoryAdmin === "Novidades") {
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      const produtosNovos = products.filter(p => (p as any).createdAt && new Date((p as any).createdAt) > thirtyDaysAgo)
+      return getProdutosDoCSVAdmin(produtosNovos)
+    } else if (selectedCategoryAdmin === "Mais Vendidos") {
+      return getProdutosDoCSVAdmin(products).filter(p => 
+        maisVendidosAdmin.some(item => {
+          const nomeProdutoNormalizado = normalizeAdmin(p.name)
+          const nomeCSVNormalizado = normalizeAdmin(item.nome)
+          return nomeProdutoNormalizado === nomeCSVNormalizado || 
+                 nomeProdutoNormalizado.includes(nomeCSVNormalizado) ||
+                 nomeCSVNormalizado.includes(nomeProdutoNormalizado)
+        })
+      )
+    } else {
+      return getProdutosDoCSVAdmin(products, selectedCategoryAdmin)
+    }
+  }, [products, maisVendidosAdmin, selectedCategoryAdmin, getProdutosDoCSVAdmin, normalizeAdmin])
+
+  // Busca nos produtos filtrados - otimizada com limite de resultados
+  const filteredProductsAdmin = useMemo(() => {
+    if (!debouncedSearchTermAdmin) return produtosFiltradosAdmin
+    
+    // Limitar busca para evitar travamento com muitos produtos
+    const maxResults = 500
+    let result = [...produtosFiltradosAdmin]
+    
+    if (debouncedSearchTermAdmin.startsWith('#')) {
+      const code = debouncedSearchTermAdmin.replace('#', '').trim()
+      result = result.filter((p: Product) => p.id === code)
+    } else {
+      const q = normalizeAdmin(debouncedSearchTermAdmin.trim())
+      
+      // Busca mais eficiente
+      const produtosDoCSV: Product[] = []
+      const outrosProdutos: Product[] = []
+      
+      // Cache para normalização
+      const normalizedNames = new Map<string, string>()
+      const getNormalizedName = (name: string) => {
+        if (!normalizedNames.has(name)) {
+          normalizedNames.set(name, normalizeAdmin(name))
+        }
+        return normalizedNames.get(name)!
+      }
+      
+      // Busca otimizada com early break
+      for (let i = 0; i < result.length && (produtosDoCSV.length + outrosProdutos.length) < maxResults; i++) {
+        const prod = result[i]
+        const nomeProduto = getNormalizedName(prod.name)
+        
+        if (nomeProduto.includes(q)) {
+          // Verificar se está no CSV (busca mais eficiente)
+          const estaNoCSV = maisVendidosAdmin.some(item => {
+            const nomeCSV = getNormalizedName(item.nome)
+            return nomeCSV === nomeProduto || nomeProduto.includes(nomeCSV)
+          })
+          
+          if (estaNoCSV) {
+            produtosDoCSV.push(prod)
+          } else {
+            outrosProdutos.push(prod)
+          }
+        }
+      }
+      
+      result = [...produtosDoCSV, ...outrosProdutos]
+    }
+    
+    return result
+  }, [produtosFiltradosAdmin, debouncedSearchTermAdmin, maisVendidosAdmin, normalizeAdmin])
 
   // Helper function to safely parse JSON responses
   const safeJsonParse = async (response: Response) => {
@@ -337,131 +549,7 @@ export default function AdminPage() {
     }
   }
 
-  // useEffect para carregar dados iniciais
-  useEffect(() => {
-    const initializeAdmin = async () => {
-      try {
-        await loadData()
-        loadSyncHistory() // Carregar histórico de sincronização
-      } catch (error) {
-        console.error('Erro na inicialização:', error)
-      } finally {
-        // Garantir que o loading sempre pare
-        setIsMainLoading(false)
-        setIsDataLoading(false)
-      }
-    }
-    
-    initializeAdmin()
-    
-    // Timeout de segurança para parar loading em 10 segundos
-    const safetyTimeout = setTimeout(() => {
-      console.log('⏰ Timeout de segurança: parando loading forçadamente')
-      setIsMainLoading(false)
-      setIsDataLoading(false)
-    }, 10000)
-    
-    return () => clearTimeout(safetyTimeout)
-  }, [])
-
-  // useEffect separado para autoSync
-  useEffect(() => {
-    if (autoSync) {
-      // Executar sincronização imediatamente quando ativar
-      startVarejoFacilSync()
-      
-      // Configurar sincronização automática a cada hora
-      const interval = setInterval(() => {
-        console.log('🔄 Executando sincronização automática...')
-        startVarejoFacilSync()
-      }, 4 * 60 * 60 * 1000) // 4 horas (reduzir uso de recursos)
-      
-      return () => clearInterval(interval)
-    }
-  }, [autoSync])
-
-  // useEffect para carregar imagens salvas
-  useEffect(() => {
-    loadSiteImages()
-  }, [])
-
-  // Função para limpar dados não utilizados e liberar memória
-  const cleanupMemory = () => {
-    // Limitar arrays grandes para economizar memória
-    if (products.length > 200) {
-      setProducts(prev => prev.slice(0, 200))
-    }
-    if (orders.length > 200) {
-      setOrders(prev => prev.slice(0, 200))
-    }
-    if (users.length > 100) {
-      setUsers(prev => prev.slice(0, 100))
-    }
-    
-    // Force garbage collection se disponível
-    if (window.gc) {
-      window.gc()
-    }
-  }
-
-  // Cleanup de memória a cada 5 minutos
-  useEffect(() => {
-    const memoryCleanup = setInterval(cleanupMemory, 5 * 60 * 1000)
-    return () => clearInterval(memoryCleanup)
-  }, [products.length, orders.length, users.length])
-
-  // Polling contínuo para notificações de novas mensagens
-  useEffect(() => {
-    const notificationInterval = setInterval(() => {
-      // Sempre verifica por novas mensagens para mostrar notificações
-      loadChatData()
-    }, 2000) // A cada 2 segundos verifica novas mensagens
-
-    return () => clearInterval(notificationInterval)
-  }, []) // Executa sempre, independente de qualquer estado
-
-  // Polling para atualizar chat em tempo real - mais agressivo
-  useEffect(() => {
-    let pollingInterval: NodeJS.Timeout | null = null
-
-    if (activeTab === 'camera-requests' || activeTab === 'returns') {
-      console.log('🔄 [Admin] Iniciando polling do chat - Tab:', activeTab)
-      pollingInterval = setInterval(() => {
-        console.log('🔄 [Admin] Atualizando dados do chat...')
-        // Para chat, carregar apenas dados específicos sem throttle
-        loadChatData()
-      }, 500) // Atualiza a cada 500ms para ser mais responsivo
-    }
-
-    return () => {
-      if (pollingInterval) {
-        clearInterval(pollingInterval)
-        console.log('🔄 [Admin] Parando polling do chat')
-      }
-    }
-  }, [activeTab]) // Removendo selectedChat da dependência
-
-  // Função específica para carregar dados do chat sem throttle
-  const loadChatData = async () => {
-    try {
-      if (activeTab === 'camera-requests') {
-        const cameraRes = await fetch('/api/camera-requests', { headers: { 'x-admin': 'true' } })
-        if (cameraRes.ok) {
-          const cameraData = await safeJsonParse(cameraRes)
-          setCameraRequests(Array.isArray(cameraData?.data) ? cameraData.data : [])
-        }
-      } else if (activeTab === 'returns') {
-        const returnsRes = await fetch('/api/return-requests', { headers: { 'x-admin': 'true' } })
-        if (returnsRes.ok) {
-          const returnsData = await safeJsonParse(returnsRes)
-          setReturnRequests(Array.isArray(returnsData?.data) ? returnsData.data : [])
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao carregar dados do chat:', error)
-    }
-  }
-
+  // Função para carregar dados iniciais
   const loadData = async () => {
     // Throttle: não carregar dados se foi carregado há menos de 2 segundos
     const now = Date.now()
@@ -486,7 +574,7 @@ export default function AdminPage() {
 
       // Carregar dados do Varejo Fácil apenas se necessário (economizar memória)
       if (activeTab === 'varejoFacil') {
-      await loadVarejoFacilData()
+        await loadVarejoFacilData()
       }
 
       if (productsRes.ok) {
@@ -572,35 +660,41 @@ export default function AdminPage() {
     }
   }
 
-  // Atualizar pedidos manualmente com badge de novos
-  const refreshOrders = async () => {
+  // Função para atualizar estatísticas
+  const updateStats = async () => {
     try {
-      setIsRefreshingOrders(true)
-      const prevIds = new Set((orders || []).map(o => o.id))
-      const res = await fetch('/api/orders?limit=100')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await safeJsonParse(res)
-      const nextOrders: Order[] = data?.orders || data || []
-      setOrders(nextOrders)
-
-      // Detectar novos
-      const newOnes = nextOrders.filter(o => !prevIds.has(o.id)).map(o => o.id)
-      setNewOrdersCount(newOnes.length)
-      if (newOnes.length) {
-        const ids = new Set<string>(newOnes)
-        setHighlightOrderIds(ids)
-        // Remover destaque após 6s
-        setTimeout(() => setHighlightOrderIds(new Set()), 6000)
-      } else {
-        setHighlightOrderIds(new Set())
+      const statsRes = await fetch('/api/admin/stats')
+      if (statsRes.ok) {
+        const statsData = await safeJsonParse(statsRes)
+        if (statsData?.success) {
+          const data = statsData.data
+          setStats({
+            totalUsers: data.totalUsers || 0,
+            totalProducts: data.totalProducts || 0,
+            totalOrders: data.totalOrders || 0,
+            totalRevenue: data.totalRevenue || 0,
+            pendingCameraRequests: data.cameraRequestsByStatus?.pending || 0,
+            pendingFeedback: data.feedbacksByStatus?.pending || 0,
+            pendingReturns: data.returnRequestsByStatus?.pending || 0
+          })
+        }
       }
-    } catch (e) {
-      console.error('Erro ao atualizar pedidos:', e)
-    } finally {
-      setIsRefreshingOrders(false)
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas:', error)
+      // Fallback para cálculo local
+      setStats({
+        totalUsers: users.length,
+        totalProducts: products.length,
+        totalOrders: orders.length,
+        totalRevenue: orders.reduce((sum, order) => sum + order.total, 0),
+        pendingCameraRequests: cameraRequests.filter(r => r.status === 'pending').length,
+        pendingFeedback: feedbacks.filter(f => f.status === 'pending').length,
+        pendingReturns: returnRequests.filter(r => r.status === 'pending').length
+      })
     }
   }
 
+  // Função para carregar dados do Varejo Fácil
   const loadVarejoFacilData = async () => {
     try {
       // Carregar apenas dados essenciais para economizar memória
@@ -650,85 +744,47 @@ export default function AdminPage() {
     }
   }
 
-  const updateStats = async () => {
-    try {
-      const statsRes = await fetch('/api/admin/stats')
-      if (statsRes.ok) {
-        const statsData = await safeJsonParse(statsRes)
-        if (statsData?.success) {
-          const data = statsData.data
-          setStats({
-            totalUsers: data.totalUsers || 0,
-            totalProducts: data.totalProducts || 0,
-            totalOrders: data.totalOrders || 0,
-            totalRevenue: data.totalRevenue || 0,
-            pendingCameraRequests: data.cameraRequestsByStatus?.pending || 0,
-            pendingFeedback: data.feedbacksByStatus?.pending || 0,
-            pendingReturns: data.returnRequestsByStatus?.pending || 0
-          })
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao carregar estatísticas:', error)
-      // Fallback para cálculo local
-      setStats({
-        totalUsers: users.length,
-        totalProducts: products.length,
-        totalOrders: orders.length,
-        totalRevenue: orders.reduce((sum, order) => sum + order.total, 0),
-        pendingCameraRequests: cameraRequests.filter(r => r.status === 'pending').length,
-        pendingFeedback: feedbacks.filter(f => f.status === 'pending').length,
-        pendingReturns: returnRequests.filter(r => r.status === 'pending').length
-      })
-    }
-  }
-
+  // Função para iniciar sincronização com Varejo Fácil (Sistema Anti-Timeout 504)
   const startVarejoFacilSync = async () => {
     const startTime = new Date().toISOString()
+    let isMonitoring = true // Controlar se deve continuar monitorando
     
     try {
+      // LIMPAR ESTADO ANTERIOR NO FRONTEND
       setSyncProgress({
         status: 'running',
         current: 0,
-        total: 0,
-        message: '🔄 Iniciando sincronização do Varejo Fácil...'
+        total: 100,
+        message: '🧹 Limpando estado anterior... Preparando nova sincronização...'
       })
 
-      // Atualizar mensagem de progresso
-      setTimeout(() => {
-        setSyncProgress(prev => ({
-          ...prev,
-          message: '📂 Buscando seções, marcas e gêneros...'
-        }))
-      }, 1000)
+      // Reset do estado no backend primeiro
+      try {
+        await fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'reset-state' })
+        })
+        console.log('🔄 Estado anterior resetado')
+      } catch (e) {
+        console.warn('Aviso ao resetar estado:', e)
+      }
 
-      setTimeout(() => {
-        setSyncProgress(prev => ({
-          ...prev,
-          message: '💰 Sincronizando preços escalonados dos produtos...'
-        }))
-      }, 3000)
+      // Aguardar um pouco para garantir limpeza
+      await new Promise(resolve => setTimeout(resolve, 1000))
 
-      setTimeout(() => {
-        setSyncProgress(prev => ({
-          ...prev,
-          message: '📦 Aplicando preços nas fichas dos produtos...'
-        }))
-      }, 4500)
+      setSyncProgress({
+        status: 'running',
+        current: 5,
+        total: 100,
+        message: '🚀 Iniciando nova sincronização... (aguardando logs)'
+      })
 
-      setTimeout(() => {
-        setSyncProgress(prev => ({
-          ...prev,
-          message: '🔄 Finalizando sincronização de produtos em lotes de 300...'
-        }))
-      }, 6000)
-
-
-      // Chamar o endpoint correto de sincronização em lote
-      const syncRes = await fetch('/api/sync-products', {
+      // Iniciar sincronização em background para evitar timeout 504
+      const syncRes = await fetch('/api/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
+        body: JSON.stringify({ action: 'start-sync' })
       })
 
       if (!syncRes.ok) {
@@ -737,51 +793,258 @@ export default function AdminPage() {
 
       const syncData = await syncRes.json()
 
-      if (syncData.success) {
-        const endTime = new Date().toISOString()
-        const duration = new Date(endTime).getTime() - new Date(startTime).getTime()
-        
+      if (syncData.success && (syncData.status === 'started' || syncData.message?.includes('background'))) {
+        // Sincronização iniciada em background, monitorar progresso real
         setSyncProgress({
-          status: 'completed',
-          current: syncData.totalProducts || 0,
-          total: syncData.totalProducts || 0,
-          message: `✅ Sincronização concluída! ${syncData.totalProducts || 0} produtos sincronizados e salvos no products.json.`
+          status: 'running',
+          current: 0,
+          total: 0,
+          message: '🚀 Sincronização iniciada... Conectando com servidor...'
         })
 
-        // Salvar no histórico
-        await saveSyncToHistory({
-          startedAt: startTime,
-          finishedAt: endTime,
-          durationMs: duration,
-          status: 'success',
-          totals: {
-            products: syncData.totalProducts || 0,
-            sections: syncData.totalSections || 0,
-            brands: syncData.totalBrands || 0,
-            genres: syncData.totalGenres || 0
+        // Contador para evitar loop infinito
+        let attemptCount = 0
+        let maxAttempts = 300 // 15 minutos (300 * 3 segundos)
+        
+        // Função simples para monitorar o progresso
+        const monitorProgress = async () => {
+          if (!isMonitoring) return
+
+          // Verificar timeout
+          attemptCount++
+          if (attemptCount > maxAttempts) {
+            console.log('⏰ Timeout do monitoramento atingido')
+            isMonitoring = false
+            setSyncProgress({
+              status: 'error',
+              current: 0,
+              total: 100,
+              message: '⏰ Timeout: Sincronização demorou mais que o esperado'
+            })
+            return
           }
-        })
 
-        // Atualizar dados do painel
-        setVarejoFacilData(prev => ({
-          ...prev,
-          products: { total: syncData.totalProducts, items: [] },
-          sections: { total: syncData.totalSections, items: [] },
-          brands: { total: syncData.totalBrands, items: [] },
-          genres: { total: syncData.totalGenres, items: [] }
-        }))
+          try {
+            const statusRes = await fetch('/api/sync/status')
+            if (statusRes.ok) {
+              const statusData = await statusRes.json()
+              const status = statusData.data
 
-        // Recarregar dados da página
+              if (status.isRunning) {
+                // Ainda rodando - mostrar progresso baseado no tempo
+                const duration = status.duration ? Math.floor(status.duration / 1000) : 0
+                const minutes = Math.floor(duration / 60)
+                const seconds = duration % 60
+                const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`
+                
+                setSyncProgress({
+                  status: 'running',
+                  current: Math.min((duration / 300) * 100, 95), // 5 minutos = 100%
+                  total: 100,
+                  message: `🔄 Sincronizando... (${timeStr})`
+                })
+                
+                if (isMonitoring) {
+                  setTimeout(monitorProgress, 3000)
+                }
+              } else {
+                // Não está rodando - verificar se deveria estar
+                const syncStartTime = new Date(startTime).getTime()
+                const now = Date.now()
+                const timeSinceStart = now - syncStartTime
+                
+                // Se passou mais de 30 segundos e ainda não iniciou, provavelmente houve erro
+                if (timeSinceStart > 30000 && !status.isRunning && attemptCount > 10) {
+                  console.log(`⚠️ Sincronização não iniciou após ${Math.floor(timeSinceStart/1000)}s`)
+                  console.log(`   - isRunning: ${status.isRunning}`)
+                  console.log(`   - startTime backend: ${status.startTime}`)
+                  
+                  isMonitoring = false
+                  setSyncProgress({
+                    status: 'error',
+                    current: 0,
+                    total: 100,
+                    message: '⚠️ Sincronização não iniciou. Verifique se o servidor está respondendo corretamente.'
+                  })
+                  return
+                }
+                
+                // Não está mais rodando - verificar resultado
+                if (status.lastResult && status.lastResult.completed) {
+                  // Verificar se é resultado da sincronização ATUAL (não de uma anterior)
+                  const resultTime = new Date(status.lastResult.completedAt || 0).getTime()
+                  const syncStartTime = new Date(startTime).getTime()
+                  const now = Date.now()
+                  
+                  // Resultado deve ser:
+                  // 1. POSTERIOR ao início da sincronização
+                  // 2. Nos últimos 30 segundos (resultado recente)
+                  const isRecentResult = (now - resultTime) < 30000 // 30 segundos
+                  const isAfterStart = resultTime > syncStartTime
+                  
+                  // Verificar se passou muito tempo esperando (mais de 2 minutos)
+                  const waitingTooLong = (now - syncStartTime) > 120000 // 2 minutos
+                  
+                  if (isAfterStart && isRecentResult) {
+                    // TERMINOU COM SUCESSO RECENTE!
+                    isMonitoring = false
+                    const result = status.lastResult
+                    const endTime = new Date().toISOString()
+                    const durationMs = result.duration || (new Date().getTime() - new Date(startTime).getTime())
+                    
+                    setSyncProgress({
+                      status: 'completed',
+                      current: 100,
+                      total: 100,
+                      message: `✅ Sincronização concluída! ${result.totalProducts || 0} produtos sincronizados.`
+                    })
+                  } else if (waitingTooLong) {
+                    // Esperou muito tempo e não há sincronização rodando
+                    // Provavelmente a sincronização não iniciou corretamente
+                    console.log(`⚠️ Sincronização não iniciou corretamente. Parando monitoramento.`)
+                    console.log(`   - Tempo de espera: ${Math.floor((now - syncStartTime) / 60000)}min`)
+                    console.log(`   - isRunning: ${status.isRunning}`)
+                    console.log(`   - Último resultado: ${new Date(resultTime).toLocaleTimeString()}`)
+                    
+                    isMonitoring = false
+                    setSyncProgress({
+                      status: 'error',
+                      current: 0,
+                      total: 100,
+                      message: '⚠️ Sincronização não iniciou. Tente novamente ou verifique o servidor.'
+                    })
+                    return
+                  } else {
+                    // Resultado antigo, continuar aguardando (mas com limite)
+                    const ageMinutes = Math.floor((now - resultTime) / 60000)
+                    console.log(`📊 Resultado antigo detectado (${ageMinutes}min atrás), aguardando nova sincronização...`)
+                    console.log(`   - Resultado em: ${new Date(resultTime).toLocaleTimeString()}`)
+                    console.log(`   - Início sync: ${new Date(syncStartTime).toLocaleTimeString()}`)
+                    console.log(`   - Agora: ${new Date(now).toLocaleTimeString()}`)
+                    
+                    setSyncProgress({
+                      status: 'running',
+                      current: Math.min(10 + (attemptCount * 0.5), 90),
+                      total: 100,
+                      message: `⏳ Aguardando nova sincronização... (tentativa ${attemptCount}/${maxAttempts})`
+                    })
+                    
+                    if (isMonitoring) {
+                      setTimeout(monitorProgress, 3000)
+                    }
+                    return
+                  }
+
+                  // Salvar no histórico
+                  try {
+                    await saveSyncToHistory({
+                      startedAt: startTime,
+                      finishedAt: endTime,
+                      durationMs: durationMs,
+                      status: 'success',
+                      totals: {
+                        products: result.totalProducts || 0,
+                        sections: result.totalSections || 0,
+                        brands: result.totalBrands || 0,
+                        genres: result.totalGenres || 0
+                      },
+                      logs: result.output || 'Sincronização concluída'
+                    })
+                  } catch (e) {
+                    console.error('Erro ao salvar histórico:', e)
+                  }
+
+                  // Atualizar dados do painel
+                  setVarejoFacilData(prev => ({
+                    ...prev,
+                    products: { total: result.totalProducts || 0, items: [] },
+                    sections: { total: result.totalSections || 0, items: [] },
+                    brands: { total: result.totalBrands || 0, items: [] },
+                    genres: { total: result.totalGenres || 0, items: [] }
+                  }))
+
+                  // Recarregar dados
+                  setTimeout(() => {
+                    loadSyncHistory()
+                    loadData()
+                  }, 1000)
+
+                } else if (status.lastError) {
+                  // TERMINOU COM ERRO
+                  isMonitoring = false
+                  setSyncProgress({
+                    status: 'error',
+                    current: 0,
+                    total: 100,
+                    message: `❌ Erro: ${status.lastError}`
+                  })
+
+                  // Salvar erro no histórico  
+                  try {
+                    await saveSyncToHistory({
+                      startedAt: startTime,
+                      finishedAt: new Date().toISOString(),
+                      status: 'error',
+                      error: status.lastError,
+                      logs: status.lastError
+                    })
+                  } catch (e) {
+                    console.error('Erro ao salvar histórico de erro:', e)
+                  }
+
+                } else {
+                  // Não está rodando mas não há resultado recente - processo pode ter terminado sem salvar resultado
+                  console.log('⚠️ Processo não está rodando mas sem resultado recente, continuando aguardar...')
+                  setSyncProgress({
+                    status: 'running',
+                    current: 85,
+                    total: 100,
+                    message: '⏳ Finalizando sincronização... (aguardando resultado)'
+                  })
+                  
+                  if (isMonitoring) {
+                    setTimeout(monitorProgress, 2000) // Verificar mais frequente
+                  }
+                }
+              }
+            } else {
+              // Erro ao acessar status, tentar novamente
+              if (isMonitoring) {
+                setTimeout(monitorProgress, 5000)
+              }
+            }
+          } catch (error) {
+            console.error('Erro no monitoramento:', error)
+            if (isMonitoring) {
+              setTimeout(monitorProgress, 5000)
+            }
+          }
+        }
+
+        // Timeout de segurança (10 minutos)
         setTimeout(() => {
-          loadData()
-          window.location.reload()
-        }, 2000)
+          if (isMonitoring) {
+            isMonitoring = false
+            setSyncProgress({
+              status: 'completed',
+              current: 100,
+              total: 100,
+              message: '✅ Sincronização finalizada (timeout)'
+            })
+          }
+        }, 10 * 60 * 1000)
+
+        // Começar a monitorar imediatamente
+        setTimeout(monitorProgress, 2000)
+        return
+
       } else {
-        throw new Error(syncData.error || 'Erro na sincronização')
+        throw new Error(syncData.message || 'Erro ao iniciar sincronização')
       }
 
     } catch (error) {
       console.error('Erro na sincronização:', error)
+      isMonitoring = false // Parar monitoramento em caso de erro
       
       // Salvar erro no histórico
       await saveSyncToHistory({
@@ -801,6 +1064,66 @@ export default function AdminPage() {
     }
   }
 
+  // Função para salvar histórico de sincronização
+  const saveSyncToHistory = async (syncData: any) => {
+    try {
+      await fetch('/api/sync-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(syncData)
+      })
+      // Recarregar histórico
+      loadSyncHistory()
+    } catch (error) {
+      console.error('Erro ao salvar histórico:', error)
+    }
+  }
+
+  // Função para carregar histórico de sincronização
+  const loadSyncHistory = async () => {
+    try {
+      const response = await fetch('/api/sync-history')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setSyncHistory(data.history)
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar histórico:', error)
+    }
+  }
+
+  // Função para atualizar pedidos manualmente
+  const refreshOrders = async () => {
+    try {
+      setIsRefreshingOrders(true)
+      const prevIds = new Set((orders || []).map(o => o.id))
+      const res = await fetch('/api/orders?limit=100')
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await safeJsonParse(res)
+      const nextOrders: Order[] = data?.orders || data || []
+      setOrders(nextOrders)
+
+      // Detectar novos
+      const newOnes = nextOrders.filter(o => !prevIds.has(o.id)).map(o => o.id)
+      setNewOrdersCount(newOnes.length)
+      if (newOnes.length) {
+        const ids = new Set<string>(newOnes)
+        setHighlightOrderIds(ids)
+        // Remover destaque após 6s
+        setTimeout(() => setHighlightOrderIds(new Set()), 6000)
+      } else {
+        setHighlightOrderIds(new Set())
+      }
+    } catch (e) {
+      console.error('Erro ao atualizar pedidos:', e)
+    } finally {
+      setIsRefreshingOrders(false)
+    }
+  }
+
+  // Função para enviar mensagem no chat
   const sendChatMessage = async (requestId: string, message: string, type: 'camera' | 'return') => {
     try {
       const endpoint = type === 'camera' ? '/api/camera-requests' : '/api/return-requests'
@@ -819,6 +1142,7 @@ export default function AdminPage() {
     }
   }
 
+  // Função para atualizar status de solicitação
   const updateRequestStatus = async (requestId: string, status: string, type: 'camera' | 'return') => {
     try {
       const endpoint = type === 'camera' ? '/api/camera-requests' : '/api/return-requests'
@@ -836,7 +1160,7 @@ export default function AdminPage() {
     }
   }
 
-  // Funções de promoções
+  // Função para buscar produtos
   const searchProducts = async (query: string) => {
     try {
       console.log('🔍 Buscando produtos para promoção:', query)
@@ -857,6 +1181,7 @@ export default function AdminPage() {
     }
   }
 
+  // Função para enviar formulário de promoção
   const handlePromotionSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -976,6 +1301,7 @@ export default function AdminPage() {
     }
   }
 
+  // Função para deletar promoção
   const deletePromotion = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir esta promoção?')) return
     
@@ -993,6 +1319,7 @@ export default function AdminPage() {
     }
   }
 
+  // Função para editar promoção
   const editPromotion = (promotion: any) => {
     setEditingPromotion(promotion)
     setPromotionForm({
@@ -1011,7 +1338,7 @@ export default function AdminPage() {
     setShowPromotionModal(true)
   }
 
-  // Funções de produtos
+  // Função para enviar formulário de produto
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -1079,6 +1406,7 @@ export default function AdminPage() {
     }
   }
 
+  // Função para editar produto
   const editProduct = (product: any) => {
     setEditingProduct(product)
     setProductForm({
@@ -1092,6 +1420,7 @@ export default function AdminPage() {
     setShowProductModal(true)
   }
 
+  // Função para atualizar status de feedback
   const updateFeedbackStatus = async (feedbackId: string, status: string) => {
     try {
       const response = await fetch(`/api/feedback/${feedbackId}`, {
@@ -1108,6 +1437,7 @@ export default function AdminPage() {
     }
   }
 
+  // Função para atualizar status de pedido
   const updateOrderStatus = async (orderId: string, status: string) => {
     try {
       const response = await fetch(`/api/orders/${orderId}`, {
@@ -1124,7 +1454,7 @@ export default function AdminPage() {
     }
   }
 
-  // Funções de upload de imagens
+  // Função para carregar imagens do site
   const loadSiteImages = async () => {
     try {
       // Carregar imagens das categorias
@@ -1149,6 +1479,7 @@ export default function AdminPage() {
     }
   }
 
+  // Função para atualizar imagem de categoria
   const updateCategoryImage = async (category: string, newImageUrl: string) => {
     try {
       const updatedImages = { ...categoryImages, [category]: newImageUrl }
@@ -1172,6 +1503,7 @@ export default function AdminPage() {
     }
   }
 
+  // Função para atualizar banners
   const updateBanners = async (newBanners: any) => {
     try {
       const response = await fetch('/api/banners', {
@@ -1192,6 +1524,7 @@ export default function AdminPage() {
     }
   }
 
+  // Função para fazer upload de imagem
   const uploadImage = async (file: File) => {
     try {
       setUploadingImage(true)
@@ -1219,6 +1552,7 @@ export default function AdminPage() {
     }
   }
 
+  // Função para adicionar banner promocional
   const addPromotionalBanner = () => {
     const newBanner = {
       id: Date.now(),
@@ -1237,6 +1571,7 @@ export default function AdminPage() {
     updateBanners(newBanners)
   }
 
+  // Função para remover banner promocional
   const removePromotionalBanner = (bannerId: number) => {
     const newBanners = {
       ...banners,
@@ -1246,37 +1581,7 @@ export default function AdminPage() {
     updateBanners(newBanners)
   }
 
-  // Funções do histórico de sincronização
-  const loadSyncHistory = async () => {
-    try {
-      const response = await fetch('/api/sync-history')
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success) {
-          setSyncHistory(data.history)
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao carregar histórico:', error)
-    }
-  }
-
-  const saveSyncToHistory = async (syncData: any) => {
-    try {
-      await fetch('/api/sync-history', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(syncData)
-      })
-      // Recarregar histórico
-      loadSyncHistory()
-    } catch (error) {
-      console.error('Erro ao salvar histórico:', error)
-    }
-  }
-
-
-
+  // Função para deletar usuário
   const deleteUser = async (userId: string) => {
     if (confirm('Tem certeza que deseja excluir este usuário?')) {
       try {
@@ -1293,11 +1598,29 @@ export default function AdminPage() {
     }
   }
 
+  // Função para criar usuário
   const createUser = async () => {
     if (!userForm.name.trim() || !userForm.email.trim()) {
       alert('Nome e e-mail são obrigatórios')
       return
     }
+
+    // Validação de senha
+    if (!userForm.password.trim()) {
+      alert('Senha é obrigatória')
+      return
+    }
+
+    if (userForm.password !== userForm.confirmPassword) {
+      alert('As senhas não coincidem')
+      return
+    }
+
+    if (userForm.password.length < 6) {
+      alert('A senha deve ter pelo menos 6 caracteres')
+      return
+    }
+
     try {
       setIsSubmittingUser(true)
       const res = await fetch('/api/users', {
@@ -1306,7 +1629,10 @@ export default function AdminPage() {
         body: JSON.stringify({
           name: userForm.name.trim(),
           email: userForm.email.trim(),
-          role: userForm.role
+          role: userForm.role,
+          phone: userForm.phone.trim(),
+          password: userForm.password,
+          address: userForm.address
         })
       })
       if (!res.ok) {
@@ -1314,7 +1640,23 @@ export default function AdminPage() {
         throw new Error(`Erro ao criar usuário: ${res.status} ${txt}`)
       }
       setShowUserModal(false)
-      setUserForm({ name: '', email: '', role: 'user', phone: '' })
+      setUserForm({ 
+        name: '', 
+        email: '', 
+        role: 'user', 
+        phone: '',
+        password: '',
+        confirmPassword: '',
+        address: {
+          street: '',
+          number: '',
+          complement: '',
+          neighborhood: '',
+          city: 'Fortaleza',
+          state: 'Ceará',
+          zipCode: ''
+        }
+      })
       await loadData()
       setActiveTab('users')
     } catch (e) {
@@ -1325,47 +1667,125 @@ export default function AdminPage() {
     }
   }
 
+  // Função para atualizar usuário
+  const updateUser = async () => {
+    if (!userForm.name.trim() || !userForm.email.trim()) {
+      alert('Nome e e-mail são obrigatórios')
+      return
+    }
+
+    // Validação de senha (apenas se foi informada)
+    if (userForm.password && userForm.password !== userForm.confirmPassword) {
+      alert('As senhas não coincidem')
+      return
+    }
+
+    if (userForm.password && userForm.password.length < 6) {
+      alert('A senha deve ter pelo menos 6 caracteres')
+      return
+    }
+
+    try {
+      setIsSubmittingUser(true)
+      const updateData: any = {
+        name: userForm.name.trim(),
+        email: userForm.email.trim(),
+        role: userForm.role,
+        phone: userForm.phone.trim(),
+        address: userForm.address
+      }
+
+      // Apenas incluir senha se foi informada
+      if (userForm.password.trim()) {
+        updateData.password = userForm.password
+      }
+
+      const res = await fetch(`/api/users/${editingUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData)
+      })
+      if (!res.ok) {
+        const txt = await res.text()
+        throw new Error(`Erro ao atualizar usuário: ${res.status} ${txt}`)
+      }
+      setShowUserModal(false)
+      setEditingUser(null)
+      setUserForm({ 
+        name: '', 
+        email: '', 
+        role: 'user', 
+        phone: '',
+        password: '',
+        confirmPassword: '',
+        address: {
+          street: '',
+          number: '',
+          complement: '',
+          neighborhood: '',
+          city: 'Fortaleza',
+          state: 'Ceará',
+          zipCode: ''
+        }
+      })
+      await loadData()
+      setActiveTab('users')
+    } catch (e) {
+      console.error(e)
+      alert('Falha ao atualizar usuário')
+    } finally {
+      setIsSubmittingUser(false)
+    }
+  }
+
+  // Função para exportar dados
   const exportData = async (
     type: 'products' | 'orders' | 'users' | 'feedback' | 'camera-requests' | 'returns' | 'promotions'
   ) => {
     try {
-      // Usar geradores padronizados para manter alinhamento
-      if (type === 'products') {
-        const selected = onlySoldLast2Months ? getProductsSoldInLast2Months() : products
-        const doc = await generateProductsPDF(selected)
-        doc.save(`products-${new Date().toISOString().split('T')[0]}.pdf`)
-        return
+      // Export as JSON for now - PDF functions can be implemented later
+      let data: any = []
+      let filename = ''
+      
+      switch (type) {
+        case 'products':
+          data = onlySoldLast2Months ? getProductsSoldInLast2Months() : products
+          filename = `products-${new Date().toISOString().split('T')[0]}.json`
+          break
+        case 'orders':
+          data = orders
+          filename = `orders-${new Date().toISOString().split('T')[0]}.json`
+          break
+        case 'users':
+          data = users
+          filename = `users-${new Date().toISOString().split('T')[0]}.json`
+          break
+        case 'feedback':
+          data = feedbacks
+          filename = `feedback-${new Date().toISOString().split('T')[0]}.json`
+          break
+        case 'camera-requests':
+          data = cameraRequests
+          filename = `camera-requests-${new Date().toISOString().split('T')[0]}.json`
+          break
+        case 'returns':
+          data = returnRequests
+          filename = `returns-${new Date().toISOString().split('T')[0]}.json`
+          break
+        case 'promotions':
+          data = promotions
+          filename = `promotions-${new Date().toISOString().split('T')[0]}.json`
+          break
       }
-      if (type === 'orders') {
-        const doc = await generateOrdersPDF(orders)
-        doc.save(`orders-${new Date().toISOString().split('T')[0]}.pdf`)
-        return
-      }
-      if (type === 'users') {
-        const doc = await generateUsersPDF(users)
-        doc.save(`users-${new Date().toISOString().split('T')[0]}.pdf`)
-        return
-      }
-      if (type === 'feedback') {
-        const doc = await generateFeedbackPDF(feedbacks)
-        doc.save(`feedback-${new Date().toISOString().split('T')[0]}.pdf`)
-        return
-      }
-      if (type === 'camera-requests') {
-        const doc = await generateCameraRequestsPDF(cameraRequests)
-        doc.save(`camera-requests-${new Date().toISOString().split('T')[0]}.pdf`)
-        return
-      }
-      if (type === 'returns') {
-        const doc = await generateReturnsPDF(returnRequests)
-        doc.save(`returns-${new Date().toISOString().split('T')[0]}.pdf`)
-        return
-      }
-      if (type === 'promotions') {
-        const doc = await generatePromotionsPDF(promotions)
-        doc.save(`promotions-${new Date().toISOString().split('T')[0]}.pdf`)
-        return
-      }
+      
+      // Download as JSON
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      a.click()
+      URL.revokeObjectURL(url)
 
     } catch (error) {
   console.error('Erro ao exportar dados:', error)
@@ -1438,6 +1858,7 @@ export default function AdminPage() {
     return result
   }
 
+  // Função para fazer logout
   const handleLogout = async () => {
     // Limpar localStorage manualmente
     if (typeof window !== 'undefined') {
@@ -1448,9 +1869,133 @@ export default function AdminPage() {
     await signOut({ callbackUrl: '/' })
   }
 
+  // Carregar dados iniciais
+  useEffect(() => {
+    const initializeAdmin = async () => {
+      try {
+        await loadData()
+        loadSyncHistory() // Carregar histórico de sincronização
+      } catch (error) {
+        console.error('Erro na inicialização:', error)
+      } finally {
+        // Garantir que o loading sempre pare
+        setIsMainLoading(false)
+        setIsDataLoading(false)
+      }
+    }
+    
+    initializeAdmin()
+    
+    // Timeout de segurança para parar loading em 10 segundos
+    const safetyTimeout = setTimeout(() => {
+      console.log('⏰ Timeout de segurança: parando loading forçadamente')
+      setIsMainLoading(false)
+      setIsDataLoading(false)
+    }, 10000)
+    
+    return () => clearTimeout(safetyTimeout)
+  }, [])
+
+  // AutoSync
+  useEffect(() => {
+    if (autoSync) {
+      // Executar sincronização imediatamente quando ativar
+      startVarejoFacilSync()
+      
+      // Configurar sincronização automática a cada hora
+      const interval = setInterval(() => {
+        console.log('🔄 Executando sincronização automática...')
+        startVarejoFacilSync()
+      }, 4 * 60 * 60 * 1000) // 4 horas (reduzir uso de recursos)
+      
+      return () => clearInterval(interval)
+    }
+  }, [autoSync])
+
+  // Carregar imagens salvas
+  useEffect(() => {
+    loadSiteImages()
+  }, [])
+
+  // Polling contínuo para notificações de novas mensagens
+  useEffect(() => {
+    const notificationInterval = setInterval(() => {
+      // Sempre verifica por novas mensagens para mostrar notificações
+      loadChatData()
+    }, 2000) // A cada 2 segundos verifica novas mensagens
+
+    return () => clearInterval(notificationInterval)
+  }, []) // Executa sempre, independente de qualquer estado
+
+  // Polling para atualizar chat em tempo real
+  useEffect(() => {
+    let pollingInterval: NodeJS.Timeout | null = null
+
+    if (activeTab === 'camera-requests' || activeTab === 'returns') {
+      console.log('🔄 [Admin] Iniciando polling do chat - Tab:', activeTab)
+      pollingInterval = setInterval(() => {
+        console.log('🔄 [Admin] Atualizando dados do chat...')
+        // Para chat, carregar apenas dados específicos sem throttle
+        loadChatData()
+      }, 500) // Atualiza a cada 500ms para ser mais responsivo
+    }
+
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval)
+        console.log('🔄 [Admin] Parando polling do chat')
+      }
+    }
+  }, [activeTab]) // Removendo selectedChat da dependência
+
+  // Função específica para carregar dados do chat sem throttle
+  const loadChatData = async () => {
+    try {
+      if (activeTab === 'camera-requests') {
+        const cameraRes = await fetch('/api/camera-requests', { headers: { 'x-admin': 'true' } })
+        if (cameraRes.ok) {
+          const cameraData = await safeJsonParse(cameraRes)
+          setCameraRequests(Array.isArray(cameraData?.data) ? cameraData.data : [])
+        }
+      } else if (activeTab === 'returns') {
+        const returnsRes = await fetch('/api/return-requests', { headers: { 'x-admin': 'true' } })
+        if (returnsRes.ok) {
+          const returnsData = await safeJsonParse(returnsRes)
+          setReturnRequests(Array.isArray(returnsData?.data) ? returnsData.data : [])
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados do chat:', error)
+    }
+  }
+
+  // Renderização condicional para loading
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Verificação de permissões
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Acesso Negado</h1>
+          <p className="text-gray-600">Você precisa ser um administrador para acessar esta página.</p>
+        </div>
+      </div>
+    )
+  }
+
   // Fallback seguro para stats
   const safeStats = stats || { totalUsers: 0, totalProducts: 0, totalOrders: 0, totalRevenue: 0, pendingCameraRequests: 0, pendingFeedback: 0, pendingReturns: 0 }
-
+  
   if (isMainLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -1467,27 +2012,67 @@ export default function AdminPage() {
     console.warn('stats está indefinido, usando fallback')
   }
 
+  // Renderização do componente
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">Painel Administrativo</h1>
+      {/* Header Moderno Aprimorado */}
+      <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-orange-500 shadow-xl relative overflow-hidden">
+        {/* Efeito de fundo */}
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-orange-400"></div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="flex justify-between items-center py-5">
+            <div className="flex items-center space-x-6">
+              {/* Logo com animação */}
+              <div className="flex-shrink-0 transform hover:scale-105 transition-transform duration-200">
+                <img 
+                  src="https://i.ibb.co/TBGDxS4M/guanabara-1.png" 
+                  alt="Atacadão Guanabara" 
+                  className="h-14 w-auto drop-shadow-lg"
+                />
+              </div>
+              
+              {/* Título e navegação aprimorados */}
+              <div className="flex items-center space-x-8">
+                <div>
+                  <h1 className="text-3xl font-bold text-white drop-shadow-md">Painel Administrativo</h1>
+                  <p className="text-blue-100 text-sm mt-1">Gestão Completa do Sistema</p>
+                </div>
+                <div className="h-12 w-px bg-white/30"></div>
+                <button 
+                  onClick={() => window.location.href = '/'}
+                  className="group flex items-center gap-3 px-6 py-3 bg-white/15 text-white rounded-xl hover:bg-white/25 transition-all duration-300 backdrop-blur-sm border border-white/20 shadow-lg hover:shadow-xl"
+                >
+                  <svg className="h-5 w-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                  </svg>
+                  <span className="font-medium">Voltar ao Catálogo</span>
+                  <svg className="h-4 w-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <button className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                <Bell className="h-4 w-4 mr-2" />
-                Notificações
-              </button>
-              <button className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Sair
-              </button>
+            
+            {/* Controles do usuário aprimorados */}
+            <div className="flex items-center space-x-6">
+              {/* User info aprimorado */}
+              <div className="flex items-center space-x-4 text-white">
+                <div className="text-right">
+                  <div className="text-sm font-semibold">{user?.name || 'Admin'}</div>
+                  <div className="text-xs text-blue-100 opacity-90">{user?.email}</div>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-gradient-to-r from-white/20 to-white/30 flex items-center justify-center shadow-lg backdrop-blur-sm border border-white/20">
+                  <Users className="h-6 w-6 text-white" />
+                </div>
+              </div>
             </div>
           </div>
         </div>
+        
+        {/* Linha decorativa */}
+        <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 to-blue-400 opacity-60"></div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -1497,41 +2082,41 @@ export default function AdminPage() {
             <nav className="space-y-2">
               <button
                 onClick={() => setActiveTab('dashboard')}
-                className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
-                  activeTab === 'dashboard' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                className={`w-full flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+                  activeTab === 'dashboard' ? 'bg-gradient-to-r from-blue-600 to-orange-500 text-white shadow-md' : 'text-gray-600 hover:text-gray-900 hover:bg-gradient-to-r hover:from-blue-50 hover:to-orange-50'
                 }`}
               >
-                <BarChart3 className="h-4 w-4 mr-3" />
+                <BarChart3 className="h-5 w-5 mr-3" />
                 Dashboard
               </button>
               
               <button
                 onClick={() => setActiveTab('analytics')}
-                className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
-                  activeTab === 'analytics' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                className={`w-full flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+                  activeTab === 'analytics' ? 'bg-gradient-to-r from-blue-600 to-orange-500 text-white shadow-md' : 'text-gray-600 hover:text-gray-900 hover:bg-gradient-to-r hover:from-blue-50 hover:to-orange-50'
                 }`}
               >
-                <PieChart className="h-4 w-4 mr-3" />
+                <PieChart className="h-5 w-5 mr-3" />
                 Analytics
               </button>
               
               <button
                 onClick={() => setActiveTab('products')}
-                className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
-                  activeTab === 'products' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                className={`w-full flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+                  activeTab === 'products' ? 'bg-gradient-to-r from-blue-600 to-orange-500 text-white shadow-md' : 'text-gray-600 hover:text-gray-900 hover:bg-gradient-to-r hover:from-blue-50 hover:to-orange-50'
                 }`}
               >
-                <Package className="h-4 w-4 mr-3" />
+                <Package className="h-5 w-5 mr-3" />
                 Produtos
               </button>
               
               <button
                 onClick={() => setActiveTab('orders')}
-                className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
-                  activeTab === 'orders' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                className={`w-full flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+                  activeTab === 'orders' ? 'bg-gradient-to-r from-blue-600 to-orange-500 text-white shadow-md' : 'text-gray-600 hover:text-gray-900 hover:bg-gradient-to-r hover:from-blue-50 hover:to-orange-50'
                 }`}
               >
-                <ShoppingCart className="h-4 w-4 mr-3" />
+                <ShoppingCart className="h-5 w-5 mr-3" />
                 Pedidos
               </button>
               
@@ -1595,25 +2180,7 @@ export default function AdminPage() {
                 Promoções
               </button>
               
-              <button
-                onClick={() => setActiveTab('site-images')}
-                className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
-                  activeTab === 'site-images' ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <ImageIcon className="h-4 w-4 mr-3" />
-                Imagens do Site
-              </button>
-              
-              <button
-                onClick={() => setActiveTab('settings')}
-                className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
-                  activeTab === 'settings' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <Settings className="h-4 w-4 mr-3" />
-                Configurações
-              </button>
+             
             </nav>
           </div>
 
@@ -1623,43 +2190,55 @@ export default function AdminPage() {
             {activeTab === 'dashboard' && (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div className="bg-white rounded-lg shadow-sm p-6">
+                  <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Total de Usuários</p>
                         <p className="text-2xl font-bold text-gray-900">{safeStats.totalUsers}</p>
+                        <p className="text-xs text-blue-600 mt-1">+12% vs mês anterior</p>
                       </div>
-                      <Users className="h-8 w-8 text-blue-600" />
+                      <div className="p-3 bg-gradient-to-r from-blue-100 to-blue-200 rounded-lg">
+                        <Users className="h-6 w-6 text-blue-600" />
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="bg-white rounded-lg shadow-sm p-6">
+                  <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Total de Produtos</p>
                         <p className="text-2xl font-bold text-gray-900">{safeStats.totalProducts}</p>
+                        <p className="text-xs text-orange-600 mt-1">+8% vs mês anterior</p>
                       </div>
-                      <Package className="h-8 w-8 text-green-600" />
+                      <div className="p-3 bg-gradient-to-r from-orange-100 to-orange-200 rounded-lg">
+                        <Package className="h-6 w-6 text-orange-500" />
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="bg-white rounded-lg shadow-sm p-6">
+                  <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Total de Pedidos</p>
                         <p className="text-2xl font-bold text-gray-900">{safeStats.totalOrders}</p>
+                        <p className="text-xs text-blue-600 mt-1">+15% vs mês anterior</p>
                       </div>
-                      <ShoppingCart className="h-8 w-8 text-orange-600" />
+                      <div className="p-3 bg-gradient-to-r from-blue-100 to-orange-100 rounded-lg">
+                        <ShoppingCart className="h-6 w-6 text-orange-600" />
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="bg-white rounded-lg shadow-sm p-6">
+                  <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Receita Total</p>
                         <p className="text-2xl font-bold text-gray-900">R$ {safeStats.totalRevenue.toFixed(2)}</p>
+                        <p className="text-xs text-green-600 mt-1">+22% vs mês anterior</p>
                       </div>
-                      <DollarSign className="h-8 w-8 text-green-600" />
+                      <div className="p-3 bg-gradient-to-r from-green-100 to-green-200 rounded-lg">
+                        <DollarSign className="h-6 w-6 text-green-600" />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1818,9 +2397,413 @@ export default function AdminPage() {
               </div>
             )}
 
+            {/* Produtos */}
+            {activeTab === 'products' && (
+              <div className="space-y-6">
+                {/* Header da seção */}
+                <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div>
+                      <h2 className="text-3xl font-bold mb-2">Mais Vendidos</h2>
+                      <p className="text-blue-100">Gerencie os produtos mais populares da sua loja</p>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="bg-white/20 rounded-lg px-3 py-2">
+                        <span className="font-medium">{filteredProductsAdmin.length}</span> produtos encontrados
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filtros e Pesquisa Aprimorados */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                  <div className="bg-gradient-to-r from-blue-50 to-orange-50 px-6 py-4 border-b border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                      <Search className="h-5 w-5 text-blue-600" />
+                      Pesquisa e Filtros
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">Encontre produtos rapidamente usando filtros avançados</p>
+                  </div>
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {/* Barra de Pesquisa Aprimorada */}
+                      <div className="relative col-span-1 md:col-span-2 xl:col-span-2">
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            {isSearching ? (
+                              <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                            ) : (
+                              <Search className="h-5 w-5 text-gray-400" />
+                            )}
+                          </div>
+                          <input
+                            type="text"
+                            value={searchTermAdmin}
+                            onChange={e => setSearchTermAdmin(e.target.value)}
+                            placeholder="🔍 Pesquisar produto por nome ou #código..."
+                            className="w-full pl-12 pr-12 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all duration-200 hover:border-blue-300 shadow-sm"
+                          />
+                          {searchTermAdmin && (
+                            <button
+                              onClick={() => setSearchTermAdmin('')}
+                              className="absolute inset-y-0 right-0 pr-4 flex items-center group"
+                            >
+                              <div className="p-1 rounded-full group-hover:bg-gray-200 transition-colors">
+                                <svg className="h-4 w-4 text-gray-400 group-hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </div>
+                            </button>
+                          )}
+                        </div>
+                        {isSearching && (
+                          <div className="absolute inset-y-0 right-8 flex items-center pr-2">
+                            <div className="text-xs text-blue-500 font-medium">Buscando...</div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Seletor de Categoria */}
+                      <div className="relative">
+                        <select
+                          value={selectedCategoryAdmin}
+                          onChange={e => setSelectedCategoryAdmin(e.target.value)}
+                          className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-4 py-3 pr-8 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-gray-400"
+                        >
+                          {categoriesAdmin.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Filtros ativos */}
+                    {(searchTermAdmin || selectedCategoryAdmin !== "Todos") && (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <span className="text-sm text-gray-600 font-medium">Filtros ativos:</span>
+                        {searchTermAdmin && (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            Busca: "{searchTermAdmin}"
+                            <button 
+                              onClick={() => setSearchTermAdmin('')}
+                              className="ml-1 hover:text-blue-600"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        )}
+                        {selectedCategoryAdmin !== "Todos" && (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Categoria: {selectedCategoryAdmin}
+                            <button 
+                              onClick={() => setSelectedCategoryAdmin("Todos")}
+                              className="ml-1 hover:text-green-600"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        )}
+                        <button
+                          onClick={() => {
+                            setSearchTermAdmin('')
+                            setSelectedCategoryAdmin("Todos")
+                          }}
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                        >
+                          Limpar todos
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Tabela de Produtos */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                          <tr>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                              <div className="flex items-center gap-2">
+                                <ImageIcon className="h-4 w-4" />
+                                Produto
+                              </div>
+                            </th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                              <div className="flex items-center gap-2">
+                                <Tag className="h-4 w-4" />
+                                Categoria
+                              </div>
+                            </th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                              <div className="flex items-center gap-2">
+                                <DollarSign className="h-4 w-4" />
+                                Preço
+                              </div>
+                            </th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                              <div className="flex items-center gap-2">
+                                <Package className="h-4 w-4" />
+                                Status
+                              </div>
+                            </th>
+                            <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                              <div className="flex items-center justify-center gap-2">
+                                <Settings className="h-4 w-4" />
+                                Ações
+                              </div>
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-100">
+                          {filteredProductsAdmin
+                            .slice((currentPageAdmin - 1) * productsPerPageAdmin, currentPageAdmin * productsPerPageAdmin)
+                            .map((prod, index) => (
+                            <tr key={prod.id} className="hover:bg-gray-50 transition-colors duration-150">
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-4">
+                                  <div className="flex-shrink-0">
+                                    {prod.image ? (
+                                      <img 
+                                        src={prod.image} 
+                                        alt={prod.name} 
+                                        className="h-12 w-12 rounded-lg object-cover border-2 border-gray-200 shadow-sm" 
+                                      />
+                                    ) : (
+                                      <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                                        <ImageIcon className="h-6 w-6 text-gray-500" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-semibold text-gray-900 truncate">{prod.name}</p>
+                                    <p className="text-xs text-gray-500">ID: #{prod.id}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {prod.category}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="text-sm font-bold text-green-700">
+                                  R$ {prod.price?.toFixed(2)}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                {prod.inStock ? (
+                                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                    Em estoque
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                    Sem estoque
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 text-center">
+                                <button 
+                                  onClick={() => editProduct(prod)}
+                                  className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 hover:text-blue-800 transition-all duration-200 border border-blue-200"
+                                  title="Editar produto"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                  Editar
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      
+                      {/* Estado vazio */}
+                      {filteredProductsAdmin.length === 0 && (
+                        <div className="text-center py-16">
+                          <div className="mx-auto h-24 w-24 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                            <Package className="h-12 w-12 text-gray-400" />
+                          </div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum produto encontrado</h3>
+                          <p className="text-gray-500 mb-6">
+                            {searchTermAdmin || selectedCategoryAdmin !== "Todos" 
+                              ? "Tente ajustar seus filtros para encontrar produtos." 
+                              : "Não há produtos cadastrados ainda."}
+                          </p>
+                          {(searchTermAdmin || selectedCategoryAdmin !== "Todos") && (
+                            <button
+                              onClick={() => {
+                                setSearchTermAdmin('')
+                                setSelectedCategoryAdmin("Todos")
+                              }}
+                              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                              Limpar filtros
+                            </button>
+                          )}
+                        </div>
+                      )}
+                  </div>
+                      
+                  {/* Componente de Paginação Melhorado */}
+                  {filteredProductsAdmin.length > 0 && (
+                    <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div className="flex items-center text-sm text-gray-700">
+                          <span className="font-medium">
+                            Mostrando <span className="text-blue-600">{((currentPageAdmin - 1) * productsPerPageAdmin) + 1}</span> até{' '}
+                            <span className="text-blue-600">{Math.min(currentPageAdmin * productsPerPageAdmin, filteredProductsAdmin.length)}</span> de{' '}
+                            <span className="text-blue-600">{filteredProductsAdmin.length}</span> produtos
+                            </span>
+                        </div>
+                          
+                        <div className="flex items-center justify-center sm:justify-end">
+                          <nav className="flex items-center space-x-1" aria-label="Paginação">
+                            <button
+                              onClick={() => setCurrentPageAdmin(currentPageAdmin - 1)}
+                              disabled={currentPageAdmin === 1}
+                              className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                                currentPageAdmin === 1
+                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 shadow-sm'
+                              }`}
+                            >
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                              </svg>
+                              <span className="hidden sm:inline">Anterior</span>
+                            </button>
+                            
+                            {/* Números das páginas */}
+                            {(() => {
+                              const totalPages = Math.ceil(filteredProductsAdmin.length / productsPerPageAdmin);
+                              const pages = [];
+                              const maxVisiblePages = 5;
+                              
+                              let startPage = Math.max(1, currentPageAdmin - Math.floor(maxVisiblePages / 2));
+                              let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+                              
+                              if (endPage - startPage + 1 < maxVisiblePages) {
+                                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                              }
+                              
+                              // Primeira página
+                              if (startPage > 1) {
+                                pages.push(
+                                  <button
+                                    key={1}
+                                    onClick={() => setCurrentPageAdmin(1)}
+                                    className="inline-flex items-center justify-center w-10 h-10 text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 rounded-lg transition-all duration-200 shadow-sm"
+                                  >
+                                    1
+                                  </button>
+                                );
+                                if (startPage > 2) {
+                                  pages.push(
+                                    <span key="start-dots" className="flex items-center justify-center w-10 h-10 text-sm text-gray-500">
+                                      ⋯
+                                    </span>
+                                  );
+                                }
+                              }
+                              
+                              // Páginas visíveis
+                              for (let i = startPage; i <= endPage; i++) {
+                                pages.push(
+                                  <button
+                                    key={i}
+                                    onClick={() => setCurrentPageAdmin(i)}
+                                    className={`inline-flex items-center justify-center w-10 h-10 text-sm font-medium rounded-lg transition-all duration-200 shadow-sm ${
+                                      i === currentPageAdmin
+                                        ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
+                                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300'
+                                    }`}
+                                  >
+                                    {i}
+                                  </button>
+                                );
+                              }
+                              
+                              // Última página
+                              if (endPage < totalPages) {
+                                if (endPage < totalPages - 1) {
+                                  pages.push(
+                                    <span key="end-dots" className="flex items-center justify-center w-10 h-10 text-sm text-gray-500">
+                                      ⋯
+                                    </span>
+                                  );
+                                }
+                                pages.push(
+                                  <button
+                                    key={totalPages}
+                                    onClick={() => setCurrentPageAdmin(totalPages)}
+                                    className="inline-flex items-center justify-center w-10 h-10 text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 rounded-lg transition-all duration-200 shadow-sm"
+                                  >
+                                    {totalPages}
+                                  </button>
+                                );
+                              }
+                              
+                              return pages;
+                            })()}
+                            
+                            <button
+                              onClick={() => setCurrentPageAdmin(currentPageAdmin + 1)}
+                              disabled={currentPageAdmin >= Math.ceil(filteredProductsAdmin.length / productsPerPageAdmin)}
+                              className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                                currentPageAdmin >= Math.ceil(filteredProductsAdmin.length / productsPerPageAdmin)
+                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 shadow-sm'
+                              }`}
+                            >
+                              <span className="hidden sm:inline">Próxima</span>
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </button>
+                          </nav>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+           
+
+          
+
             {/* Analytics */}
             {activeTab === 'analytics' && (
-              <AnalyticsDashboard />
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-gray-900">📊 Analytics do Site</h2>
+                  <Link href="/admin/analytics">
+                    <button className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 transition-all duration-200 flex items-center gap-2">
+                      <BarChart3 className="w-4 h-4" />
+                      Ver Analytics Completo
+                    </button>
+                  </Link>
+                </div>
+                
+
+              </div>
+            )}
+
+            {/* Bairros/Frete */}
+            {activeTab === 'bairros-frete' && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold text-gray-900">Bairros e Frete</h2>
+                <AdminBairrosFrete />
+              </div>
             )}
 
             {/* Varejo Fácil */}
@@ -1851,6 +2834,33 @@ export default function AdminPage() {
                     >
                       <RefreshCw className={`h-4 w-4 mr-2 inline ${syncProgress.status === 'running' ? 'animate-spin' : ''}`} />
                       {syncProgress.status === 'running' ? 'Sincronizando...' : 'Sincronizar Agora'}
+                    </button>
+                    
+                    <button 
+                      onClick={async () => {
+                        try {
+                          const response = await fetch('/api/sync', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'reset-state' })
+                          })
+                          const data = await response.json()
+                          if (data.success) {
+                            setSyncProgress({
+                              status: 'idle',
+                              current: 0,
+                              total: 0,
+                              message: '🔄 Estado resetado - pode sincronizar novamente'
+                            })
+                          }
+                        } catch (error) {
+                          console.error('Erro ao resetar estado:', error)
+                        }
+                      }}
+                      className="px-3 py-2 bg-orange-600 text-white rounded-md text-sm font-medium hover:bg-orange-700 transition-all duration-200"
+                    >
+                      <RotateCcw className="h-4 w-4 mr-1 inline" />
+                      Reset
                     </button>
                   </div>
                 </div>
@@ -1985,57 +2995,82 @@ export default function AdminPage() {
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-900">{syncProgress.message}</p>
                         {syncProgress.status === 'running' && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            Sincronizando produtos do Varejo Fácil em lotes de 300...
-                          </p>
+                          <div className="mt-1">
+                            <p className="text-xs text-gray-500">
+                              Sistema anti-timeout ativo - Sincronização rodando em background
+                            </p>
+                            <p className="text-xs text-blue-600 font-medium mt-1">
+                              ✨ Sem erro 504! O processo continua mesmo se você fechar esta aba
+                            </p>
+                          </div>
                         )}
                       </div>
                     </div>
                     
                     {syncProgress.status === 'running' && (
-                      <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
                         <div 
                           className="bg-blue-600 h-3 rounded-full transition-all duration-500 ease-out"
                           style={{ 
-                            width: syncProgress.total > 0 
-                              ? `${(syncProgress.current / syncProgress.total) * 100}%` 
-                              : '20%' 
+                            width: `${syncProgress.current || 0}%`
                           }}
                         />
                       </div>
                     )}
                     
                     {syncProgress.status === 'completed' && (
-                      <div className="bg-green-50 border border-green-200 rounded-md p-3">
-                        <div className="flex items-center">
+                      <div className="bg-green-50 border border-green-200 rounded-md p-4">
+                        <div className="flex items-center mb-2">
                           <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
                           <div>
                             <p className="text-sm font-medium text-green-800">
-                              Teste da API concluído com sucesso!
+                              Sincronização concluída com sucesso!
                             </p>
                             <p className="text-xs text-green-600 mt-1">
-                              {syncProgress.current} produtos disponíveis na API do Varejo Fácil
+                              {syncProgress.message}
                             </p>
                           </div>
                         </div>
+                        
+                        {/* Logs de output */}
+                        {syncProgress.output && (
+                          <details className="mt-3">
+                            <summary className="cursor-pointer text-xs font-medium text-green-700 mb-2">
+                              📋 Ver logs da sincronização
+                            </summary>
+                            <div className="bg-gray-900 text-green-400 p-3 rounded text-xs font-mono max-h-40 overflow-y-auto">
+                              <pre>{syncProgress.output}</pre>
+                            </div>
+                          </details>
+                        )}
                       </div>
                     )}
                     
                     {syncProgress.status === 'error' && (
-                      <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                        <div className="flex items-center">
+                      <div className="bg-red-50 border border-red-200 rounded-md p-4">
+                        <div className="flex items-center mb-2">
                           <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
                           <div>
                             <p className="text-sm font-medium text-red-800">
-                              Erro no teste da API
+                              Erro na sincronização
                             </p>
-                            {syncProgress.error && (
-                              <p className="text-xs text-red-600 mt-1">
-                                {syncProgress.error}
-                              </p>
-                            )}
+                            <p className="text-xs text-red-600 mt-1">
+                              {syncProgress.message}
+                            </p>
                           </div>
                         </div>
+
+                        {/* Logs de erro */}
+                        {syncProgress.error && (
+                          <details className="mt-3">
+                            <summary className="cursor-pointer text-xs font-medium text-red-700 mb-2">
+                              🔍 Ver detalhes do erro
+                            </summary>
+                            <div className="bg-gray-900 text-red-400 p-3 rounded text-xs font-mono max-h-40 overflow-y-auto">
+                              <pre>{syncProgress.error}</pre>
+                            </div>
+                          </details>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2171,21 +3206,185 @@ export default function AdminPage() {
                                 {new Date(feedback.createdAt).toLocaleDateString('pt-BR')}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <select 
-                                  value={feedback.status}
-                                  onChange={(e) => updateFeedbackStatus(feedback.id, e.target.value)}
-                                  className="px-2 py-1 border border-gray-300 rounded text-xs"
-                                >
-                                  <option value="pending">Pendente</option>
-                                  <option value="reviewed">Revisado</option>
-                                  <option value="resolved">Resolvido</option>
-                                </select>
+                                <div className="flex space-x-2">
+                                  <button 
+                                    onClick={() => {
+                                      setViewingFeedback(feedback)
+                                      setShowFeedbackDetailsModal(true)
+                                    }}
+                                    className="text-blue-600 hover:text-blue-900"
+                                    title="Ver detalhes"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </button>
+                                  <select 
+                                    value={feedback.status}
+                                    onChange={(e) => updateFeedbackStatus(feedback.id, e.target.value)}
+                                    className="px-2 py-1 border border-gray-300 rounded text-xs"
+                                  >
+                                    <option value="pending">Pendente</option>
+                                    <option value="reviewed">Revisado</option>
+                                    <option value="resolved">Resolvido</option>
+                                  </select>
+                                </div>
                               </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Modal: Detalhes do Feedback */}
+            {showFeedbackDetailsModal && viewingFeedback && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <div className="p-6 border-b flex items-center justify-between">
+                    <h3 className="text-xl font-semibold">Detalhes do Feedback</h3>
+                    <button 
+                      className="text-gray-500 hover:text-gray-700" 
+                      onClick={() => {
+                        setShowFeedbackDetailsModal(false)
+                        setViewingFeedback(null)
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="p-6 space-y-6">
+                    {/* Informações do cliente */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                        <div className="p-3 bg-gray-50 rounded-md text-sm">{viewingFeedback.name}</div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+                        <div className="p-3 bg-gray-50 rounded-md text-sm">{viewingFeedback.email}</div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Data do Feedback</label>
+                        <div className="p-3 bg-gray-50 rounded-md text-sm">
+                          {new Date(viewingFeedback.createdAt).toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        <div className="p-3">
+                          <select 
+                            value={viewingFeedback.status}
+                            onChange={(e) => {
+                              updateFeedbackStatus(viewingFeedback.id, e.target.value)
+                              setViewingFeedback({...viewingFeedback, status: e.target.value})
+                            }}
+                            className={`px-3 py-1 text-sm font-semibold rounded-full border ${
+                              viewingFeedback.status === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                              viewingFeedback.status === 'reviewed' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                              'bg-green-100 text-green-800 border-green-200'
+                            }`}
+                          >
+                            <option value="pending">Pendente</option>
+                            <option value="reviewed">Revisado</option>
+                            <option value="resolved">Resolvido</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Avaliação */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Avaliação</label>
+                      <div className="flex items-center space-x-2">
+                        <div className="flex items-center">
+                          {[...Array(5)].map((_, i) => (
+                            <Star 
+                              key={i} 
+                              className={`h-6 w-6 ${i < viewingFeedback.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} 
+                            />
+                          ))}
+                        </div>
+                        <span className="text-sm text-gray-600">
+                          ({viewingFeedback.rating}/5 estrelas)
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Mensagem */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Mensagem</label>
+                      <div className="p-4 bg-gray-50 rounded-lg border">
+                        <p className="text-sm whitespace-pre-wrap">{viewingFeedback.message}</p>
+                      </div>
+                    </div>
+
+                    {/* Categoria do feedback se existir */}
+                    {viewingFeedback.category && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                        <div className="p-3 bg-gray-50 rounded-md text-sm">
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                            {viewingFeedback.category}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ID do usuário se existir */}
+                    {viewingFeedback.userId && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">ID do Usuário</label>
+                        <div className="p-3 bg-gray-50 rounded-md text-sm font-mono">{viewingFeedback.userId}</div>
+                      </div>
+                    )}
+
+                    {/* Pedidos relacionados se existir */}
+                    {viewingFeedback.userId && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Pedidos do Cliente</label>
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {orders
+                            .filter(order => order.userId === viewingFeedback.userId)
+                            .slice(0, 3)
+                            .map((order) => (
+                              <div key={order.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                                <div>
+                                  <div className="text-sm font-medium">Pedido #{order.id}</div>
+                                  <div className="text-xs text-gray-500">
+                                    {new Date(order.createdAt).toLocaleDateString('pt-BR')}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-sm font-medium">R$ {order.total?.toFixed(2)}</div>
+                                  <div className="text-xs text-gray-500">{order.status}</div>
+                                </div>
+                              </div>
+                            ))}
+                          {orders.filter(order => order.userId === viewingFeedback.userId).length === 0 && (
+                            <div className="text-center text-gray-500 py-2 text-sm">Nenhum pedido encontrado</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-6 border-t flex justify-end">
+                    <button 
+                      className="px-4 py-2 rounded-md text-sm border border-gray-300"
+                      onClick={() => {
+                        setShowFeedbackDetailsModal(false)
+                        setViewingFeedback(null)
+                      }}
+                    >
+                      Fechar
+                    </button>
                   </div>
                 </div>
               </div>
@@ -2203,64 +3402,160 @@ export default function AdminPage() {
                     Exportar PDF
                   </button>
                 </div>
-                
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Lista de solicitações */}
-                  <div className="lg:col-span-1">
-                    <div className="bg-white rounded-lg shadow-sm">
-                      <div className="p-4 border-b border-gray-200">
-                        <h3 className="text-lg font-semibold">Solicitações</h3>
-                      </div>
-                      <div className="max-h-96 overflow-y-auto">
-                        {(cameraRequests || []).map((request) => (
-                          <div 
-                            key={request.id}
-                            onClick={() => setSelectedChat(request.id)}
-                            className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
-                              selectedChat === request.id ? 'bg-blue-50 border-blue-200' : ''
-                            }`}
-                          >
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-medium text-gray-900">{request.name}</p>
-                                <p className="text-sm text-gray-500">{request.phone}</p>
-                                <p className="text-xs text-gray-400 mt-1">
-                                  {new Date(request.createdAt).toLocaleDateString('pt-BR')}
-                                </p>
-                              </div>
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                request.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                                'bg-green-100 text-green-800'
-                              }`}>
-                                {request.status === 'pending' ? 'Pendente' :
-                                 request.status === 'processing' ? 'Processando' : 'Concluído'}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-600 mt-2 truncate">{request.cause}</p>
-                          </div>
-                        ))}
-                      </div>
+
+                {/* Sub-tabs para Camera Requests */}
+                <div className="border-b border-gray-200">
+                  <nav className="-mb-px flex space-x-8">
+                    <button
+                      onClick={() => setCameraSubTab('list')}
+                      className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                        cameraSubTab === 'list'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      Lista de Solicitações
+                    </button>
+                    <button
+                      onClick={() => setCameraSubTab('details')}
+                      className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                        cameraSubTab === 'details'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      Detalhes & Chat
+                    </button>
+                  </nav>
+                </div>
+
+                {/* Conteúdo das abas */}
+                {cameraSubTab === 'list' ? (
+                  /* Lista de Solicitações */
+                  <div className="bg-white rounded-lg shadow-sm">
+                    <div className="p-4 border-b border-gray-200">
+                      <h3 className="text-lg font-semibold">Todas as Solicitações</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Solicitante</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Telefone</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Motivo</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {(cameraRequests || []).map((request) => (
+                            <tr key={request.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm font-medium text-gray-900">{request.name}</div>
+                                <div className="text-sm text-gray-500">ID: {request.id}</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.phone}</td>
+                              <td className="px-6 py-4">
+                                <div className="text-sm text-gray-900 max-w-xs truncate" title={request.cause}>
+                                  {request.cause}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {new Date(request.createdAt).toLocaleDateString('pt-BR')}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  request.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                                  'bg-green-100 text-green-800'
+                                }`}>
+                                  {request.status === 'pending' ? 'Pendente' :
+                                   request.status === 'processing' ? 'Processando' : 'Concluído'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button
+                                  onClick={() => {
+                                    setSelectedChat(request.id)
+                                    setCameraSubTab('details')
+                                  }}
+                                  className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                  Ver Detalhes
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
-
-                  {/* Chat */}
-                  <div className="lg:col-span-2">
-                    {selectedChat ? (
-                      <ChatInterface
-                        requestId={selectedChat}
-                        requestType="camera"
-                        requestName={cameraRequests.find(r => r.id === selectedChat)?.name || ''}
-                        requestStatus={cameraRequests.find(r => r.id === selectedChat)?.status || 'pending'}
-                        onStatusChange={(status) => updateRequestStatus(selectedChat, status, 'camera')}
-                      />
-                    ) : (
-                      <div className="bg-white rounded-lg shadow-sm h-96 flex items-center justify-center">
-                        <p className="text-gray-500">Selecione uma solicitação para ver o chat</p>
+                ) : (
+                  /* Detalhes & Chat */
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Lista de solicitações */}
+                    <div className="lg:col-span-1">
+                      <div className="bg-white rounded-lg shadow-sm">
+                        <div className="p-4 border-b border-gray-200">
+                          <h3 className="text-lg font-semibold">Solicitações</h3>
+                        </div>
+                        <div className="max-h-96 overflow-y-auto">
+                          {(cameraRequests || []).map((request) => (
+                            <div 
+                              key={request.id}
+                              onClick={() => setSelectedChat(request.id)}
+                              className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
+                                selectedChat === request.id ? 'bg-blue-50 border-blue-200' : ''
+                              }`}
+                            >
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className="font-medium text-gray-900">{request.name}</p>
+                                  <p className="text-sm text-gray-500">{request.phone}</p>
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    {new Date(request.createdAt).toLocaleDateString('pt-BR')}
+                                  </p>
+                                </div>
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  request.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                                  'bg-green-100 text-green-800'
+                                }`}>
+                                  {request.status === 'pending' ? 'Pendente' :
+                                   request.status === 'processing' ? 'Processando' : 'Concluído'}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-600 mt-2 truncate">{request.cause}</p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    )}
+                    </div>
+
+                    {/* Chat */}
+                    <div className="lg:col-span-2">
+                      {selectedChat ? (
+                        <ChatInterface 
+                          requestId={selectedChat} 
+                          requestType="camera" 
+                          requestName={cameraRequests.find(r => r.id === selectedChat)?.cause || "Solicitação de câmera"}
+                          requestStatus={cameraRequests.find(r => r.id === selectedChat)?.status || "pending"}
+                          onStatusChange={(status: string) => {
+                            setCameraRequests(prev => prev.map(req => 
+                              req.id === selectedChat ? { ...req, status: status as "completed" | "pending" | "processing" } : req
+                            ))
+                          }}
+                        />
+                      ) : (
+                        <div className="bg-white rounded-lg shadow-sm h-96 flex items-center justify-center">
+                          <p className="text-gray-500">Selecione uma solicitação para ver o chat</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -2276,236 +3571,91 @@ export default function AdminPage() {
                     Exportar PDF
                   </button>
                 </div>
-                
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Lista de solicitações */}
-                  <div className="lg:col-span-1">
-                    <div className="bg-white rounded-lg shadow-sm">
-                      <div className="p-4 border-b border-gray-200">
-                        <h3 className="text-lg font-semibold">Solicitações</h3>
-                      </div>
-                      <div className="max-h-96 overflow-y-auto">
-                        {(returnRequests || []).map((request) => (
-                          <div 
-                            key={request.id}
-                            onClick={() => setSelectedChat(request.id)}
-                            className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
-                              selectedChat === request.id ? 'bg-blue-50 border-blue-200' : ''
-                            }`}
-                          >
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-medium text-gray-900">{request.userName}</p>
-                                <p className="text-sm text-gray-500">Pedido: {request.orderId}</p>
-                                <p className="text-xs text-gray-400 mt-1">
-                                  {new Date(request.createdAt).toLocaleDateString('pt-BR')}
-                                </p>
-                              </div>
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                request.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                request.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                'bg-blue-100 text-blue-800'
-                              }`}>
-                                {request.status === 'pending' ? 'Pendente' :
-                                 request.status === 'approved' ? 'Aprovado' :
-                                 request.status === 'rejected' ? 'Rejeitado' : 'Concluído'}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-600 mt-2 truncate">{request.reason}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Chat */}
-                  <div className="lg:col-span-2">
-                    {selectedChat ? (
-                      <ChatInterface
-                        requestId={selectedChat}
-                        requestType="return"
-                        requestName={returnRequests.find(r => r.id === selectedChat)?.userName || ''}
-                        requestStatus={returnRequests.find(r => r.id === selectedChat)?.status || 'pending'}
-                        onStatusChange={(status) => updateRequestStatus(selectedChat, status, 'return')}
-                      />
-                    ) : (
-                      <div className="bg-white rounded-lg shadow-sm h-96 flex items-center justify-center">
-                        <p className="text-gray-500">Selecione uma solicitação para ver o chat</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Produtos */}
-            {activeTab === 'products' && (
-              <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-2xl font-bold text-gray-900">Produtos</h2>
-                  <div className="flex space-x-3">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="🔍 Buscar em TODOS os produtos (nome, marca, categoria, descrição)..."
-                        value={productSearchTerm}
-                        onChange={(e) => {
-                          setProductSearchTerm(e.target.value)
-                          setCurrentPage(1) // Resetar para primeira página ao buscar
-                        }}
-                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                    <button 
-                      onClick={() => exportData('products')}
-                      className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700"
+                {/* Sub-tabs para Returns */}
+                <div className="border-b border-gray-200">
+                  <nav className="-mb-px flex space-x-8">
+                    <button
+                      onClick={() => setReturnSubTab('list')}
+                      className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                        returnSubTab === 'list'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
                     >
-                      <TrendingUp className="h-4 w-4 mr-2 inline" />
-                      Exportar
+                      Lista de Solicitações
                     </button>
                     <button
-                      onClick={() => setOnlySoldLast2Months((v) => !v)}
-                      className={`px-4 py-2 rounded-md text-sm font-medium ${onlySoldLast2Months ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                      title="Filtrar produtos vendidos nos últimos 2 meses"
+                      onClick={() => setReturnSubTab('details')}
+                      className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                        returnSubTab === 'details'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
                     >
-                      {onlySoldLast2Months ? 'Vendidos 2 meses: ON' : 'Vendidos 2 meses: OFF'}
+                      Detalhes & Chat
                     </button>
-                    <button
-                      onClick={() => {
-                        const prev = onlySoldLast2Months
-                        if (!prev) setOnlySoldLast2Months(true)
-                        exportData('products')
-                      }}
-                      className="px-4 py-2 bg-purple-600 text-white rounded-md text-sm font-medium hover:bg-purple-700"
-                    >
-                      Exportar (Vendidos 2m)
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setEditingProduct(null)
-                        setProductForm({
-                          name: '',
-                          price: '',
-                          category: '',
-                          description: '',
-                          image: '',
-                          inStock: true
-                        })
-                        setShowProductModal(true)
-                      }}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
-                    >
-                      <Plus className="h-4 w-4 mr-2 inline" />
-                      Adicionar Produto
-                    </button>
-                  </div>
+                  </nav>
                 </div>
 
-                <div className="bg-white rounded-lg shadow-sm">
-                  <div className="p-6">
+                {/* Conteúdo das abas */}
+                {returnSubTab === 'list' ? (
+                  /* Lista de Solicitações */
+                  <div className="bg-white rounded-lg shadow-sm">
+                    <div className="p-4 border-b border-gray-200">
+                      <h3 className="text-lg font-semibold">Todas as Solicitações</h3>
+                    </div>
                     <div className="overflow-x-auto">
                       <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                           <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Produto
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Categoria
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Preço
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Estoque
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Ações
-                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pedido</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Motivo</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {(onlySoldLast2Months ? getProductsSoldInLast2Months() : products)
-                            .filter(product => {
-                              if (!productSearchTerm) return true
-                              
-                              // Função para normalizar texto (remover acentos)
-                              const normalizeText = (text) => {
-                                return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-                              }
-                              
-                              const searchTerm = normalizeText(productSearchTerm)
-                              const searchWords = searchTerm.split(/\s+/).filter(word => word.length > 1)
-                              
-                              const name = normalizeText(product.name || '')
-                              const category = normalizeText(product.category || '')
-                              const description = normalizeText((product as any).description || '')
-                              const brand = normalizeText((product as any).brand || '')
-                              const tags = normalizeText(((product as any).tags || []).join(' '))
-                              
-                              // Busca por correspondência exata
-                              if (name.includes(searchTerm) || 
-                                  category.includes(searchTerm) ||
-                                  description.includes(searchTerm) ||
-                                  brand.includes(searchTerm) ||
-                                  tags.includes(searchTerm)) {
-                                return true
-                              }
-                              
-                              // Busca por palavras individuais
-                              return searchWords.some(word => 
-                                name.includes(word) || 
-                                category.includes(word) ||
-                                description.includes(word) ||
-                                brand.includes(word) ||
-                                tags.includes(word)
-                              )
-                            })
-                            .slice((currentPage - 1) * productsPerPage, currentPage * productsPerPage)
-                            .map((product) => (
-                            <tr key={product.id}>
+                          {(returnRequests || []).map((request) => (
+                            <tr key={request.id} className="hover:bg-gray-50">
                               <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center">
-                                  {('image' in product) && (product as any).image && (
-                                    <img 
-                                      className="h-10 w-10 rounded-full object-cover mr-3" 
-                                      src={(product as any).image} 
-                                      alt={product.name} 
-                                    />
-                                  )}
-                                  <div>
-                                    <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                                    {('description' in product) && (product as any).description && (
-                                      <div className="text-sm text-gray-500">{(product as any).description}</div>
-                                    )}
-                                  </div>
+                                <div className="text-sm font-medium text-gray-900">{request.userName}</div>
+                                <div className="text-sm text-gray-500">ID: {request.id}</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.orderId}</td>
+                              <td className="px-6 py-4">
+                                <div className="text-sm text-gray-900 max-w-xs truncate" title={request.reason}>
+                                  {request.reason}
                                 </div>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {product.category}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                R$ {product.price.toFixed(2)}
+                                {new Date(request.createdAt).toLocaleDateString('pt-BR')}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                  product.inStock ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                  request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                  request.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                  'bg-blue-100 text-blue-800'
                                 }`}>
-                                  {product.inStock ? 'Em estoque' : 'Sem estoque'}
+                                  {request.status === 'pending' ? 'Pendente' :
+                                   request.status === 'approved' ? 'Aprovado' :
+                                   request.status === 'rejected' ? 'Rejeitado' : 'Concluído'}
                                 </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <div className="flex space-x-2">
-                                  <button 
-                                    onClick={() => editProduct(product)}
-                                    className="text-indigo-600 hover:text-indigo-900"
-                                    title="Editar"
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </button>
-                                </div>
+                                <button
+                                  onClick={() => {
+                                    setSelectedChat(request.id)
+                                    setReturnSubTab('details')
+                                  }}
+                                  className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                  Ver Detalhes
+                                </button>
                               </td>
                             </tr>
                           ))}
@@ -2513,9 +3663,76 @@ export default function AdminPage() {
                       </table>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  /* Detalhes & Chat */
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Lista de solicitações */}
+                    <div className="lg:col-span-1">
+                      <div className="bg-white rounded-lg shadow-sm">
+                        <div className="p-4 border-b border-gray-200">
+                          <h3 className="text-lg font-semibold">Solicitações</h3>
+                        </div>
+                        <div className="max-h-96 overflow-y-auto">
+                          {(returnRequests || []).map((request) => (
+                            <div 
+                              key={request.id}
+                              onClick={() => setSelectedChat(request.id)}
+                              className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
+                                selectedChat === request.id ? 'bg-blue-50 border-blue-200' : ''
+                              }`}
+                            >
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className="font-medium text-gray-900">{request.userName}</p>
+                                  <p className="text-sm text-gray-500">Pedido: {request.orderId}</p>
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    {new Date(request.createdAt).toLocaleDateString('pt-BR')}
+                                  </p>
+                                </div>
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                  request.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                  'bg-blue-100 text-blue-800'
+                                }`}>
+                                  {request.status === 'pending' ? 'Pendente' :
+                                   request.status === 'approved' ? 'Aprovado' :
+                                   request.status === 'rejected' ? 'Rejeitado' : 'Concluído'}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-600 mt-2 truncate">{request.reason}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Chat */}
+                    <div className="lg:col-span-2">
+                      {selectedChat ? (
+                        <ChatInterface 
+                          requestId={selectedChat} 
+                          requestType="return" 
+                          requestName={returnRequests.find(r => r.id === selectedChat)?.reason || "Solicitação de devolução"}
+                          requestStatus={returnRequests.find(r => r.id === selectedChat)?.status || "pending"}
+                          onStatusChange={(status: string) => {
+                            setReturnRequests(prev => prev.map(req => 
+                              req.id === selectedChat ? { ...req, status: status as "completed" | "pending" | "approved" | "rejected" } : req
+                            ))
+                          }}
+                        />
+                      ) : (
+                        <div className="bg-white rounded-lg shadow-sm h-96 flex items-center justify-center">
+                          <p className="text-gray-500">Selecione uma solicitação para ver o chat</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
+
+            {/* Produtos */}
 
             {/* Pedidos */}
             {activeTab === 'orders' && (
@@ -2630,7 +3847,14 @@ export default function AdminPage() {
                                 {new Date(order.createdAt).toLocaleDateString('pt-BR')}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <button className="text-blue-600 hover:text-blue-900">
+                                <button 
+                                  onClick={() => {
+                                    setViewingOrder(order)
+                                    setShowOrderDetailsModal(true)
+                                  }}
+                                  className="text-blue-600 hover:text-blue-900"
+                                  title="Ver detalhes"
+                                >
                                   <Eye className="h-4 w-4" />
                                 </button>
                               </td>
@@ -2639,6 +3863,225 @@ export default function AdminPage() {
                         </tbody>
                       </table>
                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Modal: Detalhes do Pedido */}
+            {showOrderDetailsModal && viewingOrder && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                  <div className="p-6 border-b flex items-center justify-between">
+                    <h3 className="text-xl font-semibold">Detalhes do Pedido #{viewingOrder.id}</h3>
+                    <button 
+                      className="text-gray-500 hover:text-gray-700" 
+                      onClick={() => {
+                        setShowOrderDetailsModal(false)
+                        setViewingOrder(null)
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="p-6 space-y-6">
+                    {/* Informações do cliente */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="text-lg font-medium mb-3">Informações do Cliente</h4>
+                        <div className="space-y-2">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">Nome</label>
+                            <div className="p-2 bg-gray-50 rounded text-sm">
+                              {viewingOrder.customerInfo?.name || viewingOrder.userName || 'Não informado'}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">E-mail</label>
+                            <div className="p-2 bg-gray-50 rounded text-sm">
+                              {viewingOrder.customerInfo?.email || 'Não informado'}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">Telefone</label>
+                            <div className="p-2 bg-gray-50 rounded text-sm">
+                              {viewingOrder.customerInfo?.phone || 'Não informado'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h4 className="text-lg font-medium mb-3">Informações do Pedido</h4>
+                        <div className="space-y-2">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">Status</label>
+                            <div className="p-2">
+                              <select 
+                                value={viewingOrder.status}
+                                onChange={(e) => {
+                                  updateOrderStatus(viewingOrder.id, e.target.value)
+                                  setViewingOrder({...viewingOrder, status: e.target.value})
+                                }}
+                                className={`px-3 py-1 text-sm font-semibold rounded-full border ${
+                                  viewingOrder.status === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                                  viewingOrder.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                                  viewingOrder.status === 'preparing' ? 'bg-orange-100 text-orange-800 border-orange-200' :
+                                  viewingOrder.status === 'delivering' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                                  viewingOrder.status === 'delivered' ? 'bg-green-100 text-green-800 border-green-200' :
+                                  'bg-red-100 text-red-800 border-red-200'
+                                }`}
+                              >
+                                <option value="pending">Pendente</option>
+                                <option value="confirmed">Confirmado</option>
+                                <option value="preparing">Preparando</option>
+                                <option value="delivering">Entregando</option>
+                                <option value="delivered">Entregue</option>
+                                <option value="cancelled">Cancelado</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">Data do Pedido</label>
+                            <div className="p-2 bg-gray-50 rounded text-sm">
+                              {new Date(viewingOrder.createdAt).toLocaleDateString('pt-BR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">Total</label>
+                            <div className="p-2 bg-gray-50 rounded text-sm font-medium">
+                              R$ {viewingOrder.total?.toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Endereço de entrega */}
+                    {(viewingOrder.address || viewingOrder.customerInfo?.address) && (
+                      <div>
+                        <h4 className="text-lg font-medium mb-3">Endereço de Entrega</h4>
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                          {(() => {
+                            // Verificar se o endereço está na raiz ou em customerInfo.address
+                            const address = viewingOrder.address || viewingOrder.customerInfo?.address;
+                            
+                            if (!address || typeof address === 'string') {
+                              return <div className="text-sm text-gray-500">Endereço não disponível</div>;
+                            }
+                            
+                            return (
+                              <div className="text-sm">
+                                {address.street && address.number ? (
+                                  <>
+                                    {address.street}, {address.number}
+                                    {address.complement && `, ${address.complement}`}
+                                    <br />
+                                    {address.neighborhood && `${address.neighborhood}, `}
+                                    {address.city} - {address.state}
+                                    <br />
+                                    {address.zipCode && `CEP: ${address.zipCode}`}
+                                    {address.reference && (
+                                      <>
+                                        <br />
+                                        <span className="text-gray-600">Referência: {address.reference}</span>
+                                      </>
+                                    )}
+                                  </>
+                                ) : (
+                                  <span className="text-gray-500">Endereço incompleto</span>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Itens do pedido */}
+                    <div>
+                      <h4 className="text-lg font-medium mb-3">Itens do Pedido</h4>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Produto</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Preço Unit.</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Qtd</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {viewingOrder.items.map((item: any, index: number) => {
+                              // Verificar se o item tem a estrutura de CartItem (item.product) ou estrutura direta
+                              const product = item.product || item; // Fallback para estrutura direta
+                              const quantity = item.quantity || 1;
+                              const price = product.price || 0;
+                              
+                              return (
+                                <tr key={index}>
+                                  <td className="px-4 py-2">
+                                    <div className="flex items-center">
+                                      {product.image && (
+                                        <img 
+                                          src={product.image} 
+                                          alt={product.name || 'Produto'}
+                                          className="h-12 w-12 rounded object-cover mr-3"
+                                        />
+                                      )}
+                                      <div>
+                                        <div className="text-sm font-medium text-gray-900">
+                                          {product.name || 'Produto não identificado'}
+                                        </div>
+                                        {product.category && (
+                                          <div className="text-xs text-gray-500">{product.category}</div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-2 text-sm text-gray-900">
+                                    R$ {price.toFixed(2)}
+                                  </td>
+                                  <td className="px-4 py-2 text-sm text-gray-900">
+                                    {quantity}
+                                  </td>
+                                  <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                                    R$ {(price * quantity).toFixed(2)}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Observações */}
+                    {viewingOrder.observations && (
+                      <div>
+                        <h4 className="text-lg font-medium mb-3">Observações</h4>
+                        <div className="p-4 bg-gray-50 rounded-lg text-sm">
+                          {viewingOrder.observations}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-6 border-t flex justify-end">
+                    <button 
+                      className="px-4 py-2 rounded-md text-sm border border-gray-300"
+                      onClick={() => {
+                        setShowOrderDetailsModal(false)
+                        setViewingOrder(null)
+                      }}
+                    >
+                      Fechar
+                    </button>
                   </div>
                 </div>
               </div>
@@ -2668,7 +4111,27 @@ export default function AdminPage() {
                       Exportar
                     </button>
                     <button 
-                      onClick={() => setShowUserModal(true)}
+                      onClick={() => {
+                        setEditingUser(null)
+                        setUserForm({ 
+                          name: '', 
+                          email: '', 
+                          role: 'user', 
+                          phone: '',
+                          password: '',
+                          confirmPassword: '',
+                          address: {
+                            street: '',
+                            number: '',
+                            complement: '',
+                            neighborhood: '',
+                            city: 'Fortaleza',
+                            state: 'Ceará',
+                            zipCode: ''
+                          }
+                        })
+                        setShowUserModal(true)
+                      }}
                       className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
                     >
                       <Plus className="h-4 w-4 mr-2 inline" />
@@ -2731,15 +4194,47 @@ export default function AdminPage() {
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <div className="flex space-x-2">
-                                  <button className="text-blue-600 hover:text-blue-900">
+                                  <button 
+                                    onClick={() => {
+                                      setViewingUser(user)
+                                      setShowUserDetailsModal(true)
+                                    }}
+                                    className="text-blue-600 hover:text-blue-900"
+                                    title="Ver detalhes"
+                                  >
                                     <Eye className="h-4 w-4" />
                                   </button>
-                                  <button className="text-indigo-600 hover:text-indigo-900">
+                                  <button 
+                                    onClick={() => {
+                                      setEditingUser(user)
+                                      setUserForm({
+                                        name: user.name,
+                                        email: user.email,
+                                        role: user.role as 'user' | 'manager' | 'admin',
+                                        phone: user.phone || '',
+                                        password: '',
+                                        confirmPassword: '',
+                                        address: user.address || {
+                                          street: '',
+                                          number: '',
+                                          complement: '',
+                                          neighborhood: '',
+                                          city: '',
+                                          state: '',
+                                          zipCode: ''
+                                        }
+                                      })
+                                      setShowUserModal(true)
+                                    }}
+                                    className="text-indigo-600 hover:text-indigo-900"
+                                    title="Editar"
+                                  >
                                     <Edit className="h-4 w-4" />
                                   </button>
                                   <button 
                                     onClick={() => deleteUser(user.id)}
                                     className="text-red-600 hover:text-red-900"
+                                    title="Excluir"
                                   >
                                     <Trash className="h-4 w-4" />
                                   </button>
@@ -2758,58 +4253,400 @@ export default function AdminPage() {
             {/* Modal: Adicionar Usuário */}
             {showUserModal && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+                <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
                   <div className="p-4 border-b flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Novo Usuário</h3>
-                    <button className="text-gray-500 hover:text-gray-700" onClick={() => setShowUserModal(false)}>×</button>
+                    <h3 className="text-lg font-semibold">{editingUser ? 'Editar Usuário' : 'Novo Usuário'}</h3>
+                    <button className="text-gray-500 hover:text-gray-700" onClick={() => {
+                      setShowUserModal(false)
+                      setEditingUser(null)
+                    }}>×</button>
                   </div>
-                  <div className="p-4 space-y-3">
+                  <div className="p-6 space-y-6">
+                    {/* Informações básicas */}
                     <div>
-                      <label className="block text-sm text-gray-600 mb-1">Nome</label>
-                      <input 
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                        value={userForm.name}
-                        onChange={(e) => setUserForm(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="Nome completo"
-                      />
+                      <h4 className="text-lg font-medium mb-4">Informações Básicas</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm text-gray-600 mb-1">Nome</label>
+                          <input 
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                            value={userForm.name}
+                            onChange={(e) => setUserForm(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="Nome completo"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-600 mb-1">E-mail</label>
+                          <input 
+                            type="email"
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                            value={userForm.email}
+                            onChange={(e) => setUserForm(prev => ({ ...prev, email: e.target.value }))}
+                            placeholder="email@exemplo.com"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-600 mb-1">Telefone</label>
+                          <input 
+                            type="tel"
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                            value={userForm.phone}
+                            onChange={(e) => setUserForm(prev => ({ ...prev, phone: e.target.value }))}
+                            placeholder="(11) 99999-9999"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-600 mb-1">Função</label>
+                          <select 
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                            value={userForm.role}
+                            onChange={(e) => setUserForm(prev => ({ ...prev, role: e.target.value as any }))}
+                          >
+                            <option value="user">Cliente</option>
+                            <option value="manager">Gerente</option>
+                            <option value="admin">Administrador</option>
+                          </select>
+                        </div>
+                      </div>
                     </div>
+
+                    {/* Senha */}
+                    {!editingUser && (
+                      <div>
+                        <h4 className="text-lg font-medium mb-4">Senha</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm text-gray-600 mb-1">Senha</label>
+                            <input 
+                              type="password"
+                              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                              value={userForm.password}
+                              onChange={(e) => setUserForm(prev => ({ ...prev, password: e.target.value }))}
+                              placeholder="Digite a senha"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm text-gray-600 mb-1">Confirmar Senha</label>
+                            <input 
+                              type="password"
+                              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                              value={userForm.confirmPassword}
+                              onChange={(e) => setUserForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                              placeholder="Confirme a senha"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Endereço */}
                     <div>
-                      <label className="block text-sm text-gray-600 mb-1">E-mail</label>
-                      <input 
-                        type="email"
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                        value={userForm.email}
-                        onChange={(e) => setUserForm(prev => ({ ...prev, email: e.target.value }))}
-                        placeholder="email@exemplo.com"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-600 mb-1">Função</label>
-                      <select 
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                        value={userForm.role}
-                        onChange={(e) => setUserForm(prev => ({ ...prev, role: e.target.value as any }))}
-                      >
-                        <option value="user">Cliente</option>
-                        <option value="manager">Gerente</option>
-                        <option value="admin">Administrador</option>
-                      </select>
+                      <h4 className="text-lg font-medium mb-4">Endereço</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm text-gray-600 mb-1">CEP</label>
+                          <input 
+                            type="text"
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                            value={userForm.address.zipCode}
+                            onChange={(e) => setUserForm(prev => ({ 
+                              ...prev, 
+                              address: { ...prev.address, zipCode: e.target.value }
+                            }))}
+                            placeholder="00000-000"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-600 mb-1">Rua</label>
+                          <input 
+                            type="text"
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                            value={userForm.address.street}
+                            onChange={(e) => setUserForm(prev => ({ 
+                              ...prev, 
+                              address: { ...prev.address, street: e.target.value }
+                            }))}
+                            placeholder="Nome da rua"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-600 mb-1">Número</label>
+                          <input 
+                            type="text"
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                            value={userForm.address.number}
+                            onChange={(e) => setUserForm(prev => ({ 
+                              ...prev, 
+                              address: { ...prev.address, number: e.target.value }
+                            }))}
+                            placeholder="123"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-600 mb-1">Complemento</label>
+                          <input 
+                            type="text"
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                            value={userForm.address.complement}
+                            onChange={(e) => setUserForm(prev => ({ 
+                              ...prev, 
+                              address: { ...prev.address, complement: e.target.value }
+                            }))}
+                            placeholder="Apto, Bloco, etc."
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-600 mb-1">Bairro</label>
+                          <select 
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                            value={userForm.address.neighborhood}
+                            onChange={(e) => setUserForm(prev => ({ 
+                              ...prev, 
+                              address: { ...prev.address, neighborhood: e.target.value }
+                            }))}
+                          >
+                            <option value="">Selecione o bairro</option>
+                            {bairrosFortaleza.map(bairro => (
+                              <option key={bairro} value={bairro}>{bairro}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-600 mb-1">Cidade</label>
+                          <input 
+                            type="text"
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-gray-100"
+                            value="Fortaleza"
+                            readOnly
+                            placeholder="Fortaleza"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-600 mb-1">Estado</label>
+                          <input 
+                            type="text"
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-gray-100"
+                            value="Ceará"
+                            readOnly
+                            placeholder="Ceará"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div className="p-4 border-t flex justify-end gap-2">
                     <button 
                       className="px-4 py-2 rounded-md text-sm border border-gray-300"
-                      onClick={() => setShowUserModal(false)}
+                      onClick={() => {
+                        setShowUserModal(false)
+                        setEditingUser(null)
+                      }}
                       disabled={isSubmittingUser}
                     >
                       Cancelar
                     </button>
                     <button 
                       className="px-4 py-2 rounded-md text-sm bg-blue-600 text-white disabled:opacity-50"
-                      onClick={createUser}
+                      onClick={editingUser ? updateUser : createUser}
                       disabled={isSubmittingUser}
                     >
-                      {isSubmittingUser ? 'Salvando...' : 'Salvar'}
+                      {isSubmittingUser ? 'Salvando...' : editingUser ? 'Atualizar' : 'Salvar'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Modal: Detalhes do Usuário */}
+            {showUserDetailsModal && viewingUser && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <div className="p-6 border-b flex items-center justify-between">
+                    <h3 className="text-xl font-semibold">Detalhes do Usuário</h3>
+                    <button 
+                      className="text-gray-500 hover:text-gray-700" 
+                      onClick={() => {
+                        setShowUserDetailsModal(false)
+                        setViewingUser(null)
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="p-6 space-y-6">
+                    {/* Informações básicas */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                        <div className="p-3 bg-gray-50 rounded-md text-sm">{viewingUser.name}</div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+                        <div className="p-3 bg-gray-50 rounded-md text-sm">{viewingUser.email}</div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
+                        <div className="p-3 bg-gray-50 rounded-md text-sm">{viewingUser.phone || 'Não informado'}</div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Função</label>
+                        <div className="p-3 bg-gray-50 rounded-md text-sm">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            viewingUser.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                            viewingUser.role === 'manager' ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {viewingUser.role === 'admin' ? 'Administrador' :
+                             viewingUser.role === 'manager' ? 'Gerente' : 'Cliente'}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Data de Cadastro</label>
+                        <div className="p-3 bg-gray-50 rounded-md text-sm">
+                          {new Date(viewingUser.createdAt).toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit', 
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">ID do Usuário</label>
+                        <div className="p-3 bg-gray-50 rounded-md text-sm font-mono">{viewingUser.id}</div>
+                      </div>
+                    </div>
+
+                    {/* Endereço */}
+                    {viewingUser.address && (
+                      <div className="border-t pt-6">
+                        <h4 className="text-lg font-medium mb-4">Endereço</h4>
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <div className="text-sm">
+                            {viewingUser.address.street}, {viewingUser.address.number}
+                            {viewingUser.address.complement && `, ${viewingUser.address.complement}`}
+                            <br />
+                            {viewingUser.address.neighborhood}, {viewingUser.address.city} - {viewingUser.address.state}
+                            <br />
+                            CEP: {viewingUser.address.zipCode}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Estatísticas do usuário */}
+                    <div className="border-t pt-6">
+                      <h4 className="text-lg font-medium mb-4">Estatísticas</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-blue-50 p-4 rounded-lg">
+                          <div className="text-2xl font-bold text-blue-600">
+                            {orders.filter(order => 
+                              order.userId === viewingUser.id || 
+                              order.userEmail === viewingUser.email ||
+                              order.customerInfo?.email === viewingUser.email
+                            ).length}
+                          </div>
+                          <div className="text-sm text-blue-600">Pedidos realizados</div>
+                        </div>
+                        <div className="bg-green-50 p-4 rounded-lg">
+                          <div className="text-2xl font-bold text-green-600">
+                            R$ {orders
+                              .filter(order => 
+                                order.userId === viewingUser.id || 
+                                order.userEmail === viewingUser.email ||
+                                order.customerInfo?.email === viewingUser.email
+                              )
+                              .reduce((sum, order) => sum + (order.total || 0), 0)
+                              .toFixed(2)}
+                          </div>
+                          <div className="text-sm text-green-600">Total gasto</div>
+                        </div>
+                        <div className="bg-yellow-50 p-4 rounded-lg">
+                          <div className="text-2xl font-bold text-yellow-600">
+                            {feedbacks.filter(feedback => 
+                              feedback.userId === viewingUser.id || 
+                              feedback.email === viewingUser.email
+                            ).length}
+                          </div>
+                          <div className="text-sm text-yellow-600">Feedbacks enviados</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Últimos pedidos */}
+                    <div className="border-t pt-6">
+                      <h4 className="text-lg font-medium mb-4">Últimos Pedidos</h4>
+                      <div className="space-y-2">
+                        {orders
+                          .filter(order => 
+                            order.userId === viewingUser.id || 
+                            order.userEmail === viewingUser.email ||
+                            order.customerInfo?.email === viewingUser.email
+                          )
+                          .slice(0, 5)
+                          .map((order) => (
+                            <div key={order.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                              <div>
+                                <div className="font-medium">Pedido #{order.id}</div>
+                                <div className="text-sm text-gray-500">
+                                  {new Date(order.createdAt).toLocaleDateString('pt-BR')}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-medium">R$ {order.total?.toFixed(2)}</div>
+                                <div className="text-sm text-gray-500">{order.status}</div>
+                              </div>
+                            </div>
+                          ))}
+                        {orders.filter(order => 
+                          order.userId === viewingUser.id || 
+                          order.userEmail === viewingUser.email ||
+                          order.customerInfo?.email === viewingUser.email
+                        ).length === 0 && (
+                          <div className="text-center text-gray-500 py-4">Nenhum pedido encontrado</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-6 border-t flex justify-end gap-2">
+                    <button 
+                      className="px-4 py-2 rounded-md text-sm border border-gray-300"
+                      onClick={() => {
+                        setShowUserDetailsModal(false)
+                        setViewingUser(null)
+                      }}
+                    >
+                      Fechar
+                    </button>
+                    <button 
+                      className="px-4 py-2 rounded-md text-sm bg-blue-600 text-white"
+                      onClick={() => {
+                        setEditingUser(viewingUser)
+                        setUserForm({
+                          name: viewingUser.name,
+                          email: viewingUser.email,
+                          role: viewingUser.role as 'user' | 'manager' | 'admin',
+                          phone: viewingUser.phone || '',
+                          password: '',
+                          confirmPassword: '',
+                          address: {
+                            street: viewingUser.address?.street || '',
+                            number: viewingUser.address?.number || '',
+                            complement: viewingUser.address?.complement || '',
+                            neighborhood: viewingUser.address?.neighborhood || '',
+                            city: 'Fortaleza',
+                            state: 'Ceará',
+                            zipCode: viewingUser.address?.zipCode || ''
+                          }
+                        })
+                        setShowUserDetailsModal(false)
+                        setViewingUser(null)
+                        setShowUserModal(true)
+                      }}
+                    >
+                      Editar
                     </button>
                   </div>
                 </div>
@@ -3041,7 +4878,7 @@ export default function AdminPage() {
                           accept="image/*"
                           onChange={(e) => {
                             const file = e.target.files?.[0]
-                            if (file) uploadImage(file, 'hero')
+                            if (file) uploadImage(file)
                           }}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md"
                         />
@@ -3089,7 +4926,7 @@ export default function AdminPage() {
                           accept="image/*"
                           onChange={(e) => {
                             const file = e.target.files?.[0]
-                            if (file) uploadImage(file, 'banner')
+                            if (file) uploadImage(file)
                           }}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md"
                         />
@@ -4168,11 +6005,10 @@ export default function AdminPage() {
                             alt="Preview" 
                             className="h-32 w-32 object-cover rounded-lg border-2 border-blue-200 shadow-md"
                             onError={(e) => {
-                              console.log('❌ Erro ao carregar prévia da imagem')
                               (e.target as HTMLImageElement).style.display = 'none'
                             }}
                             onLoad={() => {
-                              console.log('✅ Prévia da imagem carregada com sucesso')
+                              // Imagem carregada com sucesso
                             }}
                           />
                         </div>

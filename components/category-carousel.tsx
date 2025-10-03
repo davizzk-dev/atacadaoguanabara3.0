@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { getCategoryImage } from '@/lib/category-images'
 
 interface CategoryCarouselProps {
@@ -21,6 +20,9 @@ export function CategoryCarousel({ categories, selectedCategory, onCategorySelec
 
   // Criar array infinito duplicando as categorias
   const infiniteCategories = [...categories, ...categories, ...categories, ...categories, ...categories]
+
+  // Filtrar para remover a categoria "SERVIÇOS"
+  const filteredCategories = infiniteCategories.filter(cat => cat !== "SERVIÇOS")
 
   // Auto-play do carrossel infinito
   useEffect(() => {
@@ -187,50 +189,30 @@ export function CategoryCarousel({ categories, selectedCategory, onCategorySelec
             scrollSnapType: 'x mandatory'
           }}
         >
-          {infiniteCategories.map((category, index) => {
+          {filteredCategories.map((category, index) => {
             const isSelected = selectedCategory === category
             const imageUrl = getCategoryImage(category)
-            
             return (
               <div
                 key={`${category}-${index}`}
                 onClick={() => {
                   pauseAutoPlay()
-                  onCategorySelect(category)
-                  setTimeout(resumeAutoPlay, 3000) // Retoma o auto-play após 3 segundos
+                  // Redireciona para a URL da categoria e recarrega a página
+                  window.location.href = `/catalog?category=${encodeURIComponent(category)}`
                 }}
                 className={`flex-shrink-0 cursor-pointer transition-all duration-300 transform hover:scale-105 scroll-snap-align-start ${
                   isSelected ? 'ring-2 ring-orange-500 ring-offset-2' : ''
                 }`}
+                style={{ minWidth: cardWidth, maxWidth: cardWidth }}
               >
-                <div className="relative w-40 h-40 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow flex-shrink-0 min-w-[160px] max-w-[160px] flex-shrink-0">
+                <div className="relative w-40 h-40 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow flex-shrink-0">
                   <img
                     src={imageUrl}
-                    alt={category}
+                    alt=""
                     className="w-full h-full object-cover object-center category-carousel-image"
                     loading="lazy"
                     style={{ aspectRatio: '1/1' }}
                   />
-                  <div className="absolute bottom-0 left-0 right-0 p-3">
-                    <h3 className="text-white text-sm font-semibold text-center leading-tight line-clamp-2 drop-shadow-lg">
-                      {category}
-                    </h3>
-                  </div>
-                  
-                  {/* Botão "Clique aqui" */}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 hover:opacity-100 transition-opacity duration-300">
-                    <button className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-200">
-                      Clique aqui
-                    </button>
-                  </div>
-                  
-                  {isSelected && (
-                    <div className="absolute top-2 right-2">
-                      <Badge className="bg-orange-500 text-white text-xs px-2 py-1">
-                        Ativo
-                      </Badge>
-                    </div>
-                  )}
                 </div>
               </div>
             )
@@ -266,4 +248,4 @@ export function CategoryCarousel({ categories, selectedCategory, onCategorySelec
       </div>
     </div>
   )
-} 
+}

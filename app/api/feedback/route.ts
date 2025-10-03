@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
+import { withAPIProtection } from '@/lib/auth-middleware'
 
 const dataDir = join(process.cwd(), 'data')
 const dataPath = join(dataDir, 'feedback.json')
@@ -100,7 +101,7 @@ export async function POST(request: Request) {
 }
 
 // GET - Listar feedback
-export async function GET() {
+async function handleGET() {
   try {
     console.log('[API/feedback][GET] chamada recebida')
     ensureDataFile()
@@ -119,3 +120,5 @@ export async function GET() {
     }, { status: 500 })
   }
 }
+
+export const GET = withAPIProtection(handleGET)

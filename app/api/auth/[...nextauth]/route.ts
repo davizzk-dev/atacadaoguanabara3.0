@@ -51,10 +51,14 @@ function getAuthOptions() {
   // Garante que variáveis estejam carregadas em tempo de requisição
   tryLoadDotenvIfNeeded()
 
+  const isProduction = process.env.NODE_ENV === 'production';
+  const redirectUri = isProduction
+    ? 'https://atacadaoguanabara.com/api/auth/callback/google'
+    : 'http://localhost:3005/api/auth/callback/google';
+
   return {
     providers: [
       GoogleProvider({
-        // Não lançar erro em tempo de build; validação será feita na entrada da request
         clientId: process.env.GOOGLE_CLIENT_ID || 'placeholder',
         clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'placeholder',
         authorization: {
@@ -62,6 +66,7 @@ function getAuthOptions() {
             prompt: 'consent select_account',
             access_type: 'offline',
             response_type: 'code',
+            redirect_uri: redirectUri,
           },
         },
       }),

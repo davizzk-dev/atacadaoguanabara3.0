@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
+import { hashPassword } from '@/lib/password'
 import type { Address } from '@/lib/types'
 
 const dataPath = join(process.cwd(), 'data', 'users.json')
@@ -30,6 +31,7 @@ export async function POST(request: NextRequest) {
     let body: any
     try {
       body = JSON.parse(textBody)
+      console.log('[API/auth/register][POST] body parseado:', JSON.stringify(body, null, 2))
     } catch (parseError) {
       console.error('[API/auth/register][POST] Erro ao fazer parse do JSON:', parseError)
       return NextResponse.json({
@@ -41,19 +43,54 @@ export async function POST(request: NextRequest) {
     
     const { name, email, phone, password, address } = body
 
+    console.log('[API/auth/register][POST] Campos extraídos:', {
+      name: name || 'UNDEFINED',
+      email: email || 'UNDEFINED', 
+      phone: phone || 'UNDEFINED',
+      password: password ? '[PRESENTE]' : 'UNDEFINED',
+      address: address || 'UNDEFINED'
+    })
+
     // Validações básicas
     if (!name || !email || !phone || !password) {
+      const missingFields = []
+      if (!name) missingFields.push('name')
+      if (!email) missingFields.push('email')
+      if (!phone) missingFields.push('phone')
+      if (!password) missingFields.push('password')
+      
+      console.log('[API/auth/register][POST] Campos obrigatórios faltando:', missingFields)
       return NextResponse.json({ 
         success: false,
-        error: 'Todos os campos são obrigatórios' 
+        error: `Campos obrigatórios faltando: ${missingFields.join(', ')}`,
+        missingFields
       }, { status: 400 })
     }
 
     // Validações de endereço
-    if (!address || !address.street || !address.number || !address.neighborhood || !address.city || !address.state || !address.zipCode) {
+    if (!address || typeof address !== 'object') {
+      console.log('[API/auth/register][POST] Endereço ausente ou inválido:', address)
       return NextResponse.json({ 
         success: false,
-        error: 'Todos os campos de endereço são obrigatórios' 
+        error: 'Endereço é obrigatório e deve ser um objeto válido' 
+      }, { status: 400 })
+    }
+    
+    const { street, number, neighborhood, city, state, zipCode } = address
+    if (!street || !number || !neighborhood || !city || !state || !zipCode) {
+      const missingAddressFields = []
+      if (!street) missingAddressFields.push('street')
+      if (!number) missingAddressFields.push('number')
+      if (!neighborhood) missingAddressFields.push('neighborhood')
+      if (!city) missingAddressFields.push('city')
+      if (!state) missingAddressFields.push('state')
+      if (!zipCode) missingAddressFields.push('zipCode')
+      
+      console.log('[API/auth/register][POST] Campos de endereço faltando:', missingAddressFields)
+      return NextResponse.json({ 
+        success: false,
+        error: `Campos de endereço obrigatórios faltando: ${missingAddressFields.join(', ')}`,
+        missingAddressFields
       }, { status: 400 })
     }
 
@@ -110,7 +147,7 @@ export async function POST(request: NextRequest) {
       name,
       email,
       phone: phone.replace(/\D/g, ''), // Remover caracteres não numéricos
-      password: password, // Em produção, deve ser criptografada
+      password: hashPassword(password), // Criptografar senha
       address: {
         street: address.street,
         number: address.number,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { promises as fs } from 'fs'
 import path from 'path'
+import { withAPIProtection } from '@/lib/auth-middleware'
 
 const ordersPath = path.join(process.cwd(), 'data', 'orders.json')
 
@@ -20,7 +21,7 @@ async function ensureDataFile() {
 }
 
 // GET - Listar todos os pedidos (para admin)
-export async function GET(request: NextRequest) {
+async function handleGET(request: NextRequest) {
   try {
     await ensureDataFile()
     const data = await fs.readFile(ordersPath, 'utf-8')
@@ -94,4 +95,7 @@ export async function DELETE(request: NextRequest) {
     console.error('Erro ao deletar pedido:', error)
     return NextResponse.json({ success: false, error: 'Erro interno do servidor' }, { status: 500 })
   }
-} 
+}
+
+// Aplicar proteção apenas no GET
+export const GET = withAPIProtection(handleGET) 

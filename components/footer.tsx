@@ -36,7 +36,9 @@ export function Footer() {
                 <Facebook className="h-5 w-5 group-hover:scale-110 transition-transform" />
               </Link>
               <Link
-                href="#"
+                href="https://www.instagram.com/atacadaoguanabara/"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="bg-white/10 p-3 rounded-full hover:bg-secondary transition-all duration-300 group"
               >
                 <Instagram className="h-5 w-5 group-hover:scale-110 transition-transform" />
@@ -204,22 +206,47 @@ export function Footer() {
         <div className="border-t border-white/20 mt-12 pt-8">
           <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
             <div className="text-center md:text-left">
-              <p className="text-gray-300">&copy; 2025 Atacadão Guanabara. Todos os direitos reservados. Por Davi Kalebe</p>
+              <p className="text-gray-300">&copy; 2025 Atacadão Guanabara. Todos os direitos reservados.</p>
               <p className="text-gray-400 text-sm mt-1">
                 CNPJ: 40.284.268/0001-17 | Desde 06/01/2021
               </p>
+              <p className="text-gray-400 text-sm mt-1">
+                Desenvolvido com <span className="text-blue-500">💙</span> por Davi Kalebe
+              </p>
             </div>
 
-            <div className="flex items-center space-x-6 text-sm text-gray-300">
-              <Link href="/privacy" className="hover:text-secondary transition-colors">
-                Privacidade
-              </Link>
-              <Link href="/terms" className="hover:text-secondary transition-colors">
-                Termos
-              </Link>
-              <Link href="/cookies" className="hover:text-secondary transition-colors">
-                Cookies
-              </Link>
+            <div className="flex flex-col items-center space-y-4">
+              <div className="flex items-center space-x-6 text-sm text-gray-300">
+                <Link href="/privacy" className="hover:text-secondary transition-colors">
+                  Privacidade
+                </Link>
+                <Link href="/terms" className="hover:text-secondary transition-colors">
+                  Termos
+                </Link>
+                <Link href="/cookies" className="hover:text-secondary transition-colors">
+                  Cookies
+                </Link>
+              </div>
+
+              {/* Selo de Segurança */}
+              <div className="flex items-center">
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.open('https://www.sitelock.com/verify.php?site=atacadaoguanabara.com','SiteLock','width=600,height=600,left=160,top=170');
+                  }}
+                  className="hover:opacity-80 transition-opacity"
+                  title="Verificar Segurança do Site"
+                >
+                  <img
+                    className="h-10 w-auto"
+                    alt="SiteLock"
+                    title="SiteLock"
+                    src="https://shield.sitelock.com/shield/atacadaoguanabara.com"
+                  />
+                </a>
+              </div>
             </div>
           </div>
         </div>

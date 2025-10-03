@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
+import { withAPIProtection } from '@/lib/auth-middleware'
 
 const dataDir = path.join(process.cwd(), 'data')
 const returnRequestsFile = path.join(dataDir, 'return-requests.json')
@@ -25,7 +26,7 @@ function safeReadReturnRequests() {
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 
-export async function GET(request: NextRequest) {
+async function handleGET(request: NextRequest) {
   try {
     console.log('[API/return-requests][GET] chamada recebida')
     const returnRequests = safeReadReturnRequests()
@@ -93,33 +94,95 @@ export async function POST(request: NextRequest) {
   try {
     console.log('[API/return-requests][POST] chamada recebida')
     
-    // Usar request.text() e parsing manual para evitar erro do Express middleware
-    const textBody = await request.text()
-    console.log('[API/return-requests][POST] body recebido:', textBody)
-    
     let body: any
-    try {
-      body = JSON.parse(textBody)
-    } catch (parseError) {
-      console.error('[API/return-requests][POST] Erro ao fazer parse do JSON:', parseError)
+    const contentType = request.headers.get('content-type') || ''
+    
+    if (contentType.includes('multipart/form-data')) {
+      console.log('[API/return-requests][POST] Processando FormData')
+      
+      try {
+        const formData = await request.formData()
+        body = {}
+        
+        // Converter FormData para objeto
+        for (const [key, value] of formData.entries()) {
+          if (key === 'photos') {
+            if (!body.photos) body.photos = []
+            body.photos.push(value)
+          } else {
+            body[key] = value.toString()
+          }
+        }
+        console.log('[API/return-requests][POST] FormData convertido:', body)
+      } catch (formError) {
+        console.error('[API/return-requests][POST] Erro ao processar FormData:', formError)
+        return NextResponse.json({
+          success: false,
+          error: 'Erro ao processar FormData',
+          details: (formError as Error)?.message
+        }, { status: 400 })
+      }
+    } else {
+      console.log('[API/return-requests][POST] Processando JSON')
+      
+      try {
+        const textBody = await request.text()
+        console.log('[API/return-requests][POST] body recebido:', textBody)
+        body = JSON.parse(textBody)
+      } catch (parseError) {
+        console.error('[API/return-requests][POST] Erro ao fazer parse do JSON:', parseError)
+        return NextResponse.json({
+          success: false,
+          error: 'JSON inválido',
+          details: (parseError as Error)?.message
+        }, { status: 400 })
+      }
+    }
+
+    // Validação básica dos campos obrigatórios
+    console.log('[API/return-requests][POST] Validando campos obrigatórios...')
+    
+    if (!body.orderId) {
+      console.error('[API/return-requests][POST] Campo orderId é obrigatório')
       return NextResponse.json({
         success: false,
-        error: 'JSON inválido',
-        details: (parseError as Error)?.message
+        error: 'Campo orderId é obrigatório'
       }, { status: 400 })
     }
+
+    if (!body.userName) {
+      console.error('[API/return-requests][POST] Campo userName é obrigatório')
+      return NextResponse.json({
+        success: false,
+        error: 'Campo userName é obrigatório'
+      }, { status: 400 })
+    }
+
+    if (!body.reason) {
+      console.error('[API/return-requests][POST] Campo reason é obrigatório')
+      return NextResponse.json({
+        success: false,
+        error: 'Campo reason é obrigatório'
+      }, { status: 400 })
+    }
+
+    console.log('[API/return-requests][POST] Validação passou, criando solicitação...')
     
     // Identidade do usuário: prioriza sessão NextAuth, depois headers, depois body
     let sessionEmail: string | null = null
     let sessionUserId: string | null = null
     try {
-      const session = await getServerSession(authOptions)
+      const session = await getServerSession(authOptions) as any
       if (session?.user) {
-        // @ts-ignore - user.id pode não existir dependendo do provider
-        sessionUserId = (session.user.id as string) || null
-        sessionEmail = (session.user.email as string) || null
+        sessionUserId = session.user.id || null
+        sessionEmail = session.user.email || null
+        console.log('[API/return-requests][POST] Sessão encontrada para:', sessionEmail)
+      } else {
+        console.log('[API/return-requests][POST] Nenhuma sessão encontrada')
       }
-    } catch {}
+    } catch (sessionError) {
+      console.log('[API/return-requests][POST] Erro ao obter sessão:', sessionError)
+    }
 
     const headerEmail = request.headers.get('x-user-email')
     const headerUserId = request.headers.get('x-user-id')
@@ -177,4 +240,6 @@ export async function POST(request: NextRequest) {
       errorType: error?.constructor?.name
     }, { status: 500 })
   }
-} 
+}
+
+export const GET = withAPIProtection(handleGET) 

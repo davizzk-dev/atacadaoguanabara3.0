@@ -1,5 +1,271 @@
 [
   {
+    "id": "1759349959331",
+    "startedAt": "2025-10-01T20:15:44.939Z",
+    "finishedAt": "2025-10-01T20:19:19.331Z",
+    "durationMs": 214392,
+    "totals": {
+      "products": 6567,
+      "sections": 15,
+      "brands": 3,
+      "genres": 100
+    },
+    "message": "Sincroniza��o conclu�da",
+    "status": "success"
+  },
+  {
+    "id": "1759345864501",
+    "startedAt": "2025-10-01T19:08:02.042Z",
+    "finishedAt": "2025-10-01T19:11:04.501Z",
+    "durationMs": 182459,
+    "totals": {
+      "products": 6567,
+      "sections": 15,
+      "brands": 3,
+      "genres": 100
+    },
+    "message": "Sincroniza��o conclu�da",
+    "status": "success"
+  },
+  {
+    "id": "1759328842823",
+    "startedAt": "2025-10-01T14:23:35.404Z",
+    "finishedAt": "2025-10-01T14:27:22.823Z",
+    "durationMs": 227419,
+    "totals": {
+      "products": 6565,
+      "sections": 15,
+      "brands": 3,
+      "genres": 100
+    },
+    "message": "Sincroniza��o conclu�da",
+    "status": "success"
+  },
+  {
+    "id": "1759262324825",
+    "startedAt": "2025-09-30T19:55:54.880Z",
+    "finishedAt": "2025-09-30T19:58:44.825Z",
+    "durationMs": 169945,
+    "totals": {
+      "products": 6565,
+      "sections": 15,
+      "brands": 3,
+      "genres": 100
+    },
+    "message": "Sincroniza��o conclu�da",
+    "status": "success"
+  },
+  {
+    "id": "1759259835340",
+    "startedAt": "2025-09-30T19:14:19.309Z",
+    "finishedAt": "2025-09-30T19:17:15.340Z",
+    "durationMs": 176031,
+    "totals": {
+      "products": 6565,
+      "sections": 15,
+      "brands": 3,
+      "genres": 100
+    },
+    "message": "Sincroniza��o conclu�da",
+    "status": "success"
+  },
+  {
+    "id": "1759244360793",
+    "startedAt": "2025-09-30T14:56:06.029Z",
+    "finishedAt": "2025-09-30T14:59:20.793Z",
+    "durationMs": 194764,
+    "totals": {
+      "products": 6565,
+      "sections": 15,
+      "brands": 3,
+      "genres": 100
+    },
+    "message": "Sincroniza��o conclu�da",
+    "status": "success"
+  },
+  {
+    "id": "1758393927626",
+    "startedAt": "2025-09-20T18:43:03.604Z",
+    "finishedAt": "2025-09-20T18:45:27.627Z",
+    "durationMs": 144023,
+    "totals": {
+      "products": 6534,
+      "sections": 15,
+      "brands": 2,
+      "genres": 100
+    },
+    "message": "Sincroniza��o conclu�da",
+    "status": "success"
+  },
+  {
+    "id": "1758393304306",
+    "startedAt": "2025-09-20T18:32:40.680Z",
+    "finishedAt": "2025-09-20T18:35:04.306Z",
+    "durationMs": 143626,
+    "totals": {
+      "products": 6534,
+      "sections": 15,
+      "brands": 1,
+      "genres": 100
+    },
+    "message": "Sincroniza��o conclu�da",
+    "status": "success"
+  },
+  {
+    "id": "1758392957323",
+    "startedAt": "2025-09-20T18:26:46.299Z",
+    "finishedAt": "2025-09-20T18:29:17.323Z",
+    "durationMs": 151024,
+    "totals": {
+      "products": 6534,
+      "sections": 15,
+      "brands": 1,
+      "genres": 100
+    },
+    "message": "Sincroniza��o conclu�da",
+    "status": "success"
+  },
+  {
+    "id": "1758392172365",
+    "startedAt": "2025-09-20T18:13:13.883Z",
+    "finishedAt": "2025-09-20T18:16:12.366Z",
+    "durationMs": 178483,
+    "totals": {
+      "products": 6534,
+      "sections": 15,
+      "brands": 1,
+      "genres": 100
+    },
+    "message": "Sincroniza��o conclu�da",
+    "status": "success"
+  },
+  {
+    "id": "1758383199259",
+    "startedAt": "2025-09-20T15:44:08.923Z",
+    "finishedAt": "2025-09-20T15:46:39.259Z",
+    "durationMs": 150336,
+    "totals": {
+      "products": 6534,
+      "sections": 15,
+      "brands": 1,
+      "genres": 100
+    },
+    "message": "Sincroniza��o conclu�da",
+    "status": "success"
+  },
+  {
+    "id": "1758364237641",
+    "startedAt": "2025-09-20T10:28:06.172Z",
+    "finishedAt": "2025-09-20T10:30:37.641Z",
+    "durationMs": 151469,
+    "totals": {
+      "products": 6534,
+      "sections": 15,
+      "brands": 1,
+      "genres": 100
+    },
+    "message": "Sincroniza��o conclu�da",
+    "status": "success"
+  },
+  {
+    "id": "1758304768334",
+    "startedAt": "2025-09-19T17:57:05.819Z",
+    "finishedAt": "2025-09-19T17:59:28.334Z",
+    "durationMs": 142515,
+    "totals": {
+      "products": 6533,
+      "sections": 15,
+      "brands": 1,
+      "genres": 100
+    },
+    "message": "Sincroniza��o conclu�da",
+    "status": "success"
+  },
+  {
+    "id": "1758304755057",
+    "startedAt": "2025-09-19T17:56:33.307Z",
+    "finishedAt": "2025-09-19T17:59:15.057Z",
+    "durationMs": 161750,
+    "totals": {
+      "products": 6533,
+      "sections": 15,
+      "brands": 1,
+      "genres": 100
+    },
+    "message": "Sincroniza��o conclu�da",
+    "status": "success"
+  },
+  {
+    "id": "1758304684169",
+    "startedAt": "2025-09-19T17:55:24.295Z",
+    "finishedAt": "2025-09-19T17:58:04.169Z",
+    "durationMs": 159874,
+    "totals": {
+      "products": 6533,
+      "sections": 15,
+      "brands": 1,
+      "genres": 100
+    },
+    "message": "Sincroniza��o conclu�da",
+    "status": "success"
+  },
+  {
+    "id": "1757453343233",
+    "startedAt": "2025-09-09T21:25:54.914Z",
+    "finishedAt": "2025-09-09T21:29:03.233Z",
+    "durationMs": 188319,
+    "totals": {
+      "products": 6482,
+      "sections": 15,
+      "brands": 1,
+      "genres": 100
+    },
+    "message": "Sincroniza��o conclu�da",
+    "status": "success"
+  },
+  {
+    "id": "1757210115743",
+    "startedAt": "2025-09-07T01:52:46.235Z",
+    "finishedAt": "2025-09-07T01:55:15.743Z",
+    "durationMs": 149508,
+    "totals": {
+      "products": 6479,
+      "sections": 15,
+      "brands": 1,
+      "genres": 100
+    },
+    "message": "Sincronização concluída",
+    "status": "success"
+  },
+  {
+    "id": "1756934190834",
+    "startedAt": "2025-09-03T21:13:45.974Z",
+    "finishedAt": "2025-09-03T21:16:30.834Z",
+    "durationMs": 164860,
+    "totals": {
+      "products": 6408,
+      "sections": 15,
+      "brands": 1,
+      "genres": 100
+    },
+    "message": "Sincronização concluída",
+    "status": "success"
+  },
+  {
+    "id": "1756137085760",
+    "startedAt": "2025-08-25T15:48:36.268Z",
+    "finishedAt": "2025-08-25T15:51:25.760Z",
+    "durationMs": 169492,
+    "totals": {
+      "products": 6332,
+      "sections": 15,
+      "brands": 1,
+      "genres": 100
+    },
+    "message": "Sincronização concluída",
+    "status": "success"
+  },
+  {
     "id": "1755883424904",
     "startedAt": "2025-08-22T17:21:13.643Z",
     "finishedAt": "2025-08-22T17:23:44.904Z",

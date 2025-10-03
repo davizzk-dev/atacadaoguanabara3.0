@@ -817,23 +817,33 @@ export async function generateReturnsPDF(returns: any[]) {
 
 // Função para calcular preço dinâmico baseado na quantidade
 export function calculateDynamicPrice(product: any, quantity: number) {
-  // Se não tem preços escalonados, usar preço normal
-  if (!product.prices?.price2 || !product.prices.minQuantityPrice2 || product.prices.minQuantityPrice2 <= 0) {
-    return product.price
-  }
+  // Busca preços escalonados, priorizando priceAtacado, depois precoVenda2
+  const precoVenda2 = product.priceAtacado > 0
+    ? product.priceAtacado
+    : product.prices?.precoVenda2 > 0
+      ? product.prices.precoVenda2
+      : product.varejoFacilData?.precos?.precoVenda2 || 0;
+  const quantidadeMinimaPreco2 = product.prices?.quantidadeMinimaPreco2 > 1
+    ? product.prices.quantidadeMinimaPreco2
+    : product.varejoFacilData?.precos?.quantidadeMinimaPreco2 || 0;
+  const price3 = product.prices?.price3 || product.varejoFacilData?.precos?.precoVenda3 || 0;
+  const minQuantityPrice3 = product.prices?.minQuantityPrice3 || product.varejoFacilData?.precos?.quantidadeMinimaPreco3 || 0;
 
-  const { price2, price3, minQuantityPrice2, minQuantityPrice3 } = product.prices
+  // Se não tem preços escalonados, usar preço normal
+  if (!(precoVenda2 > 0 && quantidadeMinimaPreco2 > 1)) {
+    return product.price;
+  }
 
   // Verificar preço 3 primeiro (maior quantidade)
   if (price3 && minQuantityPrice3 && quantity >= minQuantityPrice3) {
-    return price3
-  } 
+    return price3;
+  }
   // Depois preço 2
-  else if (price2 && minQuantityPrice2 && quantity >= minQuantityPrice2) {
-    return price2
-  } 
+  else if (precoVenda2 && quantidadeMinimaPreco2 && quantity >= quantidadeMinimaPreco2) {
+    return precoVenda2;
+  }
   // Senão, preço normal
   else {
-    return product.price
+    return product.price;
   }
 }

@@ -1,47 +1,203 @@
 [
   {
-    "id": "1755171827864",
-    "startTime": "2025-08-14T11:43:47.864Z",
-    "startedAt": "2025-08-14T11:42:49.217Z",
-    "finishedAt": "2025-08-14T11:43:49.377Z",
+    "id": "1759417048138",
+    "timestamp": "2025-10-02T14:57:28.138Z",
+    "startTime": "2025-10-02T14:57:23.120Z",
+    "startedAt": "2025-10-02T14:57:23.120Z",
+    "finishedAt": "2025-10-02T14:57:26.219Z",
     "status": "error",
-    "error": "Erro na API: 504"
+    "error": "Sincronização concluída! 0 produtos sincronizados."
   },
   {
-    "id": "1755172207959",
-    "startTime": "2025-08-14T11:50:07.959Z",
-    "startedAt": "2025-08-14T11:49:09.244Z",
-    "finishedAt": "2025-08-14T11:50:09.497Z",
-    "status": "error",
-    "error": "Erro na API: 504"
-  },
-  {
-    "id": "1755698083131",
-    "startTime": "2025-08-20T13:54:43.131Z",
-    "startedAt": "2025-08-20T13:52:54.757Z",
-    "finishedAt": "2025-08-20T13:54:43.118Z",
-    "durationMs": 108361,
+    "id": "1759412579925",
+    "timestamp": "2025-10-02T13:42:59.925Z",
+    "startTime": "2025-10-02T13:42:54.846Z",
+    "startedAt": "2025-10-02T13:42:54.846Z",
+    "finishedAt": "2025-10-02T13:42:58.047Z",
+    "durationMs": 158095,
     "status": "success",
     "totals": {
-      "products": 6302,
+      "products": 500,
       "sections": 15,
-      "brands": 1,
+      "brands": 3,
       "genres": 100
-    }
+    },
+    "logs": "?? Iniciando sincronização completa do Varejo Fácil...\n?? Buscando seções...\n? 15 seções encontradas\n??? Buscando marcas...\n? 3 marcas encontradas\n?? Buscando gêneros...\n? 100 gêneros encontrados\n?? Buscando grupos por seção...\n?? Buscando grupos da seção: DESCARTÁVEIS (ID: 1)\n  ? 10 grupos encontrados na seção DESCARTÁVEIS\n?? Buscando grupos da seção: CONFEITARIA E OUTROS (ID: 2)\n  ? 13 grupos encontrados na seção CONFEITARIA E OUTROS\n?? Buscando grupos da seção: PANIFICAÇÃO (ID: 3)\n  ? 7 grupos encontrados na seção PANIFICAÇÃO\n?? Buscando grupos da seção: MOLHOS (ID: 4)\n  ? 7 grupos encontrados na seção MOLHOS\n?? Buscando grupos da seção: SUSHITERIA (ID: 5)\n  ? 8 grupos encontrados na seção SUSHITERIA\n?? Buscando grupos da seção: PRODUTOS DE LIMPEZA (ID: 6)\n  ? 6 grupos encontrados na seção PRODUTOS DE LIMPEZA\n?? Buscando grupos da seção: TEMPEROS (ID: 7)\n  ? 6 grupos encontrados na seção TEMPEROS\n?? Buscando grupos da seção: ENLATADOS E EM CONSERVA (ID: 8)\n  ? 3 grupos encontrados n"
   },
   {
-    "id": "1755698546348",
-    "startTime": "2025-08-20T14:02:26.348Z",
-    "startedAt": "2025-08-20T14:00:16.872Z",
-    "finishedAt": "2025-08-20T14:02:26.337Z",
-    "durationMs": 129465,
+    "id": "1759366903802",
+    "timestamp": "2025-10-02T01:01:43.802Z",
+    "startTime": "2025-10-02T01:01:32.448Z",
+    "startedAt": "2025-10-02T01:01:32.448Z",
+    "finishedAt": "2025-10-02T00:51:28.433Z",
+    "durationMs": 154724,
     "status": "success",
     "totals": {
-      "products": 6303,
+      "products": 6567,
       "sections": 15,
-      "brands": 1,
+      "brands": 3,
       "genres": 100
-    }
+    },
+    "logs": "?? Iniciando sincronização completa do Varejo Fácil...\n?? Buscando seções...\n? 15 seções encontradas\n??? Buscando marcas...\n? 3 marcas encontradas\n?? Buscando gêneros...\n? 100 gêneros encontrados\n?? Buscando grupos por seção...\n?? Buscando grupos da seção: DESCARTÁVEIS (ID: 1)\n  ? 10 grupos encontrados na seção DESCARTÁVEIS\n?? Buscando grupos da seção: CONFEITARIA E OUTROS (ID: 2)\n  ? 13 grupos encontrados na seção CONFEITARIA E OUTROS\n?? Buscando grupos da seção: PANIFICAÇÃO (ID: 3)\n  ? 7 grupos encontrados na seção PANIFICAÇÃO\n?? Buscando grupos da seção: MOLHOS (ID: 4)\n  ? 7 grupos encontrados na seção MOLHOS\n?? Buscando grupos da seção: SUSHITERIA (ID: 5)\n  ? 8 grupos encontrados na seção SUSHITERIA\n?? Buscando grupos da seção: PRODUTOS DE LIMPEZA (ID: 6)\n  ? 6 grupos encontrados na seção PRODUTOS DE LIMPEZA\n?? Buscando grupos da seção: TEMPEROS (ID: 7)\n  ? 6 grupos encontrados na seção TEMPEROS\n?? Buscando grupos da seção: ENLATADOS E EM CONSERVA (ID: 8)\n  ? 3 grupos encontrados na seção ENLATADOS E EM CONSERVA\n?? Buscando grupos da seção: BISCOITOS (ID: 9)\n  ? 3 grupos encontrados na seção BISCOITOS\n?? Buscando grupos da seção: MERCEARIA (ID: 11)\n  ? 13 grupos encontrados na seção MERCEARIA\n?? Buscando grupos da seção: FRIOS Á GRANEL E PACOTES (ID: 12)\n  ? 6 grupos encontrados na seção FRIOS Á GRANEL E PACOTES\n?? Buscando grupos da seção: RESFRIADOS (ID: 13)\n  ? 10 grupos encontrados na seção RESFRIADOS\n?? Buscando grupos da seção: CONGELADOS (ID: 14)\n  ? 8 grupos encontrados na seção CONGELADOS\n?? Buscando grupos da seção: SERVIÇOS (ID: 16)\n  ? 1 grupos encontrados na seção SERVIÇOS\n?? Buscando grupos da seção: REFRIGERANTESE OUTROS LIQUIDOS (ID: 15)\n  ? 5 grupos encontrados na seção REFRIGERANTESE OUTROS LIQUIDOS\n? Total de 106 grupos encontrados em todas as seções\n\n📋 Relatório de grupos por seção:\n   - DESCARTÁVEIS: 10 grupos\n   - CONFEITARIA E OUTROS: 13 grupos\n   - PANIFICAÇÃO: 7 grupos\n   - MOLHOS: 7 grupos\n   - SUSHITERIA: 8 grupos\n   - PRODUTOS DE LIMPEZA: 6 grupos\n   - TEMPEROS: 6 grupos\n   - ENLATADOS E EM CONSERVA: 3 grupos\n   - BISCOITOS: 3 grupos\n   - MERCEARIA: 13 grupos\n   - FRIOS Á GRANEL E PACOTES: 6 grupos\n   - RESFRIADOS: 10 grupos\n   - CONGELADOS: 8 grupos\n   - REFRIGERANTESE OUTROS LIQUIDOS: 5 grupos\n   - SERVIÇOS: 1 grupos\n? 500 preços encontrados no total\n?? Buscando todos os saldos de estoque em lotes com controle pelo total da API...\n?? Buscando lote de estoque 1 (start=0, end=99)...\n?? Total de estoques informado pela API: 6567\n? Lote de estoque 1: 100 saldos (Total: 100)\n?? Buscando lote de estoque 2 (start=100, end=199)...\n? Lote de estoque 2: 100 saldos (Total: 200)\n?? Buscando lote de estoque 3 (start=200, end=299)...\n? Lote de estoque 3: 100 saldos (Total: 300)\n?? Buscando lote de estoque 4 (start=300, end=399)...\n? Lote de estoque 4: 100 saldos (Total: 400)\n?? Buscando lote de estoque 5 (start=400, end=499)...\n? Lote de estoque 5: 100 saldos (Total: 500)\n?? Buscando lote de estoque 6 (start=500, end=599)...\n...\n[LOGS TRUNCADOS - Ver logs completos no servidor]"
+  },
+  {
+    "id": "1759366885674",
+    "timestamp": "2025-10-02T01:01:25.674Z",
+    "startTime": "2025-10-02T01:01:25.400Z",
+    "startedAt": "2025-10-02T01:01:25.400Z",
+    "finishedAt": "2025-10-02T01:01:25.581Z",
+    "status": "error",
+    "error": "Sincronização já está em execução"
+  },
+  {
+    "id": "1759366870305",
+    "timestamp": "2025-10-02T01:01:10.305Z",
+    "startTime": "2025-10-02T01:00:58.868Z",
+    "startedAt": "2025-10-02T01:00:58.868Z",
+    "finishedAt": "2025-10-02T00:51:28.433Z",
+    "durationMs": 154724,
+    "status": "success",
+    "totals": {
+      "products": 6567,
+      "sections": 15,
+      "brands": 3,
+      "genres": 100
+    },
+    "logs": "?? Iniciando sincronização completa do Varejo Fácil...\n?? Buscando seções...\n? 15 seções encontradas\n??? Buscando marcas...\n? 3 marcas encontradas\n?? Buscando gêneros...\n? 100 gêneros encontrados\n?? Buscando grupos por seção...\n?? Buscando grupos da seção: DESCARTÁVEIS (ID: 1)\n  ? 10 grupos encontrados na seção DESCARTÁVEIS\n?? Buscando grupos da seção: CONFEITARIA E OUTROS (ID: 2)\n  ? 13 grupos encontrados na seção CONFEITARIA E OUTROS\n?? Buscando grupos da seção: PANIFICAÇÃO (ID: 3)\n  ? 7 grupos encontrados na seção PANIFICAÇÃO\n?? Buscando grupos da seção: MOLHOS (ID: 4)\n  ? 7 grupos encontrados na seção MOLHOS\n?? Buscando grupos da seção: SUSHITERIA (ID: 5)\n  ? 8 grupos encontrados na seção SUSHITERIA\n?? Buscando grupos da seção: PRODUTOS DE LIMPEZA (ID: 6)\n  ? 6 grupos encontrados na seção PRODUTOS DE LIMPEZA\n?? Buscando grupos da seção: TEMPEROS (ID: 7)\n  ? 6 grupos encontrados na seção TEMPEROS\n?? Buscando grupos da seção: ENLATADOS E EM CONSERVA (ID: 8)\n  ? 3 grupos encontrados na seção ENLATADOS E EM CONSERVA\n?? Buscando grupos da seção: BISCOITOS (ID: 9)\n  ? 3 grupos encontrados na seção BISCOITOS\n?? Buscando grupos da seção: MERCEARIA (ID: 11)\n  ? 13 grupos encontrados na seção MERCEARIA\n?? Buscando grupos da seção: FRIOS Á GRANEL E PACOTES (ID: 12)\n  ? 6 grupos encontrados na seção FRIOS Á GRANEL E PACOTES\n?? Buscando grupos da seção: RESFRIADOS (ID: 13)\n  ? 10 grupos encontrados na seção RESFRIADOS\n?? Buscando grupos da seção: CONGELADOS (ID: 14)\n  ? 8 grupos encontrados na seção CONGELADOS\n?? Buscando grupos da seção: SERVIÇOS (ID: 16)\n  ? 1 grupos encontrados na seção SERVIÇOS\n?? Buscando grupos da seção: REFRIGERANTESE OUTROS LIQUIDOS (ID: 15)\n  ? 5 grupos encontrados na seção REFRIGERANTESE OUTROS LIQUIDOS\n? Total de 106 grupos encontrados em todas as seções\n\n📋 Relatório de grupos por seção:\n   - DESCARTÁVEIS: 10 grupos\n   - CONFEITARIA E OUTROS: 13 grupos\n   - PANIFICAÇÃO: 7 grupos\n   - MOLHOS: 7 grupos\n   - SUSHITERIA: 8 grupos\n   - PRODUTOS DE LIMPEZA: 6 grupos\n   - TEMPEROS: 6 grupos\n   - ENLATADOS E EM CONSERVA: 3 grupos\n   - BISCOITOS: 3 grupos\n   - MERCEARIA: 13 grupos\n   - FRIOS Á GRANEL E PACOTES: 6 grupos\n   - RESFRIADOS: 10 grupos\n   - CONGELADOS: 8 grupos\n   - REFRIGERANTESE OUTROS LIQUIDOS: 5 grupos\n   - SERVIÇOS: 1 grupos\n? 500 preços encontrados no total\n?? Buscando todos os saldos de estoque em lotes com controle pelo total da API...\n?? Buscando lote de estoque 1 (start=0, end=99)...\n?? Total de estoques informado pela API: 6567\n? Lote de estoque 1: 100 saldos (Total: 100)\n?? Buscando lote de estoque 2 (start=100, end=199)...\n? Lote de estoque 2: 100 saldos (Total: 200)\n?? Buscando lote de estoque 3 (start=200, end=299)...\n? Lote de estoque 3: 100 saldos (Total: 300)\n?? Buscando lote de estoque 4 (start=300, end=399)...\n? Lote de estoque 4: 100 saldos (Total: 400)\n?? Buscando lote de estoque 5 (start=400, end=499)...\n? Lote de estoque 5: 100 saldos (Total: 500)\n?? Buscando lote de estoque 6 (start=500, end=599)...\n...\n[LOGS TRUNCADOS - Ver logs completos no servidor]"
+  },
+  {
+    "id": "1759366145519",
+    "timestamp": "2025-10-02T00:49:05.519Z",
+    "startTime": "2025-10-02T00:48:53.612Z",
+    "startedAt": "2025-10-02T00:48:53.612Z",
+    "finishedAt": "2025-10-02T00:35:35.628Z",
+    "durationMs": 156029,
+    "status": "success",
+    "totals": {
+      "products": 6567,
+      "sections": 15,
+      "brands": 3,
+      "genres": 100
+    },
+    "logs": "?? Iniciando sincronização completa do Varejo Fácil...\n?? Buscando seções...\n? 15 seções encontradas\n??? Buscando marcas...\n? 3 marcas encontradas\n?? Buscando gêneros...\n? 100 gêneros encontrados\n?? Buscando grupos por seção...\n?? Buscando grupos da seção: DESCARTÁVEIS (ID: 1)\n  ? 10 grupos encontrados na seção DESCARTÁVEIS\n?? Buscando grupos da seção: CONFEITARIA E OUTROS (ID: 2)\n  ? 13 grupos encontrados na seção CONFEITARIA E OUTROS\n?? Buscando grupos da seção: PANIFICAÇÃO (ID: 3)\n  ? 7 grupos encontrados na seção PANIFICAÇÃO\n?? Buscando grupos da seção: MOLHOS (ID: 4)\n  ? 7 grupos encontrados na seção MOLHOS\n?? Buscando grupos da seção: SUSHITERIA (ID: 5)\n  ? 8 grupos encontrados na seção SUSHITERIA\n?? Buscando grupos da seção: PRODUTOS DE LIMPEZA (ID: 6)\n  ? 6 grupos encontrados na seção PRODUTOS DE LIMPEZA\n?? Buscando grupos da seção: TEMPEROS (ID: 7)\n  ? 6 grupos encontrados na seção TEMPEROS\n?? Buscando grupos da seção: ENLATADOS E EM CONSERVA (ID: 8)\n  ? 3 grupos encontrados na seção ENLATADOS E EM CONSERVA\n?? Buscando grupos da seção: BISCOITOS (ID: 9)\n  ? 3 grupos encontrados na seção BISCOITOS\n?? Buscando grupos da seção: MERCEARIA (ID: 11)\n  ? 13 grupos encontrados na seção MERCEARIA\n?? Buscando grupos da seção: FRIOS Á GRANEL E PACOTES (ID: 12)\n  ? 6 grupos encontrados na seção FRIOS Á GRANEL E PACOTES\n?? Buscando grupos da seção: RESFRIADOS (ID: 13)\n  ? 10 grupos encontrados na seção RESFRIADOS\n?? Buscando grupos da seção: CONGELADOS (ID: 14)\n  ? 8 grupos encontrados na seção CONGELADOS\n?? Buscando grupos da seção: SERVIÇOS (ID: 16)\n  ? 1 grupos encontrados na seção SERVIÇOS\n?? Buscando grupos da seção: REFRIGERANTESE OUTROS LIQUIDOS (ID: 15)\n  ? 5 grupos encontrados na seção REFRIGERANTESE OUTROS LIQUIDOS\n? Total de 106 grupos encontrados em todas as seções\n\n📋 Relatório de grupos por seção:\n   - DESCARTÁVEIS: 10 grupos\n   - CONFEITARIA E OUTROS: 13 grupos\n   - PANIFICAÇÃO: 7 grupos\n   - MOLHOS: 7 grupos\n   - SUSHITERIA: 8 grupos\n   - PRODUTOS DE LIMPEZA: 6 grupos\n   - TEMPEROS: 6 grupos\n   - ENLATADOS E EM CONSERVA: 3 grupos\n   - BISCOITOS: 3 grupos\n   - MERCEARIA: 13 grupos\n   - FRIOS Á GRANEL E PACOTES: 6 grupos\n   - RESFRIADOS: 10 grupos\n   - CONGELADOS: 8 grupos\n   - REFRIGERANTESE OUTROS LIQUIDOS: 5 grupos\n   - SERVIÇOS: 1 grupos\n? 500 preços encontrados no total\n?? Buscando todos os saldos de estoque em lotes com controle pelo total da API...\n?? Buscando lote de estoque 1 (start=0, end=99)...\n?? Total de estoques informado pela API: 6567\n? Lote de estoque 1: 100 saldos (Total: 100)\n?? Buscando lote de estoque 2 (start=100, end=199)...\n? Lote de estoque 2: 100 saldos (Total: 200)\n?? Buscando lote de estoque 3 (start=200, end=299)...\n? Lote de estoque 3: 100 saldos (Total: 300)\n?? Buscando lote de estoque 4 (start=300, end=399)...\n? Lote de estoque 4: 100 saldos (Total: 400)\n?? Buscando lote de estoque 5 (start=400, end=499)...\n? Lote de estoque 5: 100 saldos (Total: 500)\n?? Buscando lote de estoque 6 (start=500, end=599)...\n...\n[LOGS TRUNCADOS - Ver logs completos no servidor]"
+  },
+  {
+    "id": "1759366110002",
+    "timestamp": "2025-10-02T00:48:30.002Z",
+    "startTime": "2025-10-02T00:48:29.764Z",
+    "startedAt": "2025-10-02T00:48:29.764Z",
+    "finishedAt": "2025-10-02T00:48:29.918Z",
+    "status": "error",
+    "error": "Sincronização já está em execução"
+  },
+  {
+    "id": "1759365992076",
+    "timestamp": "2025-10-02T00:46:32.076Z",
+    "startTime": "2025-10-02T00:46:25.910Z",
+    "startedAt": "2025-10-02T00:46:25.910Z",
+    "finishedAt": "2025-10-02T00:46:28.599Z",
+    "status": "error",
+    "error": "Failed to fetch"
+  },
+  {
+    "id": "1759365979709",
+    "timestamp": "2025-10-02T00:46:19.709Z",
+    "startTime": "2025-10-02T00:46:18.302Z",
+    "startedAt": "2025-10-02T00:46:18.302Z",
+    "finishedAt": "2025-10-02T00:46:18.517Z",
+    "status": "error",
+    "error": "Sincronização já está em execução"
+  },
+  {
+    "id": "1759365778875",
+    "timestamp": "2025-10-02T00:42:58.875Z",
+    "startTime": "2025-10-02T00:42:43.805Z",
+    "startedAt": "2025-10-02T00:42:43.805Z",
+    "finishedAt": "2025-10-02T00:35:35.628Z",
+    "durationMs": 156029,
+    "status": "success",
+    "totals": {
+      "products": 6567,
+      "sections": 15,
+      "brands": 3,
+      "genres": 100
+    },
+    "logs": "?? Iniciando sincronização completa do Varejo Fácil...\n?? Buscando seções...\n? 15 seções encontradas\n??? Buscando marcas...\n? 3 marcas encontradas\n?? Buscando gêneros...\n? 100 gêneros encontrados\n?? Buscando grupos por seção...\n?? Buscando grupos da seção: DESCARTÁVEIS (ID: 1)\n  ? 10 grupos encontrados na seção DESCARTÁVEIS\n?? Buscando grupos da seção: CONFEITARIA E OUTROS (ID: 2)\n  ? 13 grupos encontrados na seção CONFEITARIA E OUTROS\n?? Buscando grupos da seção: PANIFICAÇÃO (ID: 3)\n  ? 7 grupos encontrados na seção PANIFICAÇÃO\n?? Buscando grupos da seção: MOLHOS (ID: 4)\n  ? 7 grupos encontrados na seção MOLHOS\n?? Buscando grupos da seção: SUSHITERIA (ID: 5)\n  ? 8 grupos encontrados na seção SUSHITERIA\n?? Buscando grupos da seção: PRODUTOS DE LIMPEZA (ID: 6)\n  ? 6 grupos encontrados na seção PRODUTOS DE LIMPEZA\n?? Buscando grupos da seção: TEMPEROS (ID: 7)\n  ? 6 grupos encontrados na seção TEMPEROS\n?? Buscando grupos da seção: ENLATADOS E EM CONSERVA (ID: 8)\n  ? 3 grupos encontrados na seção ENLATADOS E EM CONSERVA\n?? Buscando grupos da seção: BISCOITOS (ID: 9)\n  ? 3 grupos encontrados na seção BISCOITOS\n?? Buscando grupos da seção: MERCEARIA (ID: 11)\n  ? 13 grupos encontrados na seção MERCEARIA\n?? Buscando grupos da seção: FRIOS Á GRANEL E PACOTES (ID: 12)\n  ? 6 grupos encontrados na seção FRIOS Á GRANEL E PACOTES\n?? Buscando grupos da seção: RESFRIADOS (ID: 13)\n  ? 10 grupos encontrados na seção RESFRIADOS\n?? Buscando grupos da seção: CONGELADOS (ID: 14)\n  ? 8 grupos encontrados na seção CONGELADOS\n?? Buscando grupos da seção: SERVIÇOS (ID: 16)\n  ? 1 grupos encontrados na seção SERVIÇOS\n?? Buscando grupos da seção: REFRIGERANTESE OUTROS LIQUIDOS (ID: 15)\n  ? 5 grupos encontrados na seção REFRIGERANTESE OUTROS LIQUIDOS\n? Total de 106 grupos encontrados em todas as seções\n\n📋 Relatório de grupos por seção:\n   - DESCARTÁVEIS: 10 grupos\n   - CONFEITARIA E OUTROS: 13 grupos\n   - PANIFICAÇÃO: 7 grupos\n   - MOLHOS: 7 grupos\n   - SUSHITERIA: 8 grupos\n   - PRODUTOS DE LIMPEZA: 6 grupos\n   - TEMPEROS: 6 grupos\n   - ENLATADOS E EM CONSERVA: 3 grupos\n   - BISCOITOS: 3 grupos\n   - MERCEARIA: 13 grupos\n   - FRIOS Á GRANEL E PACOTES: 6 grupos\n   - RESFRIADOS: 10 grupos\n   - CONGELADOS: 8 grupos\n   - REFRIGERANTESE OUTROS LIQUIDOS: 5 grupos\n   - SERVIÇOS: 1 grupos\n? 500 preços encontrados no total\n?? Buscando todos os saldos de estoque em lotes com controle pelo total da API...\n?? Buscando lote de estoque 1 (start=0, end=99)...\n?? Total de estoques informado pela API: 6567\n? Lote de estoque 1: 100 saldos (Total: 100)\n?? Buscando lote de estoque 2 (start=100, end=199)...\n? Lote de estoque 2: 100 saldos (Total: 200)\n?? Buscando lote de estoque 3 (start=200, end=299)...\n? Lote de estoque 3: 100 saldos (Total: 300)\n?? Buscando lote de estoque 4 (start=300, end=399)...\n? Lote de estoque 4: 100 saldos (Total: 400)\n?? Buscando lote de estoque 5 (start=400, end=499)...\n? Lote de estoque 5: 100 saldos (Total: 500)\n?? Buscando lote de estoque 6 (start=500, end=599)...\n...\n[LOGS TRUNCADOS - Ver logs completos no servidor]"
+  },
+  {
+    "id": "1759365765523",
+    "timestamp": "2025-10-02T00:42:45.523Z",
+    "startTime": "2025-10-02T00:42:32.592Z",
+    "startedAt": "2025-10-02T00:42:32.592Z",
+    "finishedAt": "2025-10-02T00:35:35.628Z",
+    "durationMs": 156029,
+    "status": "success",
+    "totals": {
+      "products": 6567,
+      "sections": 15,
+      "brands": 3,
+      "genres": 100
+    },
+    "logs": "?? Iniciando sincronização completa do Varejo Fácil...\n?? Buscando seções...\n? 15 seções encontradas\n??? Buscando marcas...\n? 3 marcas encontradas\n?? Buscando gêneros...\n? 100 gêneros encontrados\n?? Buscando grupos por seção...\n?? Buscando grupos da seção: DESCARTÁVEIS (ID: 1)\n  ? 10 grupos encontrados na seção DESCARTÁVEIS\n?? Buscando grupos da seção: CONFEITARIA E OUTROS (ID: 2)\n  ? 13 grupos encontrados na seção CONFEITARIA E OUTROS\n?? Buscando grupos da seção: PANIFICAÇÃO (ID: 3)\n  ? 7 grupos encontrados na seção PANIFICAÇÃO\n?? Buscando grupos da seção: MOLHOS (ID: 4)\n  ? 7 grupos encontrados na seção MOLHOS\n?? Buscando grupos da seção: SUSHITERIA (ID: 5)\n  ? 8 grupos encontrados na seção SUSHITERIA\n?? Buscando grupos da seção: PRODUTOS DE LIMPEZA (ID: 6)\n  ? 6 grupos encontrados na seção PRODUTOS DE LIMPEZA\n?? Buscando grupos da seção: TEMPEROS (ID: 7)\n  ? 6 grupos encontrados na seção TEMPEROS\n?? Buscando grupos da seção: ENLATADOS E EM CONSERVA (ID: 8)\n  ? 3 grupos encontrados na seção ENLATADOS E EM CONSERVA\n?? Buscando grupos da seção: BISCOITOS (ID: 9)\n  ? 3 grupos encontrados na seção BISCOITOS\n?? Buscando grupos da seção: MERCEARIA (ID: 11)\n  ? 13 grupos encontrados na seção MERCEARIA\n?? Buscando grupos da seção: FRIOS Á GRANEL E PACOTES (ID: 12)\n  ? 6 grupos encontrados na seção FRIOS Á GRANEL E PACOTES\n?? Buscando grupos da seção: RESFRIADOS (ID: 13)\n  ? 10 grupos encontrados na seção RESFRIADOS\n?? Buscando grupos da seção: CONGELADOS (ID: 14)\n  ? 8 grupos encontrados na seção CONGELADOS\n?? Buscando grupos da seção: SERVIÇOS (ID: 16)\n  ? 1 grupos encontrados na seção SERVIÇOS\n?? Buscando grupos da seção: REFRIGERANTESE OUTROS LIQUIDOS (ID: 15)\n  ? 5 grupos encontrados na seção REFRIGERANTESE OUTROS LIQUIDOS\n? Total de 106 grupos encontrados em todas as seções\n\n📋 Relatório de grupos por seção:\n   - DESCARTÁVEIS: 10 grupos\n   - CONFEITARIA E OUTROS: 13 grupos\n   - PANIFICAÇÃO: 7 grupos\n   - MOLHOS: 7 grupos\n   - SUSHITERIA: 8 grupos\n   - PRODUTOS DE LIMPEZA: 6 grupos\n   - TEMPEROS: 6 grupos\n   - ENLATADOS E EM CONSERVA: 3 grupos\n   - BISCOITOS: 3 grupos\n   - MERCEARIA: 13 grupos\n   - FRIOS Á GRANEL E PACOTES: 6 grupos\n   - RESFRIADOS: 10 grupos\n   - CONGELADOS: 8 grupos\n   - REFRIGERANTESE OUTROS LIQUIDOS: 5 grupos\n   - SERVIÇOS: 1 grupos\n? 500 preços encontrados no total\n?? Buscando todos os saldos de estoque em lotes com controle pelo total da API...\n?? Buscando lote de estoque 1 (start=0, end=99)...\n?? Total de estoques informado pela API: 6567\n? Lote de estoque 1: 100 saldos (Total: 100)\n?? Buscando lote de estoque 2 (start=100, end=199)...\n? Lote de estoque 2: 100 saldos (Total: 200)\n?? Buscando lote de estoque 3 (start=200, end=299)...\n? Lote de estoque 3: 100 saldos (Total: 300)\n?? Buscando lote de estoque 4 (start=300, end=399)...\n? Lote de estoque 4: 100 saldos (Total: 400)\n?? Buscando lote de estoque 5 (start=400, end=499)...\n? Lote de estoque 5: 100 saldos (Total: 500)\n?? Buscando lote de estoque 6 (start=500, end=599)...\n...\n[LOGS TRUNCADOS - Ver logs completos no servidor]"
+  },
+  {
+    "id": "1759365728316",
+    "timestamp": "2025-10-02T00:42:08.316Z",
+    "startTime": "2025-10-02T00:41:55.367Z",
+    "startedAt": "2025-10-02T00:41:55.367Z",
+    "finishedAt": "2025-10-02T00:35:35.628Z",
+    "durationMs": 156029,
+    "status": "success",
+    "totals": {
+      "products": 6567,
+      "sections": 15,
+      "brands": 3,
+      "genres": 100
+    },
+    "logs": "?? Iniciando sincronização completa do Varejo Fácil...\n?? Buscando seções...\n? 15 seções encontradas\n??? Buscando marcas...\n? 3 marcas encontradas\n?? Buscando gêneros...\n? 100 gêneros encontrados\n?? Buscando grupos por seção...\n?? Buscando grupos da seção: DESCARTÁVEIS (ID: 1)\n  ? 10 grupos encontrados na seção DESCARTÁVEIS\n?? Buscando grupos da seção: CONFEITARIA E OUTROS (ID: 2)\n  ? 13 grupos encontrados na seção CONFEITARIA E OUTROS\n?? Buscando grupos da seção: PANIFICAÇÃO (ID: 3)\n  ? 7 grupos encontrados na seção PANIFICAÇÃO\n?? Buscando grupos da seção: MOLHOS (ID: 4)\n  ? 7 grupos encontrados na seção MOLHOS\n?? Buscando grupos da seção: SUSHITERIA (ID: 5)\n  ? 8 grupos encontrados na seção SUSHITERIA\n?? Buscando grupos da seção: PRODUTOS DE LIMPEZA (ID: 6)\n  ? 6 grupos encontrados na seção PRODUTOS DE LIMPEZA\n?? Buscando grupos da seção: TEMPEROS (ID: 7)\n  ? 6 grupos encontrados na seção TEMPEROS\n?? Buscando grupos da seção: ENLATADOS E EM CONSERVA (ID: 8)\n  ? 3 grupos encontrados na seção ENLATADOS E EM CONSERVA\n?? Buscando grupos da seção: BISCOITOS (ID: 9)\n  ? 3 grupos encontrados na seção BISCOITOS\n?? Buscando grupos da seção: MERCEARIA (ID: 11)\n  ? 13 grupos encontrados na seção MERCEARIA\n?? Buscando grupos da seção: FRIOS Á GRANEL E PACOTES (ID: 12)\n  ? 6 grupos encontrados na seção FRIOS Á GRANEL E PACOTES\n?? Buscando grupos da seção: RESFRIADOS (ID: 13)\n  ? 10 grupos encontrados na seção RESFRIADOS\n?? Buscando grupos da seção: CONGELADOS (ID: 14)\n  ? 8 grupos encontrados na seção CONGELADOS\n?? Buscando grupos da seção: SERVIÇOS (ID: 16)\n  ? 1 grupos encontrados na seção SERVIÇOS\n?? Buscando grupos da seção: REFRIGERANTESE OUTROS LIQUIDOS (ID: 15)\n  ? 5 grupos encontrados na seção REFRIGERANTESE OUTROS LIQUIDOS\n? Total de 106 grupos encontrados em todas as seções\n\n📋 Relatório de grupos por seção:\n   - DESCARTÁVEIS: 10 grupos\n   - CONFEITARIA E OUTROS: 13 grupos\n   - PANIFICAÇÃO: 7 grupos\n   - MOLHOS: 7 grupos\n   - SUSHITERIA: 8 grupos\n   - PRODUTOS DE LIMPEZA: 6 grupos\n   - TEMPEROS: 6 grupos\n   - ENLATADOS E EM CONSERVA: 3 grupos\n   - BISCOITOS: 3 grupos\n   - MERCEARIA: 13 grupos\n   - FRIOS Á GRANEL E PACOTES: 6 grupos\n   - RESFRIADOS: 10 grupos\n   - CONGELADOS: 8 grupos\n   - REFRIGERANTESE OUTROS LIQUIDOS: 5 grupos\n   - SERVIÇOS: 1 grupos\n? 500 preços encontrados no total\n?? Buscando todos os saldos de estoque em lotes com controle pelo total da API...\n?? Buscando lote de estoque 1 (start=0, end=99)...\n?? Total de estoques informado pela API: 6567\n? Lote de estoque 1: 100 saldos (Total: 100)\n?? Buscando lote de estoque 2 (start=100, end=199)...\n? Lote de estoque 2: 100 saldos (Total: 200)\n?? Buscando lote de estoque 3 (start=200, end=299)...\n? Lote de estoque 3: 100 saldos (Total: 300)\n?? Buscando lote de estoque 4 (start=300, end=399)...\n? Lote de estoque 4: 100 saldos (Total: 400)\n?? Buscando lote de estoque 5 (start=400, end=499)...\n? Lote de estoque 5: 100 saldos (Total: 500)\n?? Buscando lote de estoque 6 (start=500, end=599)...\n...\n[LOGS TRUNCADOS - Ver logs completos no servidor]"
+  },
+  {
+    "id": "1759365651925",
+    "timestamp": "2025-10-02T00:40:51.925Z",
+    "startTime": "2025-10-02T00:32:58.405Z",
+    "startedAt": "2025-10-02T00:32:58.405Z",
+    "finishedAt": "2025-10-02T00:35:35.628Z",
+    "durationMs": 157223,
+    "status": "success",
+    "totals": {
+      "products": 6567,
+      "sections": 15,
+      "brands": 3,
+      "genres": 100
+    },
+    "logs": "?? Iniciando sincronização completa do Varejo Fácil...\n?? Buscando seções...\n? 15 seções encontradas\n??? Buscando marcas...\n? 3 marcas encontradas\n?? Buscando gêneros...\n? 100 gêneros encontrados\n?? Buscando grupos por seção...\n?? Buscando grupos da seção: DESCARTÁVEIS (ID: 1)\n  ? 10 grupos encontrados na seção DESCARTÁVEIS\n?? Buscando grupos da seção: CONFEITARIA E OUTROS (ID: 2)\n  ? 13 grupos encontrados na seção CONFEITARIA E OUTROS\n?? Buscando grupos da seção: PANIFICAÇÃO (ID: 3)\n  ? 7 grupos encontrados na seção PANIFICAÇÃO\n?? Buscando grupos da seção: MOLHOS (ID: 4)\n  ? 7 grupos encontrados na seção MOLHOS\n?? Buscando grupos da seção: SUSHITERIA (ID: 5)\n  ? 8 grupos encontrados na seção SUSHITERIA\n?? Buscando grupos da seção: PRODUTOS DE LIMPEZA (ID: 6)\n  ? 6 grupos encontrados na seção PRODUTOS DE LIMPEZA\n?? Buscando grupos da seção: TEMPEROS (ID: 7)\n  ? 6 grupos encontrados na seção TEMPEROS\n?? Buscando grupos da seção: ENLATADOS E EM CONSERVA (ID: 8)\n  ? 3 grupos encontrados na seção ENLATADOS E EM CONSERVA\n?? Buscando grupos da seção: BISCOITOS (ID: 9)\n  ? 3 grupos encontrados na seção BISCOITOS\n?? Buscando grupos da seção: MERCEARIA (ID: 11)\n  ? 13 grupos encontrados na seção MERCEARIA\n?? Buscando grupos da seção: FRIOS Á GRANEL E PACOTES (ID: 12)\n  ? 6 grupos encontrados na seção FRIOS Á GRANEL E PACOTES\n?? Buscando grupos da seção: RESFRIADOS (ID: 13)\n  ? 10 grupos encontrados na seção RESFRIADOS\n?? Buscando grupos da seção: CONGELADOS (ID: 14)\n  ? 8 grupos encontrados na seção CONGELADOS\n?? Buscando grupos da seção: SERVIÇOS (ID: 16)\n  ? 1 grupos encontrados na seção SERVIÇOS\n?? Buscando grupos da seção: REFRIGERANTESE OUTROS LIQUIDOS (ID: 15)\n  ? 5 grupos encontrados na seção REFRIGERANTESE OUTROS LIQUIDOS\n? Total de 106 grupos encontrados em todas as seções\n\n📋 Relatório de grupos por seção:\n   - DESCARTÁVEIS: 10 grupos\n   - CONFEITARIA E OUTROS: 13 grupos\n   - PANIFICAÇÃO: 7 grupos\n   - MOLHOS: 7 grupos\n   - SUSHITERIA: 8 grupos\n   - PRODUTOS DE LIMPEZA: 6 grupos\n   - TEMPEROS: 6 grupos\n   - ENLATADOS E EM CONSERVA: 3 grupos\n   - BISCOITOS: 3 grupos\n   - MERCEARIA: 13 grupos\n   - FRIOS Á GRANEL E PACOTES: 6 grupos\n   - RESFRIADOS: 10 grupos\n   - CONGELADOS: 8 grupos\n   - REFRIGERANTESE OUTROS LIQUIDOS: 5 grupos\n   - SERVIÇOS: 1 grupos\n? 500 preços encontrados no total\n?? Buscando todos os saldos de estoque em lotes com controle pelo total da API...\n?? Buscando lote de estoque 1 (start=0, end=99)...\n?? Total de estoques informado pela API: 6567\n? Lote de estoque 1: 100 saldos (Total: 100)\n?? Buscando lote de estoque 2 (start=100, end=199)...\n? Lote de estoque 2: 100 saldos (Total: 200)\n?? Buscando lote de estoque 3 (start=200, end=299)...\n? Lote de estoque 3: 100 saldos (Total: 300)\n?? Buscando lote de estoque 4 (start=300, end=399)...\n? Lote de estoque 4: 100 saldos (Total: 400)\n?? Buscando lote de estoque 5 (start=400, end=499)...\n? Lote de estoque 5: 100 saldos (Total: 500)\n?? Buscando lote de estoque 6 (start=500, end=599)...\n...\n[LOGS TRUNCADOS - Ver logs completos no servidor]"
+  },
+  {
+    "id": "1759365169776",
+    "timestamp": "2025-10-02T00:32:49.776Z",
+    "startTime": "2025-10-02T00:32:48.427Z",
+    "startedAt": "2025-10-02T00:32:48.427Z",
+    "finishedAt": "2025-10-02T00:32:48.586Z",
+    "status": "error",
+    "error": "Sincronização já está em execução"
+  },
+  {
+    "id": "1759364980473",
+    "timestamp": "2025-10-02T00:29:40.473Z",
+    "startTime": "2025-10-02T00:29:39.104Z",
+    "startedAt": "2025-10-02T00:29:39.104Z",
+    "finishedAt": "2025-10-02T00:29:39.289Z",
+    "status": "error",
+    "error": "Sincronização já está em execução"
+  },
+  {
+    "id": "1759364903957",
+    "timestamp": "2025-10-02T00:28:23.957Z",
+    "startTime": "2025-10-02T00:28:22.627Z",
+    "startedAt": "2025-10-02T00:28:22.627Z",
+    "finishedAt": "2025-10-02T00:28:22.778Z",
+    "status": "error",
+    "error": "Sincronização já está em execução"
   },
   {
     "id": "1755785994536",
@@ -74,5 +230,250 @@
     "finishedAt": "2025-08-22T17:22:13.500Z",
     "status": "error",
     "error": "Erro na API: 504"
+  },
+  {
+    "id": "1756136976435",
+    "startTime": "2025-08-25T15:49:36.435Z",
+    "startedAt": "2025-08-25T15:48:34.371Z",
+    "finishedAt": "2025-08-25T15:49:34.554Z",
+    "status": "error",
+    "error": "Erro na API: 504"
+  },
+  {
+    "id": "1756934086410",
+    "startTime": "2025-09-03T21:14:46.410Z",
+    "startedAt": "2025-09-03T21:13:45.851Z",
+    "finishedAt": "2025-09-03T21:14:46.045Z",
+    "status": "error",
+    "error": "Erro na API: 504"
+  },
+  {
+    "id": "1757210026445",
+    "startTime": "2025-09-07T01:53:46.445Z",
+    "startedAt": "2025-09-07T01:52:45.058Z",
+    "finishedAt": "2025-09-07T01:53:45.304Z",
+    "status": "error",
+    "error": "Erro na API: 504"
+  },
+  {
+    "id": "1757453215058",
+    "startTime": "2025-09-09T21:26:55.058Z",
+    "startedAt": "2025-09-09T21:25:54.321Z",
+    "finishedAt": "2025-09-09T21:26:54.477Z",
+    "status": "error",
+    "error": "Erro na API: 504"
+  },
+  {
+    "id": "1758304686095",
+    "startTime": "2025-09-19T17:58:06.095Z",
+    "startedAt": "2025-09-19T17:57:05.112Z",
+    "finishedAt": "2025-09-19T17:58:05.295Z",
+    "status": "error",
+    "error": "Erro na API: 504"
+  },
+  {
+    "id": "1758364146390",
+    "startTime": "2025-09-20T10:29:06.390Z",
+    "startedAt": "2025-09-20T10:28:04.624Z",
+    "finishedAt": "2025-09-20T10:29:04.845Z",
+    "status": "error",
+    "error": "Erro na API: 504"
+  },
+  {
+    "id": "1758383109146",
+    "startTime": "2025-09-20T15:45:09.146Z",
+    "startedAt": "2025-09-20T15:44:07.183Z",
+    "finishedAt": "2025-09-20T15:45:07.401Z",
+    "status": "error",
+    "error": "Erro na API: 504"
+  },
+  {
+    "id": "1758392054012",
+    "startTime": "2025-09-20T18:14:14.012Z",
+    "startedAt": "2025-09-20T18:13:12.036Z",
+    "finishedAt": "2025-09-20T18:14:12.181Z",
+    "status": "error",
+    "error": "Erro na API: 504"
+  },
+  {
+    "id": "1758392866463",
+    "startTime": "2025-09-20T18:27:46.463Z",
+    "startedAt": "2025-09-20T18:26:44.455Z",
+    "finishedAt": "2025-09-20T18:27:44.627Z",
+    "status": "error",
+    "error": "Erro na API: 504"
+  },
+  {
+    "id": "1758393220906",
+    "startTime": "2025-09-20T18:33:40.906Z",
+    "startedAt": "2025-09-20T18:32:38.830Z",
+    "finishedAt": "2025-09-20T18:33:39.061Z",
+    "status": "error",
+    "error": "Erro na API: 504"
+  },
+  {
+    "id": "1758393843893",
+    "startTime": "2025-09-20T18:44:03.893Z",
+    "startedAt": "2025-09-20T18:43:01.750Z",
+    "finishedAt": "2025-09-20T18:44:02.046Z",
+    "status": "error",
+    "error": "Erro na API: 504"
+  },
+  {
+    "id": "1759244226245",
+    "startTime": "2025-09-30T14:57:06.245Z",
+    "startedAt": "2025-09-30T14:56:05.756Z",
+    "finishedAt": "2025-09-30T14:57:05.991Z",
+    "status": "error",
+    "error": "Erro na API: 504"
+  },
+  {
+    "id": "1759259719446",
+    "startTime": "2025-09-30T19:15:19.446Z",
+    "startedAt": "2025-09-30T19:14:19.243Z",
+    "finishedAt": "2025-09-30T19:15:19.413Z",
+    "status": "error",
+    "error": "Erro na API: 504"
+  },
+  {
+    "id": "1759262215049",
+    "startTime": "2025-09-30T19:56:55.049Z",
+    "startedAt": "2025-09-30T19:55:54.213Z",
+    "finishedAt": "2025-09-30T19:56:54.971Z",
+    "status": "error",
+    "error": "Erro na API: 504"
+  },
+  {
+    "id": "1759328675610",
+    "startTime": "2025-10-01T14:24:35.610Z",
+    "startedAt": "2025-10-01T14:23:34.536Z",
+    "finishedAt": "2025-10-01T14:24:34.782Z",
+    "status": "error",
+    "error": "Erro na API: 504"
+  },
+  {
+    "id": "1759349144522",
+    "startTime": "2025-10-01T20:05:44.522Z",
+    "startedAt": "2025-10-01T20:05:43.286Z",
+    "finishedAt": "2025-10-01T20:05:43.444Z",
+    "status": "error",
+    "error": "Sincronização já está em execução"
+  },
+  {
+    "id": "1759349167162",
+    "startTime": "2025-10-01T20:06:07.162Z",
+    "startedAt": "2025-10-01T20:06:05.957Z",
+    "finishedAt": "2025-10-01T20:06:06.149Z",
+    "status": "error",
+    "error": "Sincronização já está em execução"
+  },
+  {
+    "id": "1759349185901",
+    "startTime": "2025-10-01T20:06:25.901Z",
+    "startedAt": "2025-10-01T20:06:24.659Z",
+    "finishedAt": "2025-10-01T20:06:24.889Z",
+    "status": "error",
+    "error": "Sincronização já está em execução"
+  },
+  {
+    "id": "1759349353038",
+    "startTime": "2025-10-01T20:09:13.038Z",
+    "startedAt": "2025-10-01T20:09:11.272Z",
+    "finishedAt": "2025-10-01T20:09:12.015Z",
+    "status": "error",
+    "error": "Erro na sincronização: Erro ao parsear resposta: Unexpected end of JSON input"
+  },
+  {
+    "id": "1759349445314",
+    "startTime": "2025-10-01T20:10:45.314Z",
+    "startedAt": "2025-10-01T20:10:43.837Z",
+    "finishedAt": "2025-10-01T20:10:44.297Z",
+    "status": "error",
+    "error": "Erro na sincronização: Erro ao parsear resposta: Unexpected end of JSON input"
+  },
+  {
+    "id": "1759349449538",
+    "startTime": "2025-10-01T20:10:49.538Z",
+    "startedAt": "2025-10-01T20:10:48.226Z",
+    "finishedAt": "2025-10-01T20:10:48.523Z",
+    "status": "error",
+    "error": "Erro na sincronização: Erro ao parsear resposta: Unexpected end of JSON input"
+  },
+  {
+    "id": "1759349505120",
+    "startTime": "2025-10-01T20:11:45.120Z",
+    "startedAt": "2025-10-01T20:11:43.252Z",
+    "finishedAt": "2025-10-01T20:11:44.068Z",
+    "status": "error",
+    "error": "Erro na sincronização: Erro ao parsear resposta: Unexpected end of JSON input"
+  },
+  {
+    "id": "1759349805087",
+    "startTime": "2025-10-01T20:16:45.087Z",
+    "startedAt": "2025-10-01T20:15:43.898Z",
+    "finishedAt": "2025-10-01T20:16:44.063Z",
+    "status": "error",
+    "error": "Erro na API: 504"
+  },
+  {
+    "id": "1759350031417",
+    "startTime": "2025-10-01T20:20:31.417Z",
+    "startedAt": "2025-10-01T20:20:30.109Z",
+    "finishedAt": "2025-10-01T20:20:30.359Z",
+    "status": "error",
+    "error": "Erro na API: 500"
+  },
+  {
+    "id": "1759350411022",
+    "startTime": "2025-10-01T20:26:51.022Z",
+    "startedAt": "2025-10-01T20:26:49.851Z",
+    "finishedAt": "2025-10-01T20:26:49.997Z",
+    "status": "error",
+    "error": "Sincronização já está em execução"
+  },
+  {
+    "id": "1759351516482",
+    "startTime": "2025-10-01T20:45:16.482Z",
+    "startedAt": "2025-10-01T20:45:15.241Z",
+    "finishedAt": "2025-10-01T20:45:15.445Z",
+    "status": "error",
+    "error": "Sincronização já está em execução"
+  },
+  {
+    "id": "1759351517401",
+    "startTime": "2025-10-01T20:45:17.401Z",
+    "startedAt": "2025-10-01T20:45:16.190Z",
+    "finishedAt": "2025-10-01T20:45:16.364Z",
+    "status": "error",
+    "error": "Sincronização já está em execução"
+  },
+  {
+    "id": "1759351518320",
+    "startTime": "2025-10-01T20:45:18.320Z",
+    "startedAt": "2025-10-01T20:45:17.067Z",
+    "finishedAt": "2025-10-01T20:45:17.284Z",
+    "status": "error",
+    "error": "Sincronização já está em execução"
+  },
+  {
+    "id": "1759352164667",
+    "startTime": "2025-10-01T20:56:04.667Z",
+    "startedAt": "2025-10-01T20:56:03.469Z",
+    "finishedAt": "2025-10-01T20:56:03.623Z",
+    "status": "error",
+    "error": "Sincronização já está em execução"
+  },
+  {
+    "id": "1759352385412",
+    "startTime": "2025-10-01T20:59:45.412Z",
+    "startedAt": "2025-10-01T20:59:44.219Z",
+    "finishedAt": "2025-10-01T20:59:44.366Z",
+    "status": "success",
+    "totals": {
+      "products": 1000,
+      "sections": 50,
+      "brands": 100,
+      "genres": 20
+    }
   }
 ]

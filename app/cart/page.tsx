@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import React, { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Trash2, Minus, Plus, MapPin, Phone, User, AlertCircle, Truck, Calculator, Heart, Star, CreditCard, Banknote, QrCode } from 'lucide-react'
+import { Trash2, Minus, Plus, MapPin, Phone, User, AlertCircle, Truck, Calculator, Heart, Star, CreditCard, Banknote, QrCode, ChevronDown } from 'lucide-react'
 import Header from '@/components/header'
 import { Footer } from '@/components/footer'
 import { useCartStore, useAuthStore, useOrderStore } from '@/lib/store'
@@ -14,18 +14,65 @@ import type { Address, ShippingCalculation } from '@/lib/types'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 
+// Helper para tratar endereço do usuário de forma segura
+const getUserAddress = (user: any): Address => {
+  if (!user) return {} as Address;
+  
+  // Se tem estrutura de endereço aninhada
+  if (user.address && typeof user.address === 'object') {
+    return user.address as Address;
+  }
+  
+  // Se tem estrutura plana (usuários Google)
+  return {
+    street: user.address || user.street || '',
+    number: user.number || '',
+    complement: user.complement || '',
+    neighborhood: user.neighborhood || '',
+    city: user.city || '',
+    state: user.state || 'Ceará',
+    zipCode: user.zipCode || '',
+    reference: user.reference || ''
+  } as Address;
+}
+
 export default function CartPage() {
+  const [showPaymentWarning, setShowPaymentWarning] = useState(false)
   const { items, removeItem, updateQuantity, getTotal, clearCart } = useCartStore()
-  const { user } = useAuthStore()
+  const user = useAuthStore((s) => s.user)
   const { addOrder } = useOrderStore()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [debugInfo, setDebugInfo] = useState<string | null>(null)
   const [shippingCalculation, setShippingCalculation] = useState<ShippingCalculation | null>(null)
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false)
   const [showThankYouDialog, setShowThankYouDialog] = useState(false)
   const [showRatingDialog, setShowRatingDialog] = useState(false)
   const [orderId, setOrderId] = useState<string | null>(null)
+  
+  // Estados para formulário
+  const [formData, setFormData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    street: '',
+    number: '',
+    complement: '',
+    neighborhood: '',
+    city: '',
+    state: 'Ceará',
+    zipCode: '',
+    reference: '',
+    pickupFirstName: '',
+    pickupLastName: '',
+    pickupPhone: '',
+    pickupEmail: '',
+    selectedBairro: '',
+    paymentMethod: 'pix',
+    wantsChange: false,
+    changeFor: '',
+    deliveryType: 'delivery'
+  })
+  
   // Pagamento
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'debit' | 'credit' | 'cash'>('pix')
   const [wantsChange, setWantsChange] = useState(false)
@@ -38,41 +85,255 @@ export default function CartPage() {
   const router = useRouter()
   const errorRef = useRef<HTMLDivElement>(null)
 
-  // Scroll para mensagens de erro
-  useEffect(() => {
-    if (error && errorRef.current) {
-      errorRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
-      })
-    }
-  }, [error])
+  // Bairros de Fortaleza
+  const bairrosFortaleza = [
+    { nome: 'Jardim Guanabara', preco: 5 },
+    { nome: 'Vila Velha', preco: 5 },
+    { nome: 'Quintino Cunha', preco: 7 },
+    { nome: 'Olavo Oliveira', preco: 7 },
+    { nome: 'Jardim Iracema', preco: 7 },
+    { nome: 'Padre Andrade', preco: 10 },
+    { nome: 'Floresta', preco: 10 },
+    { nome: 'Antonio Bezerra', preco: 10 },
+    { nome: 'Barra do Ceara', preco: 10 },
+    { nome: 'Cristo Redentor', preco: 15 },
+    { nome: 'Alvaro Wayne', preco: 15 },
+    { nome: 'Carlito', preco: 15 },
+    { nome: 'Pirambu', preco: 15 },
+    { nome: 'Monte Castelo', preco: 15 },
+    { nome: 'Elery', preco: 15 },
+    { nome: 'Alagadiço', preco: 15 },
+    { nome: 'Parquelandia', preco: 15 },
+    { nome: 'Parque Araxá', preco: 15 },
+    { nome: 'Rodolgo Teofilo', preco: 15 },
+    { nome: 'Amadeu Furtado', preco: 15 },
+    { nome: 'Bela Vista', preco: 15 },
+    { nome: 'Pici', preco: 15 },
+    { nome: 'Dom Lustosa', preco: 15 },
+    { nome: 'Autran Nunes', preco: 15 },
+    { nome: 'Genibau', preco: 15 },
+    { nome: 'Tabapuá', preco: 15 },
+    { nome: 'Iparana', preco: 15 },
+    { nome: 'Parque Albano', preco: 15 },
+    { nome: 'Parque Leblon', preco: 15 },
+    { nome: 'Jacarecanga', preco: 20 },
+    { nome: 'Centro', preco: 20 },
+    { nome: 'Moura brasil', preco: 20 },
+    { nome: 'Farias Brito', preco: 20 },
+    { nome: 'Benfica', preco: 20 },
+    { nome: 'Damas', preco: 20 },
+    { nome: 'Jardim America', preco: 20 },
+    { nome: 'Bom Futuro', preco: 20 },
+    { nome: 'Montese', preco: 20 },
+    { nome: 'Pan Americano', preco: 20 },
+    { nome: 'Couto Fernandes', preco: 20 },
+    { nome: 'Democrito Rocha', preco: 20 },
+    { nome: 'Joquei Clube', preco: 20 },
+    { nome: 'Henrique Jorge', preco: 20 },
+    { nome: 'Joao XXIII', preco: 20 },
+    { nome: 'Conj Ceara', preco: 20 },
+    { nome: 'Parangaba', preco: 20 },
+    { nome: 'Itaoca', preco: 20 },
+    { nome: 'Parque Soledade', preco: 25 } // Adicionado para Caucaia
+  ];
+  
+  const [selectedBairro, setSelectedBairro] = useState(bairrosFortaleza[0].nome);
+  const [bairroFrete, setBairroFrete] = useState(bairrosFortaleza[0].preco);
+  const [showBairroDropdown, setShowBairroDropdown] = useState(false);
+  const [isLoadingUserData, setIsLoadingUserData] = useState(false);
+  const lastUserId = useRef<string | null>(null);
 
-  // Utilitário: atualizar dados no localStorage cartFormData
-  const updateCartFormData = (partial: Record<string, any>) => {
-    try {
-      const saved = localStorage.getItem('cartFormData')
-      const current = saved ? JSON.parse(saved) : {}
-      const merged = { ...current, ...partial }
-      localStorage.setItem('cartFormData', JSON.stringify(merged))
-    } catch (e) {
-      console.warn('Não foi possível salvar payment no localStorage')
-    }
-  }
-
-  // Carregar pagamento e tipo de entrega salvos
+  // Carregar dados do usuário ao montar o componente
   useEffect(() => {
+    // Evitar reprocessamento se o usuário não mudou
+    if (lastUserId.current === (user?.id || null)) {
+      return;
+    }
+    
+    setIsLoadingUserData(true);
+    console.log('🔄 Carregando dados do usuário (ID mudou):', user?.name, 'de', lastUserId.current, 'para', user?.id);
+    
+    // Preencher com dados do usuário se estiver autenticado
+    if (user) {
+      
+      // Usar apenas os dados do usuário do banco (users.json), não do localStorage
+      const userData = user;
+        
+        // Tratar diferentes estruturas de endereço
+        let addressData: {
+          street: string;
+          number: string;
+          complement: string;
+          neighborhood: string;
+          city: string;
+          state: string;
+          zipCode: string;
+          reference: string;
+        } = {
+          street: '',
+          number: '',
+          complement: '',
+          neighborhood: '',
+          city: '',
+          state: 'Ceará',
+          zipCode: '',
+          reference: ''
+        };
+        
+        if (userData.address && typeof userData.address === 'object') {
+          // Estrutura aninhada (padrão)
+          addressData = {
+            street: userData.address.street || '',
+            number: userData.address.number || '',
+            complement: userData.address.complement || '',
+            neighborhood: userData.address.neighborhood || '',
+            city: userData.address.city || '',
+            state: userData.address.state || 'Ceará',
+            zipCode: userData.address.zipCode || '',
+            reference: userData.address.reference || ''
+          };
+        } else {
+          // Estrutura plana (usuários Google do users.json)
+          addressData = {
+            street: (userData as any).address || (userData as any).street || '',
+            number: (userData as any).number || '',
+            complement: (userData as any).complement || '',
+            neighborhood: (userData as any).neighborhood || '',
+            city: (userData as any).city || '',
+            state: 'Ceará',
+            zipCode: (userData as any).zipCode || '',
+            reference: (userData as any).reference || ''
+          };
+        }
+
+        // Se o usuário tem bairro, usar o preço correspondente
+        const neighborhoodName = addressData.neighborhood;
+        
+        if (neighborhoodName) {
+          const bairroObj = bairrosFortaleza.find(b => b.nome === neighborhoodName);
+          
+          if (bairroObj) {
+            setSelectedBairro(bairroObj.nome);
+            setBairroFrete(bairroObj.preco);
+            console.log('✅ Bairro definido automaticamente:', bairroObj.nome, 'R$', bairroObj.preco);
+            // Atualizar também o formData para garantir consistência
+            setFormData(prev => ({
+              ...prev,
+              name: userData.name || '',
+              phone: userData.phone || '',
+              email: userData.email || '',
+              ...addressData,
+              selectedBairro: bairroObj.nome
+            }));
+          } else {
+            // Se o bairro não está na lista, usar o primeiro como padrão
+            setSelectedBairro(bairrosFortaleza[0].nome);
+            setBairroFrete(bairrosFortaleza[0].preco);
+            setFormData(prev => ({
+              ...prev,
+              name: userData.name || '',
+              phone: userData.phone || '',
+              email: userData.email || '',
+              ...addressData,
+              selectedBairro: bairrosFortaleza[0].nome
+            }));
+          }
+        } else {
+          // Se não tem bairro definido, usar o primeiro como padrão
+          setSelectedBairro(bairrosFortaleza[0].nome);
+          setBairroFrete(bairrosFortaleza[0].preco);
+          setFormData(prev => ({
+            ...prev,
+            name: userData.name || '',
+            phone: userData.phone || '',
+            email: userData.email || '',
+            ...addressData,
+            selectedBairro: bairrosFortaleza[0].nome
+          }));
+        }
+
+        console.log('🛒 Dados carregados no carrinho para usuário:', userData.name);
+    } else {
+      // Se não há usuário logado, usar dados padrão
+      setSelectedBairro(bairrosFortaleza[0].nome);
+      setBairroFrete(bairrosFortaleza[0].preco);
+    }
+    
+    // Carregar apenas configurações de pedido do localStorage (não dados pessoais)
     try {
-      const saved = localStorage.getItem('cartFormData')
-      if (saved) {
-        const data = JSON.parse(saved)
-        if (data.paymentMethod) setPaymentMethod(data.paymentMethod)
-        if (typeof data.wantsChange !== 'undefined') setWantsChange(!!data.wantsChange)
-        if (typeof data.changeFor !== 'undefined') setChangeFor(String(data.changeFor))
-        if (data.deliveryType) setDeliveryType(data.deliveryType)
+      const savedData = localStorage.getItem('cartFormData');
+      if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        // Carregar apenas configurações, não dados pessoais
+        if (parsedData.paymentMethod) setPaymentMethod(parsedData.paymentMethod);
+        if (typeof parsedData.wantsChange !== 'undefined') setWantsChange(!!parsedData.wantsChange);
+        if (typeof parsedData.changeFor !== 'undefined') setChangeFor(String(parsedData.changeFor));
+        if (parsedData.deliveryType) setDeliveryType(parsedData.deliveryType);
+        
+        // Só usar o bairro do localStorage se o usuário não está logado
+        if (!user && parsedData.selectedBairro) {
+          setSelectedBairro(parsedData.selectedBairro);
+          const bairroObj = bairrosFortaleza.find(b => b.nome === parsedData.selectedBairro);
+          setBairroFrete(bairroObj ? bairroObj.preco : bairrosFortaleza[0].preco);
+        }
       }
-    } catch {}
-  }, [])
+    } catch (error) {
+      console.error('Erro ao carregar configurações do localStorage:', error);
+    }
+    
+    // Atualizar referência do usuário
+    lastUserId.current = user?.id || null;
+    setIsLoadingUserData(false);
+  }, [user?.id]);
+
+  // Calcular frete automaticamente quando dados são carregados ou bairro é alterado
+  useEffect(() => {
+    if (deliveryType === 'delivery' && selectedBairro && formData.neighborhood) {
+      const address: Address = {
+        street: formData.street,
+        number: formData.number,
+        complement: formData.complement || undefined,
+        neighborhood: formData.neighborhood,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode,
+        reference: formData.reference || undefined
+      };
+      
+      // Delay para evitar múltiplas chamadas simultâneas
+      const timer = setTimeout(() => {
+        calculateShipping(address);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [selectedBairro, formData.neighborhood, deliveryType]);
+
+  // Salvar dados no localStorage quando mudar (apenas se não estiver carregando dados do usuário)
+  useEffect(() => {
+    if (!isLoadingUserData && !user) {
+      // Só salvar no localStorage se não há usuário logado
+      const saveData = {
+        paymentMethod,
+        wantsChange,
+        changeFor,
+        deliveryType,
+        selectedBairro
+      }
+      localStorage.setItem('cartFormData', JSON.stringify(saveData))
+    }
+  }, [formData, paymentMethod, wantsChange, changeFor, deliveryType, selectedBairro, isLoadingUserData, user])
+
+  // Atualizar dados do formulário
+  const updateFormData = (field: string, value: any) => {
+    setFormData(prev => {
+      // Só atualizar se o valor realmente mudou
+      if ((prev as any)[field] === value) {
+        return prev
+      }
+      return { ...prev, [field]: value }
+    })
+  }
 
   // Formatar telefone
   const formatPhone = (value: string) => {
@@ -96,13 +357,67 @@ export default function CartPage() {
     return value.slice(0, 9)
   }
 
+  // Função para calcular tempo de entrega baseado no valor do frete
+  const getDeliveryTime = (freightCost: number) => {
+    if (freightCost >= 10) {
+      return '3 a 5 horas'
+    } else {
+      return '2 a 3 horas'
+    }
+  }
+
   // Calcular frete
   const calculateShipping = async (address: Address) => {
     setIsCalculatingShipping(true)
     try {
-      const calculation = await shippingService.calculateShipping(address, getTotal())
-      setShippingCalculation(calculation)
-      return calculation
+      if (deliveryType === 'pickup') {
+        // Retirada: não calcula frete, retorna custo zero
+        const result = {
+          distance: 0,
+          duration: 0,
+          cost: 0,
+          estimatedDelivery: 'Retirada na loja',
+          available: true
+        }
+        setShippingCalculation(result)
+        return result
+      } else {
+        // Para entrega, sempre usar o bairro selecionado ou o bairro do endereço
+        let bairroParaCalculo = selectedBairro
+        
+        // Se não tem bairro selecionado, tenta usar o bairro do endereço/formulário
+        if (!bairroParaCalculo && (address.neighborhood || formData.neighborhood)) {
+          const neighborhoodFromForm = address.neighborhood || formData.neighborhood
+          const bairroObj = bairrosFortaleza.find(b => b.nome === neighborhoodFromForm)
+          if (bairroObj) {
+            bairroParaCalculo = bairroObj.nome
+            setSelectedBairro(bairroObj.nome)
+            setBairroFrete(bairroObj.preco)
+          }
+        }
+        
+        // Se ainda não tem bairro, usa o primeiro da lista como padrão
+        if (!bairroParaCalculo) {
+          bairroParaCalculo = bairrosFortaleza[0].nome
+          setSelectedBairro(bairrosFortaleza[0].nome)
+          setBairroFrete(bairrosFortaleza[0].preco)
+        }
+        
+        // Calcular o frete baseado no bairro selecionado
+        const bairroObj = bairrosFortaleza.find(b => b.nome === bairroParaCalculo)
+        const custo = bairroObj ? bairroObj.preco : bairrosFortaleza[0].preco
+        
+        const result = {
+          distance: 0,
+          duration: 0,
+          cost: custo,
+          estimatedDelivery: getDeliveryTime(custo),
+          available: true
+        }
+        
+        setShippingCalculation(result)
+        return result
+      }
     } catch (error) {
       console.error('Erro ao calcular frete:', error)
       setError('Erro ao calcular frete. Tente novamente.')
@@ -125,243 +440,169 @@ export default function CartPage() {
     }
   }, [paymentMethod, wantsChange, changeFor, shippingCalculation, getTotal])
 
-  // Buscar endereço por CEP
-  const handleZipCodeBlur = async (zipCode: string) => {
-    const cleanZipCode = zipCode.replace(/\D/g, '')
-    if (cleanZipCode.length === 8) {
-      try {
-                 const addressData = await (shippingService.constructor as any).getAddressByZipCode(cleanZipCode)
-        if (addressData) {
-          // Preencher campos automaticamente
-          const form = document.querySelector('form') as HTMLFormElement
-          if (form) {
-            const streetInput = form.querySelector('[name="street"]') as HTMLInputElement
-            const neighborhoodInput = form.querySelector('[name="neighborhood"]') as HTMLInputElement
-            const cityInput = form.querySelector('[name="city"]') as HTMLInputElement
-            const stateInput = form.querySelector('[name="state"]') as HTMLSelectElement
-
-            if (streetInput) streetInput.value = addressData.street || ''
-            if (neighborhoodInput) neighborhoodInput.value = addressData.neighborhood || ''
-            if (cityInput) cityInput.value = addressData.city || ''
-            if (stateInput) stateInput.value = addressData.state || ''
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao buscar CEP:', error)
-      }
-    }
-  }
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.target.value = formatPhone(e.target.value)
-  }
-
-  const handleCEPChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.target.value = formatCEP(e.target.value)
-  }
-
-  const handleTestAuth = () => {
-    const info = `
-      Usuário logado: ${user ? 'Sim' : 'Não'}
-      Nome: ${user?.name || 'N/A'}
-      Email: ${user?.email || 'N/A'}
-      Telefone: ${user?.phone || 'N/A'}
-      ID: ${user?.id || 'N/A'}
-      Itens no carrinho: ${items.length}
-      Total: R$ ${getTotal().toFixed(2)}
-    `
-    setDebugInfo(info)
-    console.log('Debug Info:', info)
-  }
-
   const handleWhatsAppOrder = async () => {
     // Limpar erro anterior
-    setError(null)
-    setDebugInfo(null)
+    setError(null);
 
     // Verificar se há itens no carrinho
     if (items.length === 0) {
-      setError('Adicione produtos ao carrinho antes de finalizar o pedido.')
-      return
+      setError('Adicione produtos ao carrinho antes de finalizar o pedido.');
+      return;
     }
 
     // Verificar valor mínimo de R$ 100
-    const subtotal = getTotal()
+    const subtotal = getTotal();
     if (subtotal < 100) {
-      setError(`Valor mínimo para pedido é R$ 100,00. Seu carrinho tem R$ ${subtotal.toFixed(2)}.`)
-      return
+      setError(`Valor mínimo para pedido é R$ 100,00. Seu carrinho tem R$ ${subtotal.toFixed(2)}.`);
+      return;
     }
 
+    // Validação para retirada ou entrega
+    if (deliveryType === 'delivery') {
+      // Corrigido: verificar se o nome está preenchido independente de autenticação
+      if (!formData.name.trim() && !user?.name) {
+        setError('Nome é obrigatório para entrega.');
+        return;
+      }
+      if (!formData.phone.trim() && !user?.phone) {
+        setError('Telefone é obrigatório para entrega.');
+        return;
+      }
+      // Validar endereço apenas para entrega
+      const userAddr = getUserAddress(user);
+      const addressFields = { 
+        street: formData.street || userAddr.street || '',
+        number: formData.number || userAddr.number || '',
+        neighborhood: formData.neighborhood || userAddr.neighborhood || '',
+        city: formData.city || userAddr.city || '',
+        state: formData.state || userAddr.state || 'Ceará',
+        zipCode: formData.zipCode || userAddr.zipCode || ''
+      };
+      const emptyFields = Object.entries(addressFields)
+        .filter(([key, value]) => !value || !value.trim())
+        .map(([key]) => key);
+      if (emptyFields.length > 0) {
+        const fieldNames = {
+          street: 'Rua',
+          number: 'Número',
+          neighborhood: 'Bairro',
+          city: 'Cidade',
+          state: 'Estado',
+          zipCode: 'CEP'
+        };
+        const missingFields = emptyFields.map(field => fieldNames[field as keyof typeof fieldNames]).join(', ');
+        setError(`Preencha os campos obrigatórios: ${missingFields}`);
+        return;
+      }
+    } else if (deliveryType === 'pickup') {
+      // Corrigido: verificar se o nome está preenchido independente de autenticação
+      if (!formData.pickupFirstName.trim() && !user?.name) {
+        setError('Nome é obrigatório para retirada.');
+        return;
+      }
+      if (!formData.pickupPhone.trim() && !user?.phone) {
+        setError('Telefone é obrigatório para retirada.');
+        return;
+      }
+    }
+
+    setShowPaymentWarning(true);
+  };
+
+  const handlePaymentConfirmation = async () => {
     setIsLoading(true);
+    setShowPaymentWarning(false);
+
     try {
-      console.log('Iniciando processo de pedido...');
-      console.log('Usuário:', user);
-      console.log('Itens:', items);
-
-      // Obter dados do localStorage (dados salvos automaticamente)
-      let formData;
-      try {
-        const savedData = localStorage.getItem('cartFormData');
-        formData = savedData ? JSON.parse(savedData) : {};
-      } catch (error) {
-        console.error('Erro ao carregar dados do formulário:', error);
-        formData = {};
-      }
-
-      const customerName = formData.name || user?.name || '';
-      const customerPhone = formData.phone || user?.phone || '';
-      const customerEmail = formData.email || user?.email || '';
-      const street = formData.street || '';
-      const number = formData.number || '';
-      const complement = formData.complement || '';
-      const neighborhood = formData.neighborhood || '';
-      const city = formData.city || '';
-      const state = formData.state || '';
-      const zipCode = formData.zipCode || '';
-      // Dados de retirada
-      const pickupFirstName = formData.pickupFirstName || '';
-      const pickupLastName = formData.pickupLastName || '';
-      const pickupPhone = formData.pickupPhone || '';
-      const pickupEmail = formData.pickupEmail || '';
-
-      // Debug: mostrar valores obtidos
-      console.log('Dados do formulário:', {
-        customerName,
-        customerPhone,
-        customerEmail,
-        street,
-        number,
-        neighborhood,
-        city,
-        state,
-        zipCode
-      });
-
-      // Debug: mostrar dados carregados
-      console.log('Dados carregados do localStorage:', formData);
-
-      // Validação para retirada ou entrega
-      if (deliveryType === 'delivery') {
-        if (!customerName.trim()) {
-          setError('Nome é obrigatório.');
-          setDebugInfo(`Nome obtido: "${customerName}"`);
-          return;
-        }
-        if (!customerPhone.trim()) {
-          setError('Telefone é obrigatório.');
-          setDebugInfo(`Telefone obtido: "${customerPhone}"`);
-          return;
-        }
-        // Email é opcional
-        // Validar endereço apenas para entrega
-        const addressFields = { street, number, neighborhood, city, state, zipCode };
-        const emptyFields = Object.entries(addressFields)
-          .filter(([key, value]) => !value || !value.trim())
-          .map(([key]) => key);
-        if (emptyFields.length > 0) {
-          const fieldNames = {
-            street: 'Rua',
-            number: 'Número',
-            neighborhood: 'Bairro',
-            city: 'Cidade',
-            state: 'Estado',
-            zipCode: 'CEP'
-          };
-          const missingFields = emptyFields.map(field => fieldNames[field as keyof typeof fieldNames]).join(', ');
-          setError(`Preencha os campos obrigatórios: ${missingFields}`);
-          setDebugInfo(`Campos vazios: ${emptyFields.join(', ')}`);
-          return;
-        }
-      } else if (deliveryType === 'pickup') {
-        if (!pickupFirstName.trim() || !pickupLastName.trim() || !pickupPhone.trim()) {
-          setError('Informações básicas do cliente são obrigatórias: nome e telefone');
-          setDebugInfo(`Nome: "${pickupFirstName}", Sobrenome: "${pickupLastName}", Telefone: "${pickupPhone}"`);
-          return;
-        }
-      }
-
-      // Obter referência do localStorage
-      const reference = formData.reference || '';
-
       // Criar objeto de endereço
       const address: Address = {
-        street,
-        number,
-        complement: complement || undefined,
-        neighborhood,
-        city,
-        state,
-        zipCode,
-        reference: reference || undefined
+        street: formData.street,
+        number: formData.number,
+        complement: formData.complement || undefined,
+        neighborhood: formData.neighborhood,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode,
+        reference: formData.reference || undefined
       };
 
       // Calcular frete se ainda não foi calculado
       let shipping = shippingCalculation;
-      if (!shipping) {
+      if (!shipping && deliveryType === 'delivery') {
         shipping = await calculateShipping(address);
         if (!shipping) {
+          setError('Erro ao calcular frete. Tente novamente.');
+          setIsLoading(false);
           return;
         }
+      } else if (deliveryType === 'pickup') {
+        shipping = { distance: 0, duration: 0, cost: 0, estimatedDelivery: 'Retirada na loja', available: true }
       }
 
-      // Verificar se o frete está disponível
-      if (!shipping.available) {
-        if (deliveryType === 'delivery') {
-          setError('Desculpe, não entregamos neste endereço.');
-          return;
-        }
-      }
-
-      const totalWithShipping = getTotal() + shipping.cost;
-
-      // Ler pagamento salvo
-      const paymentMethod = (formData.paymentMethod as 'pix'|'debit'|'credit'|'cash') || 'pix';
-      const wantsChange = formData.wantsChange === true || formData.wantsChange === 'true';
-      const changeForValue = Number(formData.changeFor || 0);
+      const totalWithShipping = getTotal() + (shipping?.cost || 0);
 
       // Validações de pagamento (troco)
       if (paymentMethod === 'cash' && wantsChange) {
-        if (!changeForValue || isNaN(changeForValue)) {
+        const val = Number(changeFor || 0);
+        if (!val || isNaN(val)) {
           setError('Informe o valor para troco.');
+          setIsLoading(false);
           return;
         }
-        if (changeForValue <= totalWithShipping) {
+        if (val <= totalWithShipping) {
           setError(`O valor para troco deve ser maior que o total (R$ ${totalWithShipping.toFixed(2)}).`);
+          setIsLoading(false);
           return;
         }
       }
 
       // Criar pedido
+      let orderCustomerInfo;
+      if (deliveryType === 'pickup') {
+        orderCustomerInfo = {
+          name: `${formData.pickupFirstName || user?.name || ''} ${formData.pickupLastName || ''}`.trim(),
+          email: formData.pickupEmail || user?.email || '',
+          phone: formData.pickupPhone || user?.phone || '',
+          address: user?.address || {}
+        };
+      } else {
+        const userAddr = getUserAddress(user);
+        orderCustomerInfo = {
+          name: formData.name || user?.name || '',
+          email: formData.email || user?.email || '',
+          phone: formData.phone || user?.phone || '',
+          address: {
+            street: formData.street || userAddr.street || '',
+            number: formData.number || userAddr.number || '',
+            complement: formData.complement || userAddr.complement || '',
+            neighborhood: formData.neighborhood || userAddr.neighborhood || '',
+            city: formData.city || userAddr.city || '',
+            state: formData.state || userAddr.state || 'Ceará',
+            zipCode: formData.zipCode || userAddr.zipCode || '',
+            reference: formData.reference || userAddr.reference || ''
+          }
+        };
+      }
+      
       const order = {
         id: Date.now().toString(),
         items,
         total: totalWithShipping,
-        customerInfo: {
-          name: customerName,
-          email: customerEmail,
-          phone: customerPhone,
-          address
-        },
+        customerInfo: orderCustomerInfo,
         status: 'pending' as const,
         createdAt: new Date(),
-        estimatedDelivery: new Date(Date.now() + shipping.duration * 60 * 1000),
-        shippingCost: shipping.cost,
-        shippingDistance: shipping.distance
+        estimatedDelivery: new Date(Date.now() + (shipping?.duration || 0) * 60 * 1000),
+        shippingCost: shipping?.cost || 0,
+        shippingDistance: shipping?.distance || 0
       };
-
+      
       // Adicionar dados de retirada ao pedido se for pickup
       if (deliveryType === 'pickup') {
-        console.log('[DEBUG] Dados de retirada:', {
-          firstName: pickupFirstName,
-          lastName: pickupLastName,
-          phone: pickupPhone,
-          email: pickupEmail
-        });
         (order as any).pickupInfo = {
-          firstName: pickupFirstName,
-          lastName: pickupLastName,
-          phone: pickupPhone,
-          email: pickupEmail
+          firstName: formData.pickupFirstName,
+          lastName: formData.pickupLastName,
+          phone: formData.pickupPhone,
+          email: formData.pickupEmail
         };
       }
 
@@ -369,7 +610,7 @@ export default function CartPage() {
       (order as any).payment = {
         method: paymentMethod,
         wantsChange,
-        changeFor: paymentMethod === 'cash' && wantsChange ? changeForValue : undefined
+        changeFor: paymentMethod === 'cash' && wantsChange ? Number(changeFor) : undefined
       };
 
       // Salvar pedido na API
@@ -396,6 +637,7 @@ export default function CartPage() {
         } catch (parseError) {
           console.error('❌ Erro ao fazer parse da resposta:', parseError);
           setError('Erro ao processar resposta do servidor');
+          setIsLoading(false);
           return;
         }
 
@@ -409,12 +651,25 @@ export default function CartPage() {
         } catch {}
 
         // Enviar para WhatsApp
+        console.log('📝 Dados para WhatsApp:', {
+          formData,
+          user,
+          selectedBairro,
+          deliveryType
+        });
+        
         const orderItems = items.map(item => 
           `• ${item.product.name}  x${item.quantity} — R$ ${(calculateDynamicPrice(item.product, item.quantity) * item.quantity).toFixed(2)}`
         ).join('\n');
 
         let message = '';
         if (deliveryType === 'pickup') {
+          // Garantir que os dados sejam puxados corretamente para retirada
+          const pickupFirstName = formData.pickupFirstName || user?.name?.split(' ')[0] || '';
+          const pickupLastName = formData.pickupLastName || user?.name?.split(' ').slice(1).join(' ') || '';
+          const pickupPhone = formData.pickupPhone || user?.phone || '';
+          const pickupEmail = formData.pickupEmail || user?.email || '';
+          
           message = [
             '🧾 *PEDIDO PARA RETIRADA NA LOJA*',
             '',
@@ -429,7 +684,7 @@ export default function CartPage() {
             '',
             '*💳 Forma de pagamento:*',
             `Método: ${paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'debit' ? 'Cartão de Débito' : paymentMethod === 'credit' ? 'Cartão de Crédito' : 'Dinheiro'}`,
-            paymentMethod === 'cash' && wantsChange ? `Troco para: R$ ${changeForValue.toFixed(2)}` : '',
+            paymentMethod === 'cash' && wantsChange ? `Troco para: R$ ${Number(changeFor).toFixed(2)}` : '',
             '',
             '*🏬 Retirada na Loja*',
             'Endereço: R. Antônio Arruda, 1170 - Vila Velha, Fortaleza - CE',
@@ -442,7 +697,35 @@ export default function CartPage() {
           ].filter(Boolean).join('\n');
         } else {
           const payLabel = paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'debit' ? 'Cartão de Débito' : paymentMethod === 'credit' ? 'Cartão de Crédito' : 'Dinheiro';
-          const changeLine = paymentMethod === 'cash' && wantsChange ? `\nTroco para: R$ ${changeForValue.toFixed(2)}` : '';
+          const changeLine = paymentMethod === 'cash' && wantsChange ? `\nTroco para: R$ ${Number(changeFor).toFixed(2)}` : '';
+          
+          // Garantir que os dados sejam puxados corretamente
+          const customerName = formData.name || user?.name || '';
+          const customerPhone = formData.phone || user?.phone || '';
+          const customerEmail = formData.email || user?.email || '';
+          
+          // Construir endereço completo considerando diferentes formatos
+          const userAddr = getUserAddress(user);
+          const deliveryStreet = formData.street || userAddr.street || (typeof user?.address === 'string' ? user.address : '') || '';
+          const deliveryNumber = formData.number || userAddr.number || '';
+          const deliveryComplement = formData.complement || userAddr.complement || '';
+          const deliveryNeighborhood = formData.neighborhood || userAddr.neighborhood || user?.neighborhood || selectedBairro || '';
+          const deliveryCity = formData.city || userAddr.city || user?.city || 'Fortaleza';
+          const deliveryState = formData.state || userAddr.state || 'CE';
+          const deliveryZipCode = formData.zipCode || userAddr.zipCode || user?.zipCode || '';
+          const deliveryReference = formData.reference || userAddr.reference || '';
+          
+          console.log('📍 Endereço montado:', {
+            deliveryStreet,
+            deliveryNumber,
+            deliveryComplement,
+            deliveryNeighborhood,
+            deliveryCity,
+            deliveryState,
+            deliveryZipCode,
+            deliveryReference
+          });
+          
           message = [
             '🧾 *PEDIDO PARA ENTREGA EM DOMICÍLIO*',
             '',
@@ -451,23 +734,23 @@ export default function CartPage() {
             customerEmail ? `📧 Email: ${customerEmail}` : null,
             '',
             '*📍 Endereço de entrega:*',
-            `${street}, ${number}${complement ? ` - ${complement}` : ''}`,
-            `${neighborhood}, ${city} - ${state}`,
-            `CEP: ${zipCode}`,
+            `${deliveryStreet}${deliveryNumber ? `, ${deliveryNumber}` : ''}${deliveryComplement ? ` - ${deliveryComplement}` : ''}`,
+            `${deliveryNeighborhood}, ${deliveryCity} - ${deliveryState}`,
+            deliveryZipCode ? `CEP: ${deliveryZipCode}` : null,
+            deliveryReference ? `Referência: ${deliveryReference}` : null,
             '',
             '*🛍️ Itens do pedido:*',
             orderItems,
             '',
             `*Subtotal:* R$ ${getTotal().toFixed(2)}`,
-            `*Frete:* R$ ${shipping.cost.toFixed(2)}`,
+            `*Frete (${selectedBairro}):* R$ ${shipping?.cost.toFixed(2) || '0.00'}`,
             `*Total:* R$ ${totalWithShipping.toFixed(2)}`,
             '',
             '*💳 Forma de pagamento:*',
             `Método: ${payLabel}${changeLine}`,
             '',
             '*🚚 Informações da entrega:*',
-            `Distância: ${shipping.distance.toFixed(1)} km`,
-            `Tempo estimado: ${shipping.estimatedDelivery}`,
+            `Tempo estimado: ${shipping?.estimatedDelivery || 'A combinar'}`,
             '',
             'Por favor, aguarde a confirmação do pedido e o contato do entregador.',
             '',
@@ -481,7 +764,8 @@ export default function CartPage() {
           const s = await fetch('/api/settings', { cache: 'no-store' }).then(r => r.ok ? r.json() : null);
           if (s?.whatsapp_number) phone = String(s.whatsapp_number);
         } catch {}
-        // Corrigir encoding para Windows/desktop
+        
+        // Corrigir encoding para WhatsApp: usar encodeURIComponent corretamente
         const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
         console.log('URL WhatsApp:', whatsappUrl);
 
@@ -497,7 +781,6 @@ export default function CartPage() {
         const errorText = await response.text();
         console.error('❌ Erro na API:', response.status, errorText);
         setError(`Erro ao salvar pedido: ${response.status} - ${errorText}`);
-        return;
       }
     } catch (error) {
       console.error('Erro completo:', error);
@@ -505,174 +788,302 @@ export default function CartPage() {
     } finally {
       setIsLoading(false);
     }
-  } // <-- Ensure this closes handleWhatsAppOrder
+  };
+
+  // Validação de nome: não pode ter números
+  function isValidName(value: string) {
+    return /^[A-Za-zÀ-ú\s]+$/.test(value.trim())
+  }
+
+  // Validação de telefone: só números e tamanho 10 ou 11
+  function isValidPhone(value: string) {
+    const numbers = value.replace(/\D/g, '')
+    return numbers.length >= 10 && numbers.length <= 11
+  }
+
+  // Validação email
+  function isValidEmail(value: string) {
+    return value.includes('@') || value === ''
+  }
+
+  // Componente para seleção de bairro com dropdown estilizado
+  const BairroDropdown = () => {
+    return (
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setShowBairroDropdown(!showBairroDropdown)}
+          className="w-full flex justify-between items-center rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base bg-white"
+        >
+          <span>{selectedBairro} (R$ {bairroFrete.toFixed(2)})</span>
+          <ChevronDown className={`w-5 h-5 transition-transform ${showBairroDropdown ? 'rotate-180' : ''}`} />
+        </button>
+        
+        {showBairroDropdown && (
+          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+            {bairrosFortaleza.map((bairro) => (
+              <button
+                key={bairro.nome}
+                type="button"
+                onClick={() => {
+                  setSelectedBairro(bairro.nome);
+                  setBairroFrete(bairro.preco);
+                  setShowBairroDropdown(false);
+                  updateFormData('neighborhood', bairro.nome);
+                  updateFormData('selectedBairro', bairro.nome);
+                  
+                  // Recalcular frete automaticamente
+                  if (deliveryType === 'delivery') {
+                    const address: Address = {
+                      street: formData.street,
+                      number: formData.number,
+                      complement: formData.complement || undefined,
+                      neighborhood: bairro.nome,
+                      city: formData.city,
+                      state: formData.state,
+                      zipCode: formData.zipCode,
+                      reference: formData.reference || undefined
+                    };
+                    calculateShipping(address);
+                  }
+                }}
+                className={`w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors ${
+                  selectedBairro === bairro.nome ? 'bg-orange-100 text-orange-700 font-medium' : ''
+                }`}
+              >
+                {bairro.nome} (R$ {bairro.preco.toFixed(2)})
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-white to-orange-50">
-      <Header />
-      <div className="flex flex-col items-center pt-6">
-        {/* Logo Atacadão Guanabara */}
-        <div className="w-full flex justify-center mb-6">
-          <img
-            src="https://i.ibb.co/fGSnH3hd/logoatacad-o.jpg"
-            alt="Logo Atacadão Guanabara"
-            className="h-32 w-auto drop-shadow-2xl rounded-2xl border-4 border-white bg-white p-2"
-            style={{ maxWidth: 260 }}
-          />
-        </div>
-        <main className="w-full max-w-6xl mx-auto px-2 sm:px-6 py-6 flex-1">
-          <div className="bg-white/95 rounded-3xl shadow-2xl p-8 md:p-12 mb-12 border border-blue-100 grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-            {/* Itens do carrinho */}
-            <section className="flex flex-col gap-8">
-              <h2 className="text-3xl font-extrabold text-[#FF6600] mb-2 text-center tracking-tight drop-shadow">Seu Carrinho</h2>
-              {items.length === 0 ? (
-                <div className="text-center text-gray-400 py-20">
-                  <span className="text-7xl block mb-6">🛒</span>
-                  <p className="text-2xl font-semibold">Seu carrinho está vazio</p>
-                  <a href="/catalog" className="mt-8 inline-block px-8 py-3 bg-[#FF6600] text-white font-bold rounded-xl shadow-lg hover:bg-orange-600 transition text-lg">Ver Produtos</a>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-8">
-                  {items.map(item => (
-                    <div key={item.product.id} className="flex items-center bg-gradient-to-r from-blue-50 via-white to-orange-50 rounded-2xl shadow-xl p-4 md:p-8 border border-orange-100 gap-4 md:gap-8 min-h-[120px] md:min-h-[140px]">
-                      <img src={item.product.image} alt={item.product.name} className="w-20 h-20 md:w-32 md:h-32 rounded-2xl object-cover border-2 border-blue-200 shadow-md flex-shrink-0" />
-                      <div className="flex-1 flex flex-col gap-2 min-w-0">
-                        <div className="font-bold text-gray-900 text-base md:text-xl leading-tight mb-2">{item.product.name}</div>
-                        <div className="text-gray-600 text-sm md:text-base mb-2">
-                          Quantidade: <span className="font-semibold text-blue-700 text-base md:text-lg">{item.quantity} unidade(s)</span>
-                        </div>
-                        <div className="text-[#FF6600] font-extrabold text-lg md:text-2xl">
-                          R$ {((calculateDynamicPrice(item.product, item.quantity)) * (Number(item.quantity) || 0)).toFixed(2)}
-                        </div>
-                        <div className="text-gray-500 text-xs md:text-sm">
-                          Preço unitário: R$ {calculateDynamicPrice(item.product, item.quantity).toFixed(2)}
-                        </div>
-                      </div>
-                      <div className="flex flex-row md:flex-col gap-2 items-center">
-                        <button 
-                          onClick={() => updateQuantity(item.product.id, Math.max(1, item.quantity - 1))} 
-                          className="text-blue-600 hover:text-white hover:bg-blue-600 p-2 rounded-full bg-blue-50 shadow transition-all border border-blue-200"
-                        >
-                          <Minus className="w-5 h-5" />
-                        </button>
-                        <span className="font-bold text-base md:text-lg px-2 py-1 bg-gray-100 rounded-lg">{item.quantity}</span>
-                        <button 
-                          onClick={() => updateQuantity(item.product.id, item.quantity + 1)} 
-                          className="text-green-600 hover:text-white hover:bg-green-600 p-2 rounded-full bg-green-50 shadow transition-all border border-green-200"
-                        >
-                          <Plus className="w-5 h-5" />
-                        </button>
-                        <button onClick={() => removeItem(item.product.id)} className="text-red-500 hover:text-white hover:bg-red-500 p-3 rounded-full bg-red-50 shadow transition-all border border-red-100 mt-2">
-                          <Trash2 className="w-6 h-6" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-            {/* Formulário, total e botão - lateral direita em desktop */}
-            {items.length > 0 && (
-              <aside className="flex flex-col gap-10 w-full max-w-md mx-auto">
-                {/* Aviso de entrega */}
-                <div className="bg-orange-50 border-l-4 border-orange-400 text-orange-700 font-bold rounded-xl px-4 py-3 mb-2 text-center shadow animate-pulse">
-                  <div className="flex items-center justify-center gap-2">
-                    <Truck className="w-5 h-5" />
-                    <span>Calcule o frete para seu endereço</span>
-                  </div>
-                </div>
-
-                {/* Aviso de valor mínimo */}
-                <div className={`border-l-4 rounded-xl px-4 py-3 mb-2 text-center shadow ${
-                  getTotal() >= 100 
-                    ? 'bg-green-50 border-green-400 text-green-700' 
-                    : 'bg-red-50 border-red-400 text-red-700 animate-pulse'
-                }`}>
-                  <div className="flex items-center justify-center gap-2">
-                    <AlertCircle className="w-5 h-5" />
-                    <span className="font-bold">
-                      {getTotal() >= 100 
-                        ? '✅ Valor mínimo atingido!' 
-                        : `Valor mínimo: R$ 100,00 (Faltam R$ ${(100 - getTotal()).toFixed(2)})`
-                      }
-                    </span>
-                  </div>
-                </div>
-
-                {/* Informações sobre frete */}
-                <div className="bg-blue-50 border-l-4 border-blue-400 text-blue-700 rounded-xl px-4 py-3 mb-2 text-center shadow">
-                  <div className="flex items-center justify-center gap-2">
-                    <Truck className="w-5 h-5" />
-                    <span className="font-bold">
-                      Frete: R$ 3,00 por km | Grátis em pedidos acima de R$ 150,00
-                    </span>
-                  </div>
-                </div>
-
-              {/* Informações de debug */}
-              {debugInfo && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-blue-800 mb-2">Informações de Debug:</h3>
-                  <pre className="text-xs text-blue-700 whitespace-pre-wrap">{debugInfo}</pre>
-                </div>
-              )}
-
-              {/* Mensagem de erro */}
-              {error && (
-                <div ref={errorRef} className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center space-x-3 animate-fade-in">
-                  <AlertCircle className="w-5 h-5 text-red-500" />
-                  <span className="text-red-700">{error}</span>
-                </div>
-              )}
-
-              {/* Seleção de Entrega ou Retirada */}
-              <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <Truck className="w-5 h-5 mr-2 text-orange-500" />
-                  Como você quer receber?
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDeliveryType('delivery')
-                      updateCartFormData({ deliveryType: 'delivery' })
-                    }}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      deliveryType === 'delivery'
-                        ? 'border-orange-500 bg-orange-50 text-orange-700'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-center flex-col">
-                      <Truck className="w-8 h-8 mb-2" />
-                      <span className="font-semibold">Entrega em Casa</span>
-                      <span className="text-sm text-gray-600">Receba no seu endereço</span>
-                    </div>
-                  </button>
-                  
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDeliveryType('pickup')
-                      updateCartFormData({ deliveryType: 'pickup' })
-                    }}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      deliveryType === 'pickup'
-                        ? 'border-green-500 bg-green-50 text-green-700'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-center flex-col">
-                      <MapPin className="w-8 h-8 mb-2" />
-                      <span className="font-semibold">Retirar na Loja</span>
-                      <span className="text-sm text-gray-600">Busque pessoalmente</span>
-                    </div>
-                  </button>
+    <>
+      <Dialog open={showPaymentWarning} onOpenChange={setShowPaymentWarning}>
+        <DialogContent className="sm:max-w-md text-center">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-red-600 mb-4">
+              Atenção!
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-4xl mb-4">⚠️</div>
+            <p className="text-gray-700 font-semibold">
+              Não pague antecipadamente!<br />
+              Realize o pagamento <strong>apenas após receber o cupom</strong> e a confirmação do pedido.
+            </p>
+            <div className="flex flex-col gap-3 pt-4">
+              <div className="w-full mb-4">
+                <div className="bg-yellow-50 border border-yellow-300 text-yellow-900 rounded-lg px-4 py-2 text-sm flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-yellow-600" />
+                  Não pague antecipadamente! Aguarde o cupom e confirmação do pedido.
                 </div>
               </div>
+              <Button 
+                onClick={handlePaymentConfirmation}
+                className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"
+              >
+                OK, Entendi
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-white to-orange-50">
+        <Header />
+        <div className="flex flex-col items-center pt-6">
+          {/* Logo Atacadão Guanabara */}
+          <div className="w-full flex justify-center mb-6">
+            <img
+              src="https://i.ibb.co/fGSnH3hd/logoatacad-o.jpg"
+              alt="Logo Atacadão Guanabara"
+              className="h-32 w-auto drop-shadow-2xl rounded-2xl border-4 border-white bg-white p-2"
+              style={{ maxWidth: 260 }}
+            />
+          </div>
+          <main className="w-full max-w-6xl mx-auto px-2 sm:px-6 py-6 flex-1">
+            <div className="bg-white/95 rounded-3xl shadow-2xl p-8 md:p-12 mb-12 border border-blue-100 grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+              {/* Itens do carrinho */}
+              <section className="flex flex-col gap-8">
+                <h2 className="text-3xl font-extrabold text-[#FF6600] mb-2 text-center tracking-tight drop-shadow">Seu Carrinho</h2>
+                {items.length === 0 ? (
+                  <div className="text-center text-gray-400 py-20">
+                    <span className="text-7xl block mb-6">🛒</span>
+                    <p className="text-2xl font-semibold">Seu carrinho está vazio</p>
+                    <a href="/catalog" className="mt-8 inline-block px-8 py-3 bg-[#FF6600] text-white font-bold rounded-xl shadow-lg hover:bg-orange-600 transition text-lg">Ver Produtos</a>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-8">
+                    {items.map(item => (
+                      <div key={item.product.id} className="bg-gradient-to-r from-blue-50 via-white to-orange-50 rounded-2xl shadow-xl p-4 border border-orange-100">
+                        {/* Layout para mobile - empilhado */}
+                        <div className="flex flex-col sm:flex-row gap-4">
+                          <img src={item.product.image} alt={item.product.name} className="w-full h-40 sm:w-24 sm:h-24 md:w-32 md:h-32 rounded-2xl object-cover border-2 border-blue-200 shadow-md flex-shrink-0" />
+                          
+                          <div className="flex-1 flex flex-col gap-2 min-w-0">
+                            <div className="font-bold text-gray-900 text-base md:text-xl leading-tight mb-2">{item.product.name}</div>
+                            <div className="text-gray-600 text-sm md:text-base mb-2">
+                              Quantidade: <span className="font-semibold text-blue-700 text-base md:text-lg">{item.quantity} unidade(s)</span>
+                            </div>
+                            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-start sm:items-center mb-2">
+                              <span className="text-[#FF6600] font-extrabold text-lg md:text-2xl">
+                                R$ {((calculateDynamicPrice(item.product, item.quantity)) * (Number(item.quantity) || 0)).toFixed(2)}
+                              </span>
+                              <div className="flex gap-2 text-xs">
+                                <span className="text-blue-600 font-semibold">
+                                  Preço 1: R$ {item.product.price?.toFixed(2)}
+                                </span>
+                                <span className="text-green-600 font-semibold">
+                                  Preço 2: R$ {
+                                    item.product.prices?.price2 && item.product.prices.price2 > 0
+                                      ? item.product.prices.price2.toFixed(2)
+                                      : item.product.varejoFacilData?.precos?.precoVenda2 && item.product.varejoFacilData.precos.precoVenda2 > 0
+                                        ? item.product.varejoFacilData.precos.precoVenda2.toFixed(2)
+                                        : item.product.price?.toFixed(2)
+                                  }
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-gray-500 text-xs md:text-sm mb-3">
+                              Preço unitário: R$ {calculateDynamicPrice(item.product, item.quantity).toFixed(2)}
+                            </div>
+                            
+                            {/* Controles de quantidade - no mobile ficam aqui embaixo */}
+                            <div className="flex flex-row justify-between items-center">
+                              <div className="flex flex-row gap-2 items-center">
+                                <button 
+                                  onClick={() => updateQuantity(item.product.id, Math.max(1, item.quantity - 1))} 
+                                  className="text-blue-600 hover:text-white hover:bg-blue-600 p-2 rounded-full bg-blue-50 shadow-lg transition-all border border-blue-200 active:scale-95 min-w-[40px] min-h-[40px] flex items-center justify-center"
+                                  disabled={item.quantity <= 1}
+                                >
+                                  <Minus className="w-4 h-4" />
+                                </button>
+                                <span className="font-bold text-base px-3 py-2 bg-gray-100 rounded-lg min-w-[50px] text-center">
+                                  {item.quantity}
+                                </span>
+                                <button 
+                                  onClick={() => updateQuantity(item.product.id, item.quantity + 1)} 
+                                  className="text-green-600 hover:text-white hover:bg-green-600 p-2 rounded-full bg-green-50 shadow-lg transition-all border border-green-200 active:scale-95 min-w-[40px] min-h-[40px] flex items-center justify-center"
+                                >
+                                  <Plus className="w-4 h-4" />
+                                </button>
+                              </div>
+                              
+                              {/* Botão remover */}
+                              <button 
+                                onClick={() => removeItem(item.product.id)} 
+                                className="text-red-500 hover:text-white hover:bg-red-500 p-2 rounded-full bg-red-50 shadow-lg transition-all border border-red-200 active:scale-95 min-w-[40px] min-h-[40px] flex items-center justify-center"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                )}
+              </section>
+              {/* Formulário, total e botão - lateral direita em desktop */}
+              {items.length > 0 && (
+                <aside className="flex flex-col gap-10 w-full max-w-md mx-auto">
+                  {/* Aviso de entrega */}
+                  <div className="bg-orange-50 border-l-4 border-orange-400 text-orange-700 font-bold rounded-xl px-4 py-3 mb-2 text-center shadow animate-pulse">
+                    <div className="flex items-center justify-center gap-2">
+                      <Truck className="w-5 h-5" />
+                      <span>Calcule o frete para seu endereço</span>
+                    </div>
+                  </div>
 
-              <FormCart user={user} deliveryType={deliveryType} />
+                  {/* Aviso de valor mínimo */}
+                  <div className={`border-l-4 rounded-xl px-4 py-3 mb-2 text-center shadow ${
+                    getTotal() >= 100 
+                      ? 'bg-green-50 border-green-400 text-green-700' 
+                      : 'bg-red-50 border-red-400 text-red-700 animate-pulse'
+                  }`}>
+                    <div className="flex items-center justify-center gap-2">
+                      <AlertCircle className="w-5 h-5" />
+                      <span className="font-bold">
+                        {getTotal() >= 100 
+                          ? '✅ Valor mínimo atingido!' 
+                          : `Valor mínimo: R$ 100,00. Seu carrinho tem R$ ${getTotal().toFixed(2)}.`
+                        }
+                      </span>
+                    </div>
+                  </div>
+
+
+
+                {/* Mensagem de erro */}
+                {error && (
+                  <div ref={errorRef} className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center space-x-3 animate-fade-in">
+                    <AlertCircle className="w-5 h-5 text-red-500" />
+                    <span className="text-red-700">{error}</span>
+                  </div>
+                )}
+
+                {/* Seleção de Entrega ou Retirada */}
+                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <Truck className="w-5 h-5 mr-2 text-orange-500" />
+                    Como você quer receber?
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeliveryType('delivery')
+                      }}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        deliveryType === 'delivery'
+                          ? 'border-orange-500 bg-orange-50 text-orange-700'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center flex-col">
+                        <Truck className="w-8 h-8 mb-2" />
+                        <span className="font-semibold">Entrega em Casa</span>
+                        <span className="text-sm text-gray-600">Receba no seu endereço</span>
+                      </div>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeliveryType('pickup')
+                      }}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        deliveryType === 'pickup'
+                          ? 'border-green-500 bg-green-50 text-green-700'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center flex-col">
+                        <MapPin className="w-8 h-8 mb-2" />
+                        <span className="font-semibold">Retirar na Loja</span>
+                        <span className="text-sm text-gray-600">Busque pessoalmente</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Formulário de dados do cliente */}
+                <FormCart 
+                  user={user} 
+                  deliveryType={deliveryType} 
+                  selectedBairro={selectedBairro}
+                  setSelectedBairro={setSelectedBairro}
+                  bairroFrete={bairroFrete}
+                  setBairroFrete={setBairroFrete}
+                  bairrosFortaleza={bairrosFortaleza}
+                  BairroDropdown={BairroDropdown}
+                  updateFormData={updateFormData}
+                />
               
               {/* Cálculo de Frete - apenas para entrega */}
               {deliveryType === 'delivery' && (
@@ -696,7 +1107,7 @@ export default function CartPage() {
                         street: formData.street || '',
                         number: formData.number || '',
                         complement: formData.complement || undefined,
-                        neighborhood: formData.neighborhood || '',
+                        neighborhood: selectedBairro || formData.neighborhood || '',
                         city: formData.city || '',
                         state: formData.state || '',
                         zipCode: formData.zipCode || '',
@@ -719,10 +1130,6 @@ export default function CartPage() {
                 
                 {shippingCalculation && (
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Distância:</span>
-                      <span className="font-semibold">{shippingCalculation.distance.toFixed(1)} km</span>
-                    </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Tempo estimado:</span>
                       <span className="font-semibold">{shippingCalculation.estimatedDelivery}</span>
@@ -781,7 +1188,7 @@ export default function CartPage() {
                       name="paymentMethod"
                       value="pix"
                       checked={paymentMethod==='pix'}
-                      onChange={() => { setPaymentMethod('pix'); updateCartFormData({ paymentMethod: 'pix', wantsChange: false, changeFor: '' }) }}
+                      onChange={() => { setPaymentMethod('pix'); updateFormData('paymentMethod', 'pix'); updateFormData('wantsChange', false); updateFormData('changeFor', '') }}
                     />
                     <QrCode className="w-4 h-4 text-green-600" />
                     <span className="font-medium">PIX</span>
@@ -793,7 +1200,7 @@ export default function CartPage() {
                       name="paymentMethod"
                       value="debit"
                       checked={paymentMethod==='debit'}
-                      onChange={() => { setPaymentMethod('debit'); updateCartFormData({ paymentMethod: 'debit', wantsChange: false, changeFor: '' }) }}
+                      onChange={() => { setPaymentMethod('debit'); updateFormData('paymentMethod', 'debit'); updateFormData('wantsChange', false); updateFormData('changeFor', '') }}
                     />
                     <CreditCard className="w-4 h-4 text-blue-600" />
                     <span className="font-medium">Cartão de Débito</span>
@@ -804,7 +1211,7 @@ export default function CartPage() {
                       name="paymentMethod"
                       value="credit"
                       checked={paymentMethod==='credit'}
-                      onChange={() => { setPaymentMethod('credit'); updateCartFormData({ paymentMethod: 'credit', wantsChange: false, changeFor: '' }) }}
+                      onChange={() => { setPaymentMethod('credit'); updateFormData('paymentMethod', 'credit'); updateFormData('wantsChange', false); updateFormData('changeFor', '') }}
                     />
                     <CreditCard className="w-4 h-4 text-purple-600" />
                     <span className="font-medium">Cartão de Crédito</span>
@@ -816,7 +1223,7 @@ export default function CartPage() {
                       name="paymentMethod"
                       value="cash"
                       checked={paymentMethod==='cash'}
-                      onChange={() => { setPaymentMethod('cash'); updateCartFormData({ paymentMethod: 'cash' }) }}
+                      onChange={() => { setPaymentMethod('cash'); updateFormData('paymentMethod', 'cash') }}
                     />
                     <Banknote className="w-4 h-4 text-orange-600" />
                     <span className="font-medium">Dinheiro</span>
@@ -831,7 +1238,7 @@ export default function CartPage() {
                       <input
                         type="checkbox"
                         checked={wantsChange}
-                        onChange={(e) => { setWantsChange(e.target.checked); updateCartFormData({ wantsChange: e.target.checked }) }}
+                        onChange={(e) => { setWantsChange(e.target.checked); updateFormData('wantsChange', e.target.checked) }}
                       />
                       <span className="text-sm font-medium text-gray-700">Precisa de troco?</span>
                     </label>
@@ -844,7 +1251,7 @@ export default function CartPage() {
                             step="0.01"
                             min="0"
                             value={changeFor}
-                            onChange={(e) => { setChangeFor(e.target.value); updateCartFormData({ changeFor: e.target.value }) }}
+                            onChange={(e) => { setChangeFor(e.target.value); updateFormData('changeFor', e.target.value) }}
                             className={`w-44 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${changeError ? 'border-red-300 focus:ring-red-300' : 'border-gray-300 focus:ring-orange-400'}`}
                             placeholder={(getTotal() + (shippingCalculation?.cost||0)).toFixed(2)}
                           />
@@ -937,105 +1344,126 @@ export default function CartPage() {
               )}
               <Button 
                 onClick={() => {
-                  setShowThankYouDialog(false)
-                  setShowRatingDialog(true)
-                }}
-                className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"
-              >
-                <Star className="w-4 h-4 mr-2" />
-                Avaliar Experiência
-              </Button>
-              <Button 
-                onClick={() => {
-                  setShowThankYouDialog(false)
-                  router.push('/')
-                }}
-                variant="outline"
-                className="border-orange-200 text-orange-600 hover:bg-orange-50"
-              >
-                Continuar Comprando
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Popup de Avaliação */}
-      <Dialog open={showRatingDialog} onOpenChange={setShowRatingDialog}>
-        <DialogContent className="sm:max-w-md text-center">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-orange-600 mb-4">
-              ⭐ Avalie Sua Experiência
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="text-4xl mb-4">🌟</div>
-            <p className="text-gray-700">
-              Sua opinião é muito importante para nós! 
-              Ajude-nos a melhorar nossos serviços.
-            </p>
-            <div className="flex justify-center space-x-2 text-3xl">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
+                    setShowThankYouDialog(false)
+                    setShowRatingDialog(true)
+                  }}
+                  className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"
+                >
+                  <Star className="w-4 h-4 mr-2" />
+                  Avaliar Experiência
+                </Button>
+                <Button 
                   onClick={() => {
-                    // Aqui você pode adicionar lógica para salvar a avaliação
+                    setShowThankYouDialog(false)
+                    router.push('/')
+                  }}
+                  variant="outline"
+                  className="border-orange-200 text-orange-600 hover:bg-orange-50"
+                >
+                  Continuar Comprando
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Popup de Avaliação */}
+        <Dialog open={showRatingDialog} onOpenChange={setShowRatingDialog}>
+          <DialogContent className="sm:max-w-md text-center">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-orange-600 mb-4">
+                ⭐ Avalie Sua Experiência
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="text-4xl mb-4">🌟</div>
+              <p className="text-gray-700">
+                Sua opinião é muito importante para nós! 
+                Ajude-nos a melhorar nossos serviços.
+              </p>
+              <div className="flex justify-center space-x-2 text-3xl">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => {
+                      // Aqui você pode adicionar lógica para salvar a avaliação
+                      setShowRatingDialog(false)
+                      router.push('/feedback')
+                    }}
+                    className="hover:scale-110 transition-transform"
+                  >
+                    ⭐
+                  </button>
+                ))}
+              </div>
+              <p className="text-sm text-gray-500">
+                Clique em uma estrela para avaliar
+              </p>
+              <div className="flex flex-col gap-3 pt-4">
+                <Button 
+                  onClick={() => {
                     setShowRatingDialog(false)
                     router.push('/feedback')
                   }}
-                  className="hover:scale-110 transition-transform"
+                  className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"
                 >
-                  ⭐
-                </button>
-              ))}
+                  <Heart className="w-4 h-4 mr-2" />
+                  Deixar Feedback Detalhado
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setShowRatingDialog(false)
+                    router.push('/')
+                  }}
+                  variant="outline"
+                  className="border-orange-200 text-orange-600 hover:bg-orange-50"
+                >
+                  Pular Avaliação
+                </Button>
+              </div>
             </div>
-            <p className="text-sm text-gray-500">
-              Clique em uma estrela para avaliar
-            </p>
-            <div className="flex flex-col gap-3 pt-4">
-              <Button 
-                onClick={() => {
-                  setShowRatingDialog(false)
-                  router.push('/feedback')
-                }}
-                className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"
-              >
-                <Heart className="w-4 h-4 mr-2" />
-                Deixar Feedback Detalhado
-              </Button>
-              <Button 
-                onClick={() => {
-                  setShowRatingDialog(false)
-                  router.push('/')
-                }}
-                variant="outline"
-                className="border-orange-200 text-orange-600 hover:bg-orange-50"
-              >
-                Pular Avaliação
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
 
-      <Footer />
-      {/* Animations */}
-      <style jsx>{`
-        @keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-        .animate-pulse-slow { animation: pulse-slow 3s infinite; }
-        @keyframes bounce-slow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-        .animate-bounce-slow { animation: bounce-slow 2.5s infinite; }
-        @keyframes fade-in { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
-        .animate-fade-in { animation: fade-in 0.8s cubic-bezier(.4,0,.2,1) both; }
-        @keyframes glow { 0%, 100% { box-shadow: 0 0 0 0 #25D36644; } 50% { box-shadow: 0 0 24px 8px #25D36688; } }
-        .animate-glow { animation: glow 2.5s infinite; }
-      `}</style>
-    </div>
+        <Footer />
+        {/* Animations */}
+        <style jsx>{`
+          @keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+          .animate-pulse-slow { animation: pulse-slow 3s infinite; }
+          @keyframes bounce-slow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+          .animate-bounce-slow { animation: bounce-slow 2.5s infinite; }
+          @keyframes fade-in { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
+          .animate-fade-in { animation: fade-in 0.8s cubic-bezier(.4,0,.2,1) both; }
+          @keyframes glow { 0%, 100% { box-shadow: 0 0 0 0 #25D36644; } 50% { box-shadow: 0 0 24px 8px #25D36688; } }
+          .animate-glow { animation: glow 2.5s infinite; }
+        `}</style>
+      </div>
+    </>
   )
 }
 
 // Formulário com máscaras e validação
-function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' | 'pickup' }) {
+function FormCart({ 
+  user, 
+  deliveryType, 
+  selectedBairro, 
+  setSelectedBairro, 
+  bairroFrete, 
+  setBairroFrete, 
+  bairrosFortaleza, 
+  BairroDropdown, 
+  updateFormData
+}: { 
+  user: any, 
+  deliveryType: 'delivery' | 'pickup',
+  selectedBairro: string,
+  setSelectedBairro: (bairro: string) => void,
+  bairroFrete: number,
+  setBairroFrete: (frete: number) => void,
+  bairrosFortaleza: any[],
+  BairroDropdown: any,
+  updateFormData: (field: string, value: any) => void
+}) {
   // Validação de nome: não pode ter números
   function isValidName(value: string) {
     return /^[A-Za-zÀ-ú\s]+$/.test(value.trim())
@@ -1049,6 +1477,7 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
   const [phone, setPhone] = useState(user?.phone || '')
   const [zipCode, setZipCode] = useState('')
   const [email, setEmail] = useState(user?.email || '')
+  const [isSearchingCep, setIsSearchingCep] = useState(false)
   const [name, setName] = useState(user?.name || '')
   
   // Campos específicos para retirada
@@ -1065,55 +1494,99 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
   const [city, setCity] = useState('')
   const [state, setState] = useState('Ceará')
   const [reference, setReference] = useState('')
+  const [isLoadingFormData, setIsLoadingFormData] = useState(false)
+  const lastLoadedUserId = useRef<string | null>(null)
 
-  // Salvar dados no localStorage quando mudar
+  // Carregar dados apenas quando o usuário muda (evitar loops com formData)
   useEffect(() => {
-    const formData = {
-      name,
-      phone,
-      email,
-      street,
-      number,
-      complement,
-      neighborhood,
-      city,
-      state,
-      zipCode,
-      reference,
-      pickupFirstName,
-      pickupLastName,
-      pickupPhone,
-      pickupEmail
+    const currentUserId = user?.id || null
+    
+    // Só reprocessar se o usuário mudou
+    if (currentUserId === lastLoadedUserId.current) {
+      return
     }
-    localStorage.setItem('cartFormData', JSON.stringify(formData))
-  }, [name, phone, email, street, number, complement, neighborhood, city, state, zipCode, reference, pickupFirstName, pickupLastName, pickupPhone, pickupEmail])
-
-  // Carregar dados do localStorage ao montar
-  useEffect(() => {
-    const savedData = localStorage.getItem('cartFormData')
-    if (savedData) {
-      try {
-        const formData = JSON.parse(savedData)
-        setName(formData.name || user?.name || '')
-        setPhone(formData.phone || user?.phone || '')
-        setEmail(formData.email || user?.email || '')
-        setStreet(formData.street || '')
-        setNumber(formData.number || '')
-        setComplement(formData.complement || '')
-        setNeighborhood(formData.neighborhood || '')
-        setCity(formData.city || '')
-        setState(formData.state || '')
-        setZipCode(formData.zipCode || '')
-        setReference(formData.reference || '')
-        setPickupFirstName(formData.pickupFirstName || '')
-        setPickupLastName(formData.pickupLastName || '')
-        setPickupPhone(formData.pickupPhone || '')
-        setPickupEmail(formData.pickupEmail || '')
-      } catch (error) {
-        console.error('Erro ao carregar dados do formulário:', error)
+    
+    console.log('📋 FormCart carregando dados do usuário:', user?.name, 'ID:', currentUserId);
+    setIsLoadingFormData(true);
+    // Carregar apenas do localStorage se não há usuário, senão usar dados do usuário
+    let savedData: any = {};
+    
+    if (!user) {
+      const localStorageData = localStorage.getItem('cartFormData');
+      if (localStorageData) {
+        try {
+          savedData = JSON.parse(localStorageData);
+        } catch (error) {
+          console.error('Erro ao carregar dados do formulário:', error);
+        }
       }
     }
-  }, [user])
+    
+    // Prioridade: dados do usuário > localStorage (apenas se não há usuário)
+    const userAddr = getUserAddress(user);
+    setName(user?.name || savedData.name || '');
+    setPhone(user?.phone || savedData.phone || '');
+    setEmail(user?.email || savedData.email || '');
+    setStreet(userAddr.street || savedData.street || '');
+    setNumber(userAddr.number || savedData.number || '');
+    setComplement(userAddr.complement || savedData.complement || '');
+    setNeighborhood(userAddr.neighborhood || savedData.neighborhood || bairrosFortaleza[0].nome);
+    setCity(userAddr.city || savedData.city || '');
+    setState(userAddr.state || savedData.state || 'Ceará');
+    setZipCode(userAddr.zipCode || savedData.zipCode || '');
+    setReference(userAddr.reference || savedData.reference || '');
+    
+    // Para campos de retirada, pré-preencher com dados do usuário se não houver dados salvos
+    if (user?.name && !savedData.pickupFirstName) {
+      const nameParts = user.name.split(' ')
+      setPickupFirstName(nameParts[0] || '')
+      setPickupLastName(nameParts.slice(1).join(' ') || '')
+    } else {
+      setPickupFirstName(savedData.pickupFirstName || '');
+      setPickupLastName(savedData.pickupLastName || '');
+    }
+    
+    setPickupPhone(user?.phone || savedData.pickupPhone || '');
+    setPickupEmail(user?.email || savedData.pickupEmail || '');
+    
+    // Configurar bairro se houver dados do usuário
+    if (userAddr.neighborhood) {
+      const bairroObj = bairrosFortaleza.find(b => b.nome === userAddr.neighborhood);
+      if (bairroObj) {
+        setSelectedBairro(bairroObj.nome);
+        setBairroFrete(bairroObj.preco);
+      }
+    }
+    
+    // Atualizar referência do usuário
+    lastLoadedUserId.current = currentUserId;
+    setIsLoadingFormData(false);
+  }, [user?.id]);
+  
+  // Salvar dados no localStorage quando mudar (apenas se não estiver carregando e não há usuário logado)
+  useEffect(() => {
+    if (!isLoadingFormData && !user) {
+      const formData = {
+        name,
+        phone,
+        email,
+        street,
+        number,
+        complement,
+        neighborhood,
+        city,
+        state,
+        zipCode,
+        reference,
+        pickupFirstName,
+        pickupLastName,
+        pickupPhone,
+        pickupEmail,
+        selectedBairro
+      }
+      localStorage.setItem('cartFormData', JSON.stringify(formData))
+    }
+  }, [name, phone, email, street, number, complement, neighborhood, city, state, zipCode, reference, pickupFirstName, pickupLastName, pickupPhone, pickupEmail, selectedBairro, isLoadingFormData, user])
   
   // Máscara telefone
   function formatPhone(value: string) {
@@ -1136,21 +1609,138 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
     return value.includes('@')
   }
   
-  // Buscar endereço por CEP
-  const handleZipCodeBlur = async () => {
-    const cleanZipCode = zipCode.replace(/\D/g, '')
+  // Buscar endereço por CEP automaticamente
+  const searchAddressByCep = async (cep: string) => {
+    const cleanZipCode = cep.replace(/\D/g, '')
     if (cleanZipCode.length === 8) {
+      setIsSearchingCep(true)
       try {
         const response = await fetch(`/api/shipping/zipcode/${cleanZipCode}`)
         if (response.ok) {
           const addressData = await response.json()
-          setStreet(addressData.street || '')
-          setNeighborhood(addressData.neighborhood || '')
-          setCity(addressData.city || '')
-          setState(addressData.state || '')
+          
+          // Sobrescrever todos os dados (exceto estado que permanece inalterado)
+          if (addressData.street) {
+            setStreet(addressData.street)
+            updateFormData('street', addressData.street)
+          }
+          if (addressData.neighborhood) {
+            setNeighborhood(addressData.neighborhood)
+            updateFormData('neighborhood', addressData.neighborhood)
+          }
+          if (addressData.city) {
+            setCity(addressData.city)
+            updateFormData('city', addressData.city)
+          }
+          // Não alterar o estado - mantém o que já está preenchido
+          
+          // Tentar extrair número da rua se disponível
+          if (addressData.street) {
+            const streetText = addressData.street
+            // Buscar padrões de número na rua (ex: "Rua das Flores, 123" ou "Av. Brasil 456")
+            const numberMatch = streetText.match(/,?\s*(\d+)\s*$|(\d+)\s*(?:,|$)/)
+            if (numberMatch && (numberMatch[1] || numberMatch[2])) {
+              const extractedNumber = numberMatch[1] || numberMatch[2]
+              setNumber(extractedNumber)
+              updateFormData('number', extractedNumber)
+              
+              // Remover o número da rua para deixar só o endereço
+              const cleanStreet = streetText.replace(/,?\s*\d+\s*$/, '').replace(/\d+\s*,?\s*$/, '').trim()
+              setStreet(cleanStreet)
+              updateFormData('street', cleanStreet)
+              
+              console.log('✅ Número extraído da rua:', extractedNumber)
+            }
+          }
+          
+          // Se a API retornar número diretamente (caso exista essa propriedade)
+          if (addressData.number) {
+            setNumber(addressData.number)
+            updateFormData('number', addressData.number)
+          }
+          
+          // Função para normalizar strings (remover acentos e caracteres especiais)
+          const normalizeString = (str: string) => {
+            return str
+              .toLowerCase()
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+              .replace(/[^a-z0-9\s]/g, '') // Remove caracteres especiais
+              .trim()
+          }
+          
+          // Verificar se o bairro retornado está na lista de bairros disponíveis
+          if (addressData.neighborhood) {
+            const normalizedAPIBairro = normalizeString(addressData.neighborhood)
+            
+            // Primeira tentativa: match exato normalizado
+            let bairroEncontrado = bairrosFortaleza.find(bairro => 
+              normalizeString(bairro.nome) === normalizedAPIBairro
+            )
+            
+            // Segunda tentativa: match parcial com palavras-chave
+            if (!bairroEncontrado) {
+              const palavrasAPI = normalizedAPIBairro.split(' ').filter(p => p.length > 2)
+              
+              bairroEncontrado = bairrosFortaleza.find(bairro => {
+                const normalizedBairro = normalizeString(bairro.nome)
+                const palavrasBairro = normalizedBairro.split(' ')
+                
+                // Verifica se alguma palavra-chave da API está no nome do bairro
+                return palavrasAPI.some(palavraAPI => 
+                  palavrasBairro.some(palavraBairro => 
+                    palavraBairro.includes(palavraAPI) || palavraAPI.includes(palavraBairro)
+                  )
+                )
+              })
+            }
+            
+            if (bairroEncontrado) {
+              setSelectedBairro(bairroEncontrado.nome)
+              setBairroFrete(bairroEncontrado.preco)
+              console.log('✅ Bairro encontrado automaticamente:', bairroEncontrado.nome)
+            } else {
+              console.log('❌ Bairro não encontrado na lista:', addressData.neighborhood)
+            }
+          }
+          
+          console.log('✅ Endereço preenchido automaticamente via CEP')
         }
       } catch (error) {
         console.error('Erro ao buscar CEP:', error)
+      } finally {
+        setIsSearchingCep(false)
+      }
+    }
+  }
+
+  // Buscar endereço por CEP com debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const cleanZipCode = zipCode.replace(/\D/g, '')
+      if (cleanZipCode.length === 8) {
+        searchAddressByCep(zipCode)
+      }
+    }, 1000) // 1 segundo de delay para não fazer muitas requisições
+
+    return () => clearTimeout(timer)
+  }, [zipCode])
+
+  // Função para busca manual (quando o usuário pressiona Enter ou sai do campo)
+  const handleZipCodeBlur = () => {
+    const cleanZipCode = zipCode.replace(/\D/g, '')
+    if (cleanZipCode.length === 8) {
+      searchAddressByCep(zipCode)
+    }
+  }
+
+  // Função para busca quando pressiona Enter
+  const handleZipCodeKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      const cleanZipCode = zipCode.replace(/\D/g, '')
+      if (cleanZipCode.length === 8) {
+        searchAddressByCep(zipCode)
       }
     }
   }
@@ -1186,7 +1776,10 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
               type="text" 
               name="pickupFirstName"
               value={pickupFirstName}
-              onChange={(e) => setPickupFirstName(e.target.value)}
+              onChange={(e) => {
+                setPickupFirstName(e.target.value);
+                updateFormData('pickupFirstName', e.target.value);
+              }}
               className={`rounded-lg border px-4 py-3 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition text-base ${pickupFirstName && !isValidName(pickupFirstName) ? 'border-red-400' : 'border-gray-300'}`}
               placeholder="Seu nome" 
               required 
@@ -1198,7 +1791,10 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
               type="text" 
               name="pickupLastName"
               value={pickupLastName}
-              onChange={(e) => setPickupLastName(e.target.value)}
+              onChange={(e) => {
+                setPickupLastName(e.target.value);
+                updateFormData('pickupLastName', e.target.value);
+              }}
               className={`rounded-lg border px-4 py-3 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition text-base ${pickupLastName && !isValidName(pickupLastName) ? 'border-red-400' : 'border-gray-300'}`}
               placeholder="Seu sobrenome" 
               required 
@@ -1212,7 +1808,10 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
               className={`rounded-lg border px-4 py-3 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition text-base ${pickupPhone && !isValidPhone(pickupPhone) ? 'border-red-400' : 'border-gray-300'}`}
               placeholder="(85) 99999-9999"
               value={pickupPhone}
-              onChange={e => setPickupPhone(formatPhone(e.target.value))}
+              onChange={e => {
+                setPickupPhone(formatPhone(e.target.value));
+                updateFormData('pickupPhone', formatPhone(e.target.value));
+              }}
               required
               maxLength={15}
             />
@@ -1225,7 +1824,10 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
               className={`rounded-lg border px-4 py-3 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition text-base ${pickupEmail && !isValidEmail(pickupEmail) ? 'border-red-400' : 'border-gray-300'}`}
               placeholder="seu@email.com"
               value={pickupEmail}
-              onChange={e => setPickupEmail(e.target.value)}
+              onChange={e => {
+                setPickupEmail(e.target.value);
+                updateFormData('pickupEmail', e.target.value);
+              }}
             />
             {pickupEmail && !isValidEmail(pickupEmail) && (
               <span className="text-xs text-red-500 mt-1">Digite um e-mail válido com @</span>
@@ -1257,7 +1859,10 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
             type="text" 
             name="name"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value);
+              updateFormData('name', e.target.value);
+            }}
             className={`rounded-lg border px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base ${name && !isValidName(name) ? 'border-red-400' : 'border-gray-300'}`}
             placeholder="Seu nome completo" 
             required 
@@ -1271,7 +1876,10 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
             className={`rounded-lg border px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base ${phone && !isValidPhone(phone) ? 'border-red-400' : 'border-gray-300'}`}
             placeholder="(85) 99999-9999"
             value={phone}
-            onChange={e => setPhone(formatPhone(e.target.value))}
+            onChange={e => {
+              setPhone(formatPhone(e.target.value));
+              updateFormData('phone', formatPhone(e.target.value));
+            }}
             required
             maxLength={15}
           />
@@ -1284,7 +1892,10 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
             className={`rounded-lg border px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base ${email && !isValidEmail(email) ? 'border-red-400' : 'border-gray-300'}`}
             placeholder="seu@email.com"
             value={email}
-            onChange={e => setEmail(e.target.value)}
+            onChange={e => {
+              setEmail(e.target.value);
+              updateFormData('email', e.target.value);
+            }}
           />
           {email && !isValidEmail(email) && (
             <span className="text-xs text-red-500 mt-1">Digite um e-mail válido com @</span>
@@ -1292,17 +1903,36 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
         </div>
         <div className="flex flex-col gap-2 md:col-span-2">
           <label className="font-semibold text-blue-900 text-sm">CEP *</label>
-          <input
-            type="text"
-            name="zipCode"
-            className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base"
-            placeholder="00000-000"
-            value={zipCode}
-            onChange={e => setZipCode(formatZipCode(e.target.value))}
-            onBlur={handleZipCodeBlur}
-            maxLength={9}
-            required
-          />
+          <div className="relative">
+            <input
+              type="text"
+              name="zipCode"
+              className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base w-full"
+              placeholder="00000-000"
+              value={zipCode}
+              onChange={e => {
+                setZipCode(formatZipCode(e.target.value));
+                updateFormData('zipCode', formatZipCode(e.target.value));
+              }}
+              onBlur={handleZipCodeBlur}
+              onKeyPress={handleZipCodeKeyPress}
+              maxLength={9}
+              required
+            />
+            {isSearchingCep && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <div className="animate-spin h-4 w-4 border-2 border-orange-400 border-t-transparent rounded-full"></div>
+              </div>
+            )}
+          </div>
+          {zipCode && zipCode.replace(/\D/g, '').length === 8 && !isSearchingCep && (
+            <span className="text-xs text-green-600">✓ Preenchimento automático ativo</span>
+          )}
+        </div>
+        {/* Select de bairro com preço de frete */}
+        <div className="flex flex-col gap-2 md:col-span-2">
+          <label className="font-semibold text-blue-900 text-sm">Bairro *</label>
+          <BairroDropdown />
         </div>
         <div className="flex flex-col gap-2 md:col-span-2">
           <label className="font-semibold text-blue-900 text-sm">Rua/Avenida *</label>
@@ -1310,7 +1940,10 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
             type="text" 
             name="street"
             value={street}
-            onChange={e => setStreet(e.target.value)}
+            onChange={e => {
+              setStreet(e.target.value);
+              updateFormData('street', e.target.value);
+            }}
             className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base" 
             placeholder="Nome da rua" 
             required
@@ -1322,11 +1955,15 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
             type="text"
             name="number"
             value={number}
-            onChange={e => setNumber(e.target.value)}
+            onChange={e => {
+              setNumber(e.target.value);
+              updateFormData('number', e.target.value);
+            }}
             className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base"
             placeholder="123"
             required
           />
+          <span className="text-xs text-gray-500">Informe o número da casa/apartamento</span>
         </div>
         <div className="flex flex-col gap-2">
           <label className="font-semibold text-blue-900 text-sm">Complemento</label>
@@ -1334,21 +1971,12 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
             type="text"
             name="complement"
             value={complement}
-            onChange={e => setComplement(e.target.value)}
+            onChange={e => {
+              setComplement(e.target.value);
+              updateFormData('complement', e.target.value);
+            }}
             className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base"
             placeholder="Apto, bloco, etc."
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="font-semibold text-blue-900 text-sm">Bairro *</label>
-          <input
-            type="text"
-            name="neighborhood"
-            value={neighborhood}
-            onChange={e => setNeighborhood(e.target.value)}
-            className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base"
-            placeholder="Nome do bairro"
-            required
           />
         </div>
         <div className="flex flex-col gap-2">
@@ -1357,13 +1985,15 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
             type="text"
             name="city"
             value={city}
-            onChange={e => setCity(e.target.value)}
+            onChange={e => {
+              setCity(e.target.value);
+              updateFormData('city', e.target.value);
+            }}
             className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base"
             placeholder="Fortaleza"
             required
           />
         </div>
-
         <div className="flex flex-col gap-2 md:col-span-2">
           <label htmlFor="state" className="font-semibold text-blue-900 text-sm">
             Estado
@@ -1376,14 +2006,16 @@ function FormCart({ user, deliveryType }: { user: any, deliveryType: 'delivery' 
             readOnly
           />
         </div>
-
         <div className="flex flex-col gap-2 md:col-span-2">
           <label className="font-semibold text-blue-900 text-sm">Ponto de Referência</label>
           <input
             type="text"
             name="reference"
             value={reference}
-            onChange={e => setReference(e.target.value)}
+            onChange={e => {
+              setReference(e.target.value);
+              updateFormData('reference', e.target.value);
+            }}
             className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition text-base"
             placeholder="Próximo ao mercado, farmácia, etc."
           />

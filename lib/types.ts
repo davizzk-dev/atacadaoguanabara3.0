@@ -80,7 +80,11 @@ export interface User {
   email: string
   name: string
   phone: string
-  address?: Address
+  address?: string | Address
+  city?: string
+  state?: string
+  zipCode?: string
+  neighborhood?: string
   role: "user" | "admin"
   createdAt?: string
   updatedAt?: string
@@ -88,6 +92,7 @@ export interface User {
   totalSpent?: number
   lastOrder?: string | null
   isClient?: boolean
+  provider?: string // Adicionado para identificar usuários Google
 }
 
 export interface Promotion {

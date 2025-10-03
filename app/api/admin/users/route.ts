@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { promises as fs } from 'fs'
 import path from 'path'
+import { withAPIProtection } from '@/lib/auth-middleware'
 
-export async function GET(request: NextRequest) {
+async function handleGET(request: NextRequest) {
   try {
     // Ler dados do arquivo JSON
     const dataDir = path.join(process.cwd(), 'data')
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
 }
 
 // PUT - Atualizar usuário
-export async function PUT(request: NextRequest) {
+async function handlePUT(request: NextRequest) {
   try {
     const body = await request.json()
     const { id, ...updateData } = body
@@ -63,7 +64,7 @@ export async function PUT(request: NextRequest) {
 }
 
 // DELETE - Deletar usuário
-export async function DELETE(request: NextRequest) {
+async function handleDELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
@@ -86,4 +87,9 @@ export async function DELETE(request: NextRequest) {
     console.error('Erro ao deletar usuário:', error)
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
-} 
+}
+
+// Exportar as funções protegidas pelo middleware
+export const GET = withAPIProtection(handleGET)
+export const PUT = withAPIProtection(handlePUT)
+export const DELETE = withAPIProtection(handleDELETE) 

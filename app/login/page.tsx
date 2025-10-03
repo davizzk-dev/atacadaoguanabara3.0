@@ -11,6 +11,16 @@ import { Footer } from '@/components/footer'
 import { useAuthStore } from '@/lib/store'
 
 function LoginContent() {
+  // Função para redirecionar após login Google OAuth
+  const handleGoogleOAuthRedirect = () => {
+    if (typeof window !== 'undefined') {
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const redirectUrl = isLocalhost
+        ? 'http://localhost:3005/'
+        : 'https://atacadaoguanabara.com/catalog';
+      window.location.href = redirectUrl;
+    }
+  };
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -214,7 +224,7 @@ function LoginContent() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
-                  placeholder={isAdminMode ? 'admin' : 'seu@email.com ou admin'}
+                  placeholder={isAdminMode ? 'admin' : 'seu@email.com '}
                   required
                 />
               </div>

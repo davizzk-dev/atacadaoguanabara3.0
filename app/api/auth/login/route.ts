@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { handlePasswordLogin } from '@/lib/password'
 
 const dataPath = join(process.cwd(), 'data', 'users.json')
 
@@ -52,10 +53,20 @@ export async function POST(request: NextRequest) {
 
     const users = readUsers()
 
-    // Buscar usuário
-    const user = users.find((u: any) => u.email === email && u.password === password)
+    // Buscar usuário pelo email
+    const user = users.find((u: any) => u.email === email)
     
     if (!user) {
+      return NextResponse.json({ 
+        success: false,
+        error: 'Email ou senha incorretos' 
+      }, { status: 401 })
+    }
+
+    // Verificar senha (compatível com senhas hasheadas e não hasheadas)
+    const isValidPassword = handlePasswordLogin(password, user.password)
+    
+    if (!isValidPassword) {
       return NextResponse.json({ 
         success: false,
         error: 'Email ou senha incorretos' 

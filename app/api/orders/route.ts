@@ -3,6 +3,7 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]/route'
+import { withAPIProtection } from '@/lib/auth-middleware'
 
 // Usar caminho correto para o arquivo
 const ordersPath = path.join(process.cwd(), 'data', 'orders.json')
@@ -79,11 +80,13 @@ export async function POST(request: NextRequest) {
     const orders = JSON.parse(data)
     console.log('[API/orders][POST] Pedidos existentes:', orders.length)
     
+    const tipoPedido = body.pickupInfo ? 'retirada' : 'entrega';
     const newOrder = {
       ...body,
       id: body.id || Date.now().toString(),
       createdAt: body.createdAt || new Date().toISOString(),
       status: body.status || 'pending',
+      tipoPedido,
       // Garantir que customerInfo tenha email mesmo que vazio
       customerInfo: {
         ...body.customerInfo,
@@ -116,7 +119,7 @@ export async function POST(request: NextRequest) {
 }
 
 // GET - Listar pedidos do usuário logado
-export async function GET(request: NextRequest) {
+async function handleGET(request: NextRequest) {
   try {
     console.log('[API/orders][GET] chamada recebida')
     await ensureDataFile()
@@ -173,4 +176,6 @@ export async function GET(request: NextRequest) {
     console.error('[API/orders][GET] Erro:', error, error?.stack)
     return NextResponse.json([], { status: 500 })
   }
-} 
+}
+
+export const GET = withAPIProtection(handleGET) 

@@ -5,20 +5,19 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Mail, ArrowLeft, Lock, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react'
+import { Phone, Mail, ArrowLeft, Lock, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react'
 import Header from '@/components/header'
 import { Footer } from '@/components/footer'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [step, setStep] = useState('email')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [code, setCode] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [countdown, setCountdown] = useState(0)
   const router = useRouter()
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -27,48 +26,59 @@ export default function ForgotPasswordPage() {
     setError('')
     setSuccess('')
 
+    console.log('🔥 Enviando email forgot password:')
+    console.log('  📧 Email:', email, '(length:', email?.length || 0, ')')
+    console.log('  📧 Email trimmed:', email?.trim(), '(length:', email?.trim().length || 0, ')')
+
     try {
+      const requestData = { email: email.trim() }
+      console.log('📨 Request data:', requestData)
+
       const response = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+        body: JSON.stringify(requestData)
       })
 
+      console.log('📨 Response status:', response.status)
       const data = await response.json()
+      console.log('📨 Response data:', data)
 
       if (response.ok) {
-        setSuccess('Código de verificação enviado para seu email!')
-        setStep('code')
-        setCountdown(60)
+        setSuccess('Email confirmado! Agora confirme seu número de telefone.')
+        setStep('phone')
       } else {
-        setError(data.error || 'Erro ao enviar código de verificação')
+        console.log('❌ Error response:', response.status, data)
+        setError(data.error || 'Email não encontrado')
       }
     } catch (error) {
+      console.log('❌ Catch error:', error)
       setError('Erro de conexão. Tente novamente.')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleCodeSubmit = async (e: React.FormEvent) => {
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError('')
+    setSuccess('')
 
     try {
-      const response = await fetch('/api/auth/verify-code', {
+      const response = await fetch('/api/auth/verify-phone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code })
+        body: JSON.stringify({ email, phone })
       })
 
       const data = await response.json()
 
       if (response.ok) {
+        setSuccess('Telefone confirmado! Agora defina sua nova senha.')
         setStep('new-password')
-        setSuccess('Código verificado! Agora defina sua nova senha.')
       } else {
-        setError(data.error || 'Código inválido')
+        setError(data.error || 'Número de telefone não confere')
       }
     } catch (error) {
       setError('Erro de conexão. Tente novamente.')
@@ -82,14 +92,21 @@ export default function ForgotPasswordPage() {
     setIsLoading(true)
     setError('')
 
+    const requestData = { email, phone, newPassword }
+    console.log('🔥 Enviando reset password:')
+    console.log('  📧 Email:', email)
+    console.log('  📱 Phone:', phone)
+    console.log('  🔐 New Password:', newPassword ? `provided (${newPassword.length} chars)` : 'missing')
+
     try {
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code, newPassword })
+        body: JSON.stringify(requestData)
       })
 
       const data = await response.json()
+      console.log('📨 Response:', data)
 
       if (response.ok) {
         setSuccess('Senha alterada com sucesso! Redirecionando para login...')
@@ -97,33 +114,8 @@ export default function ForgotPasswordPage() {
           router.push('/login')
         }, 2000)
       } else {
+        console.log('❌ Error response:', response.status, data)
         setError(data.error || 'Erro ao alterar senha')
-      }
-    } catch (error) {
-      setError('Erro de conexão. Tente novamente.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleResendCode = async () => {
-    setIsLoading(true)
-    setError('')
-
-    try {
-      const response = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setSuccess('Novo código enviado para seu email!')
-        setCountdown(60)
-      } else {
-        setError(data.error || 'Erro ao reenviar código')
       }
     } catch (error) {
       setError('Erro de conexão. Tente novamente.')
@@ -153,13 +145,13 @@ export default function ForgotPasswordPage() {
             
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
               {step === 'email' && 'Recuperar Senha'}
-              {step === 'code' && 'Verificar Código'}
+              {step === 'phone' && 'Verificar Telefone'}
               {step === 'new-password' && 'Nova Senha'}
             </h1>
             
             <p className="text-gray-600">
-              {step === 'email' && 'Digite seu email para receber um código de verificação'}
-              {step === 'code' && 'Digite o código enviado para seu email'}
+              {step === 'email' && 'Digite seu email cadastrado'}
+              {step === 'phone' && 'Confirme o seu número de telefone'}
               {step === 'new-password' && 'Defina sua nova senha'}
             </p>
           </div>
@@ -169,15 +161,15 @@ export default function ForgotPasswordPage() {
             <div className="flex items-center space-x-4">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                 step === 'email' ? 'bg-orange-500 text-white' : 
-                step === 'code' || step === 'new-password' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'
+                step === 'phone' || step === 'new-password' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'
               }`}>
                 1
               </div>
               <div className={`w-16 h-1 ${
-                step === 'code' || step === 'new-password' ? 'bg-green-500' : 'bg-gray-200'
+                step === 'phone' || step === 'new-password' ? 'bg-green-500' : 'bg-gray-200'
               }`}></div>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                step === 'code' ? 'bg-orange-500 text-white' : 
+                step === 'phone' ? 'bg-orange-500 text-white' : 
                 step === 'new-password' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'
               }`}>
                 2
@@ -234,54 +226,39 @@ export default function ForgotPasswordPage() {
                 disabled={isLoading}
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg transition-colors disabled:opacity-50"
               >
-                {isLoading ? 'Enviando...' : 'Enviar Código'}
+                {isLoading ? 'Verificando...' : 'Confirmar Email'}
               </button>
             </form>
           )}
 
-          {/* Step 2: Code Verification */}
-          {step === 'code' && (
-            <form onSubmit={handleCodeSubmit} className="space-y-6">
+          {/* Step 2: Phone */}
+          {step === 'phone' && (
+            <form onSubmit={handlePhoneSubmit} className="space-y-6">
               <div>
-                <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-2">
-                  Código de Verificação
+                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                  Número de Telefone
                 </label>
-                <input
-                  id="code"
-                  type="text"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="Digite o código de 6 dígitos"
-                  className="w-full text-center text-lg font-mono tracking-widest border border-gray-300 rounded-lg py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                  maxLength={6}
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-2">
-                  Código enviado para: <span className="font-medium">{email}</span>
-                </p>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    id="phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Digite seu número de telefone"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                    required
+                  />
+                </div>
               </div>
 
-              <div className="flex space-x-3">
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg transition-colors disabled:opacity-50"
-                >
-                  {isLoading ? 'Verificando...' : 'Verificar Código'}
-                </button>
-              </div>
-
-              <div className="text-center">
-                <p className="text-sm text-gray-600 mb-2">Não recebeu o código?</p>
-                <button
-                  type="button"
-                  onClick={handleResendCode}
-                  disabled={isLoading || countdown > 0}
-                  className="text-orange-600 hover:text-orange-700 text-sm font-medium disabled:text-gray-400"
-                >
-                  {countdown > 0 ? `Reenviar em ${countdown}s` : 'Reenviar código'}
-                </button>
-              </div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {isLoading ? 'Verificando...' : 'Confirmar Telefone'}
+              </button>
             </form>
           )}
 

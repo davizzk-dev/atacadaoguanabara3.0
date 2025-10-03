@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { promises as fs } from 'fs'
 import path from 'path'
+import { withAPIProtection } from '@/lib/auth-middleware'
 
-export async function GET(request: NextRequest) {
+async function handleGET(request: NextRequest) {
   try {
     // Ler dados do arquivo JSON
     const dataDir = path.join(process.cwd(), 'data')
@@ -66,4 +67,6 @@ export async function DELETE(request: NextRequest) {
     console.error('Erro ao deletar solicitação:', error)
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
-} 
+}
+
+export const GET = withAPIProtection(handleGET) 

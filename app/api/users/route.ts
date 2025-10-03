@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
+import { withAPIProtection } from '@/lib/auth-middleware'
 
 const dataDir = join(process.cwd(), 'data')
 const dataPath = join(dataDir, 'users.json')
@@ -34,7 +35,7 @@ function ensureDataFile() {
 }
 
 // GET - Listar usuários
-export async function GET(request: NextRequest) {
+async function handleGET(request: NextRequest) {
   try {
     console.log('[API/users][GET] chamada recebida')
     ensureDataFile()
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
     
-    const { name, email, role = 'user' } = body
+    const { name, email, role = 'user', ranking = 'user', phone, password, address } = body
     
     if (!name || !email) {
       return NextResponse.json({ 
@@ -110,6 +111,19 @@ export async function POST(request: NextRequest) {
       name,
       email,
       role,
+      ranking,
+      phone: phone || '',
+      // Nota: senha não é salva por questões de segurança
+      // Em produção, você usaria hash da senha
+      address: address || {
+        street: '',
+        number: '',
+        complement: '',
+        neighborhood: '',
+        city: 'Fortaleza',
+        state: 'Ceará',
+        zipCode: ''
+      },
       createdAt: new Date().toISOString(),
       status: 'active'
     }
@@ -133,3 +147,5 @@ export async function POST(request: NextRequest) {
     }, { status: 500 })
   }
 }
+
+export const GET = withAPIProtection(handleGET)

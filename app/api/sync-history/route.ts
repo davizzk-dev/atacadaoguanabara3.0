@@ -34,22 +34,31 @@ export async function POST(request: NextRequest) {
   try {
     const newEntry = await request.json()
     
+    // Limitar tamanho dos logs para evitar erro 413
+    if (newEntry.logs && newEntry.logs.length > 5000) {
+      newEntry.logs = newEntry.logs.substring(0, 5000) + '... (logs truncados para evitar erro 413)'
+    }
+    
     const data = fs.readFileSync(HISTORY_FILE, 'utf8')
     const history = JSON.parse(data)
     
     // Adicionar nova entrada
-    history.push({
+    const entry = {
       id: Date.now().toString(),
-      startTime: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
+      startTime: newEntry.startedAt || new Date().toISOString(),
       ...newEntry
-    })
+    }
+    
+    history.unshift(entry) // Adicionar no início (mais recente primeiro)
     
     // Manter apenas os últimos 50 registros
     if (history.length > 50) {
-      history.splice(0, history.length - 50)
+      history.splice(50)
     }
     
     fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2))
+    console.log('✅ Histórico salvo:', entry.id)
     
     return NextResponse.json({ success: true })
   } catch (error) {

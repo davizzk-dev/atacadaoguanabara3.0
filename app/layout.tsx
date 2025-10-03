@@ -4,7 +4,6 @@ import { Inter } from "next/font/google"
 import CookieBanner from "@/components/cookie-banner"
 import OrderTrackingNotification from "@/components/order-tracking-notification"
 import VisitorTracker from "@/components/visitor-tracker"
-import BuildNotificationWrapper from "@/components/build-notification-wrapper"
 import DevAuthChecker from "@/components/dev-auth-checker"
 import { Providers } from "./providers"
 import "./globals.css"
@@ -34,7 +33,6 @@ export default function RootLayout({
           <CookieBanner />
           <OrderTrackingNotification />
           <VisitorTracker />
-          <BuildNotificationWrapper />
         </Providers>
       </body>
     </html>

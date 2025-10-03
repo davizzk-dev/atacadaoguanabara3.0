@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { withAPIProtection } from '@/lib/auth-middleware'
 
 const dataPath = join(process.cwd(), 'data', 'camera-requests.json')
 
@@ -117,7 +118,7 @@ export async function POST(request: NextRequest) {
 }
 
 // GET - Listar solicitações de câmera
-export async function GET(request: NextRequest) {
+async function handleGET(request: NextRequest) {
   try {
     console.log('[API/camera-requests][GET] chamada recebida')
     ensureDataFile()
@@ -174,4 +175,6 @@ export async function GET(request: NextRequest) {
       errorType: error?.constructor?.name
     }, { status: 500 })
   }
-} 
+}
+
+export const GET = withAPIProtection(handleGET) 

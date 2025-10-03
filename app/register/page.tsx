@@ -14,6 +14,58 @@ import { ShippingService } from '@/lib/shipping'
 import type { Address } from '@/lib/types'
 
 function RegisterPageContent() {
+  // Bairros de Fortaleza - mesma lista do carrinho
+    const bairrosFortaleza = [
+    { nome: 'Jardim Guanabara', preco: 5 },
+    { nome: 'Vila Velha', preco: 5 },
+    { nome: 'Quintino Cunha', preco: 7 },
+    { nome: 'Olavo Oliveira', preco: 7 },
+    { nome: 'Jardim Iracema', preco: 7 },
+    { nome: 'Padre Andrade', preco: 10 },
+    { nome: 'Floresta', preco: 10 },
+    { nome: 'Antonio Bezerra', preco: 10 },
+    { nome: 'Barra do Ceara', preco: 10 },
+    { nome: 'Presidente Kennedy', preco: 10 },
+    { nome: 'Cristo Redentor', preco: 15 },
+    { nome: 'Alvaro Wayne', preco: 15 },
+    { nome: 'Carlito', preco: 15 },
+    { nome: 'Pirambu', preco: 15 },
+    { nome: 'Monte Castelo', preco: 15 },
+    { nome: 'Elery', preco: 15 },
+    { nome: 'Alagadiço', preco: 15 },
+    { nome: 'Parquelandia', preco: 15 },
+    { nome: 'Parque Araxá', preco: 15 },
+    { nome: 'Rodolgo Teofilo', preco: 15 },
+    { nome: 'Amadeu Furtado', preco: 15 },
+    { nome: 'Bela Vista', preco: 15 },
+    { nome: 'Pici', preco: 15 },
+    { nome: 'Dom Lustosa', preco: 15 },
+    { nome: 'Autran Nunes', preco: 15 },
+    { nome: 'Genibau', preco: 15 },
+    { nome: 'Tabapuá', preco: 15 },
+    { nome: 'Iparana', preco: 15 },
+    { nome: 'Parque Albano', preco: 15 },
+    { nome: 'Parque Leblon', preco: 15 },
+    { nome: 'Jacarecanga', preco: 20 },
+    { nome: 'Centro', preco: 20 },
+    { nome: 'Moura brasil', preco: 20 },
+    { nome: 'Farias Brito', preco: 20 },
+    { nome: 'Benfica', preco: 20 },
+    { nome: 'Damas', preco: 20 },
+    { nome: 'Jardim America', preco: 20 },
+    { nome: 'Bom Futuro', preco: 20 },
+    { nome: 'Montese', preco: 20 },
+    { nome: 'Pan Americano', preco: 20 },
+    { nome: 'Couto Fernandes', preco: 20 },
+    { nome: 'Democrito Rocha', preco: 20 },
+    { nome: 'Joquei Clube', preco: 20 },
+    { nome: 'Henrique Jorge', preco: 20 },
+    { nome: 'Joao XXIII', preco: 20 },
+    { nome: 'Conj Ceara', preco: 20 },
+    { nome: 'Parangaba', preco: 20 },
+    { nome: 'Itaoca', preco: 20 }
+  ]
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -38,22 +90,30 @@ function RegisterPageContent() {
   const [isGoogleUser, setIsGoogleUser] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const callback = searchParams.get('callback') || '/'
+  const callback = searchParams?.get('callback') || '/'
   const { register } = useAuthStore()
 
   // Detectar se veio do Google e preencher dados
   useEffect(() => {
-    const google = searchParams.get('google')
-    const name = searchParams.get('name')
-    const email = searchParams.get('email')
-    
-    if (google === 'true' && name && email) {
+    const google = searchParams?.get('google')
+    const name = searchParams?.get('name')
+    const email = searchParams?.get('email')
+    // Só ativa Google se todos os parâmetros vierem da autenticação OAuth
+    if (
+      google === 'true' &&
+      typeof name === 'string' && name.length > 0 &&
+      typeof email === 'string' && email.length > 0 &&
+      window.location.pathname.includes('register') &&
+      window.location.search.includes('google=true')
+    ) {
       setIsGoogleUser(true)
       setFormData(prev => ({
         ...prev,
         name: decodeURIComponent(name),
         email: decodeURIComponent(email)
       }))
+    } else {
+      setIsGoogleUser(false)
     }
   }, [searchParams])
 
@@ -100,10 +160,24 @@ function RegisterPageContent() {
       try {
         const addressData = await ShippingService.getAddressByZipCode(zipCode)
         if (addressData) {
+          // Verificar se o bairro retornado está na lista de bairros disponíveis
+          let selectedNeighborhood = addressData.neighborhood || ''
+          
+          if (addressData.neighborhood) {
+            const bairroEncontrado = bairrosFortaleza.find(bairro => 
+              bairro.nome.toLowerCase().includes(addressData.neighborhood!.toLowerCase()) ||
+              addressData.neighborhood!.toLowerCase().includes(bairro.nome.toLowerCase())
+            )
+            
+            if (bairroEncontrado) {
+              selectedNeighborhood = bairroEncontrado.nome
+            }
+          }
+          
           setFormData(prev => ({
             ...prev,
             street: addressData.street || '',
-            neighborhood: addressData.neighborhood || '',
+            neighborhood: selectedNeighborhood,
             city: addressData.city || '',
             state: addressData.state || ''
           }))
@@ -222,16 +296,27 @@ function RegisterPageContent() {
       }
 
       if (isGoogleUser) {
+        const requestData = {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
+          address: address
+        }
+        
+        console.log('🔥 Enviando dados Google registration:')
+        console.log('  👤 Name:', requestData.name)
+        console.log('  📧 Email:', requestData.email)
+        console.log('  📱 Phone:', requestData.phone, '(length:', requestData.phone?.length || 0, ')')
+        console.log('  🔐 Password:', requestData.password ? `provided (${requestData.password.length} chars)` : 'missing')
+        console.log('  🏠 Address:', requestData.address)
+        
         const response = await fetch('/api/auth/google-complete-registration', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            name: formData.name,
-            email: formData.email,
-            address: address
-          })
+          body: JSON.stringify(requestData)
         })
 
         if (response.ok) {
@@ -589,16 +674,21 @@ function RegisterPageContent() {
                   <label htmlFor="neighborhood" className="block text-sm font-medium text-gray-700 mb-2">
                     Bairro *
                   </label>
-                  <input
-                    type="text"
+                  <select
                     id="neighborhood"
                     name="neighborhood"
                     value={formData.neighborhood}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
-                    placeholder="Nome do bairro"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 bg-white"
                     required
-                  />
+                  >
+                    <option value="">Selecione o bairro</option>
+                    {bairrosFortaleza.map((bairro) => (
+                      <option key={bairro.nome} value={bairro.nome}>
+                        {bairro.nome} - R$ {bairro.preco.toFixed(2)} frete
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -619,35 +709,16 @@ function RegisterPageContent() {
 
                 <div>
                   <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-2">
-                    Estado *
+                    Estado
                   </label>
-                  <select
+                  <input
+                    type="text"
                     id="state"
                     name="state"
-                    value={formData.state}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
-                    required
-                  >
-                    <option value="">Selecione o estado</option>
-                    <option value="AC">Acre</option>
-                    <option value="AL">Alagoas</option>
-                    <option value="AP">Amapá</option>
-                    <option value="AM">Amazonas</option>
-                    <option value="BA">Bahia</option>
-                    <option value="CE">Ceará</option>
-                    <option value="DF">Distrito Federal</option>
-                    <option value="ES">Espírito Santo</option>
-                    <option value="GO">Goiás</option>
-                    <option value="MA">Maranhão</option>
-                    <option value="MT">Mato Grosso</option>
-                    <option value="MS">Mato Grosso do Sul</option>
-                    <option value="MG">Minas Gerais</option>
-                    <option value="PA">Pará</option>
-                    <option value="PB">Paraíba</option>
-                    <option value="PR">Paraná</option>
-                  
-                  </select>
+                    value="Ceará"
+                    readOnly
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700"
+                  />
                 </div>
 
                 <div className="md:col-span-2">

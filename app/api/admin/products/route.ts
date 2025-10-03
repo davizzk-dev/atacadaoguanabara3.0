@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { saveProductToFile, updateProductInFile, deleteProductFromFile, getAllProductsFromFile, products as defaultProducts, syncProductsToFile } from '@/lib/data'
+import { withAPIProtection } from '@/lib/auth-middleware'
 
 // Função wrapper para capturar erros
 const handleApiError = (error: any, operation: string) => {
@@ -29,7 +30,7 @@ const handleApiError = (error: any, operation: string) => {
   }, { status: 500 })
 }
 
-export async function GET() {
+async function handleGET() {
   try {
     console.log('🔍 Buscando produtos...')
     let products = await getAllProductsFromFile()
@@ -192,7 +193,7 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
+async function handleDELETE(request: NextRequest) {
   try {
     console.log('🗑️ Recebendo requisição para deletar produto...')
     const { searchParams } = new URL(request.url)
@@ -227,4 +228,9 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     return handleApiError(error, 'deletar produto')
   }
-} 
+}
+
+// Aplicar proteção apenas no GET (para impedir visualização direta via URL)
+// Manter POST, PUT, DELETE sem proteção para funcionamento normal do sistema
+export const GET = withAPIProtection(handleGET)
+export const DELETE = handleDELETE 

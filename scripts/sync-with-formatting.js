@@ -1,4 +1,4 @@
-// SincronizaÁ„o e formataÁ„o de produtos Varejo F·cil
+// Sincroniza√ß√£o e formata√ß√£o de produtos Varejo F√°cil
 const fs = require('fs').promises;
 const path = require('path');
 const VAREJO_FACIL_CONFIG = {
@@ -20,7 +20,7 @@ async function makeVarejoFacilRequest(endpoint, options = {}) {
   };
   const response = await fetch(url, fetchOptions);
   if (!response.ok) {
-    throw new Error(`Erro na requisiÁ„o: ${response.status} ${response.statusText}`);
+    throw new Error(`Erro na requisi√ß√£o: ${response.status} ${response.statusText}`);
   }
   return await response.json();
 }
@@ -48,7 +48,7 @@ async function getAllStock() {
           console.log(`? Lote de estoque ${batchCount}: ${stockData.items.length} saldos (Total: ${allStock.length})`)
           if (stockData.items.length < batchSize) {
             hasMore = false
-            console.log(`?? ⁄ltimo lote de estoque recebido. Finalizando...`)
+            console.log(`?? √öltimo lote de estoque recebido. Finalizando...`)
           } else {
             start += batchSize
           }
@@ -64,7 +64,7 @@ async function getAllStock() {
         if (retryCount < maxRetries) {
           await new Promise(resolve => setTimeout(resolve, 2000))
         } else {
-          console.error(`? Falha apÛs ${maxRetries} tentativas. Pulando este lote.`)
+          console.error(`? Falha ap√≥s ${maxRetries} tentativas. Pulando este lote.`)
           hasMore = false
         }
       }
@@ -75,7 +75,7 @@ async function getAllStock() {
 }
 
 async function getAllPrices() {
-  // Implemente aqui a lÛgica de busca de preÁos
+  // Implemente aqui a l√≥gica de busca de pre√ßos
   return [];
 }
 
@@ -87,7 +87,8 @@ function formatProductForCatalogFast(
   stockByProductId,
   sectionsById,
   brandsById,
-  genresById
+  genresById,
+  groupsById
 ) {
   let productPrice = pricesByProductId.get(varejoProduct.id);
   let price = productPrice ? getAnyPrice(productPrice) : undefined;
@@ -109,7 +110,7 @@ function formatProductForCatalogFast(
     if (price) priceSource = 'codigoInterno';
   }
 
-  // 3. Busca forÁada: procurar qualquer preÁo para o produtoId
+  // 3. Busca for√ßada: procurar qualquer pre√ßo para o produtoId
   if (!price) {
     for (const p of pricesByProductId.values()) {
       if (p.produtoId === varejoProduct.id) {
@@ -126,14 +127,24 @@ function formatProductForCatalogFast(
   const stockQuantity = productStock?.saldo || 0;
   const inStock = stockQuantity > 0;
 
-  // Busca r·pida de seÁ„o, marca e gÍnero usando Map
+  // Busca r√°pida de se√ß√£o, marca, g√™nero e grupo usando Map
   const section = sectionsById.get(varejoProduct.secaoId);
   const brand = brandsById.get(varejoProduct.marcaId);
   const genre = genresById.get(varejoProduct.generoId);
+  
+  // Buscar grupo usando chave composta (secaoId-grupoId) para evitar conflitos
+  const compositeGroupKey = `${varejoProduct.secaoId}-${varejoProduct.grupoId}`;
+  let group = groupsById.get(compositeGroupKey);
+  
+  // Fallback: se n√£o encontrar com chave composta, tentar apenas grupoId
+  if (!group) {
+    group = groupsById.get(varejoProduct.grupoId);
+  }
 
   const category = section?.descricao || 'GERAL';
   const brandName = brand?.descricao || 'Sem marca';
   const genreName = genre?.descricao || '';
+  const groupName = group?.descricao || '';
 
   // Gerar imagem e tags de forma otimizada
   const image = varejoProduct.imagem && varejoProduct.imagem.trim() ? 
@@ -144,10 +155,11 @@ function formatProductForCatalogFast(
     category.toLowerCase(),
     brandName.toLowerCase(),
     genreName.toLowerCase(),
+    groupName.toLowerCase(),
     'varejo-facil'
   ].filter(tag => tag && tag !== 'sem marca');
 
-  // Corrige a lÛgica para garantir que os preÁos escalonados sejam salvos corretamente
+  // Corrige a l√≥gica para garantir que os pre√ßos escalonados sejam salvos corretamente
   return {
     id: varejoProduct.id.toString(),
     name: varejoProduct.descricao || 'Produto sem nome',
@@ -155,12 +167,14 @@ function formatProductForCatalogFast(
     originalPrice: parseFloat(productPrice?.precoVenda1 || 0),
     image: image,
     category: category,
-    description: varejoProduct.descricaoReduzida || varejoProduct.descricao || 'DescriÁ„o n„o disponÌvel',
+    description: varejoProduct.descricaoReduzida || varejoProduct.descricao || 'Descri√ß√£o n√£o dispon√≠vel',
     stock: stockQuantity,
     inStock: inStock,
     rating: 4.5,
     reviews: Math.floor(Math.random() * 100) + 10,
     brand: brandName,
+    genre: genreName,
+    group: groupName,
     unit: varejoProduct.unidadeDeVenda || 'un',
     tags: tags,
     prices: {
@@ -174,8 +188,13 @@ function formatProductForCatalogFast(
       codigoInterno: varejoProduct.codigoInterno,
       idExterno: varejoProduct.idExterno,
       secaoId: varejoProduct.secaoId,
+      secaoNome: section?.descricao || '',
+      grupoId: varejoProduct.grupoId,
+      grupoNome: group?.descricao || '',
       marcaId: varejoProduct.marcaId,
+      marcaNome: brand?.descricao || '',
       generoId: varejoProduct.generoId,
+      generoNome: genre?.descricao || '',
       ativoNoEcommerce: varejoProduct.ativoNoEcommerce,
       dataInclusao: varejoProduct.dataInclusao,
       dataAlteracao: varejoProduct.dataAlteracao,
@@ -218,13 +237,13 @@ function getAnyPrice(productPrice) {
 
 async function syncAndFormatProducts() {
   try {
-    console.log('?? Iniciando sincronizaÁ„o completa do Varejo F·cil...');
+    console.log('?? Iniciando sincroniza√ß√£o completa do Varejo F√°cil...');
     
-    // 1. Buscar seÁıes
-    console.log('?? Buscando seÁıes...');
+    // 1. Buscar se√ß√µes
+    console.log('?? Buscando se√ß√µes...');
     const sectionsData = await makeVarejoFacilRequest('/api/v1/produto/secoes?count=500');
     const sections = sectionsData.items || [];
-    console.log(`? ${sections.length} seÁıes encontradas`);
+    console.log(`? ${sections.length} se√ß√µes encontradas`);
 
     // 2. Buscar marcas
     console.log('??? Buscando marcas...');
@@ -232,23 +251,64 @@ async function syncAndFormatProducts() {
     const brands = brandsData.items || [];
     console.log(`? ${brands.length} marcas encontradas`);
 
-    // 3. Buscar gÍneros
-    console.log('?? Buscando gÍneros...');
+    // 3. Buscar g√™neros
+    console.log('?? Buscando g√™neros...');
     const genresData = await makeVarejoFacilRequest('/api/v1/produto/generos?count=500');
     const genres = genresData.items || [];
-    console.log(`? ${genres.length} gÍneros encontrados`);
+    console.log(`? ${genres.length} g√™neros encontrados`);
 
-  // 4. Buscar TODOS os preÁos em lotes
+    // 4. Buscar grupos por se√ß√£o
+    console.log('?? Buscando grupos por se√ß√£o...');
+    let allGroups = [];
+    for (const section of sections) {
+      console.log(`?? Buscando grupos da se√ß√£o: ${section.descricao} (ID: ${section.id})`);
+      try {
+        const groupsData = await makeVarejoFacilRequest(`/api/v1/produto/secoes/${section.id}/grupos`);
+        if (groupsData.items && groupsData.items.length > 0) {
+          // Adicionar informa√ß√£o da se√ß√£o a cada grupo
+          const groupsWithSection = groupsData.items.map(group => ({
+            ...group,
+            secaoId: section.id,
+            secaoNome: section.descricao
+          }));
+          allGroups = allGroups.concat(groupsWithSection);
+          console.log(`  ? ${groupsData.items.length} grupos encontrados na se√ß√£o ${section.descricao}`);
+        } else {
+          console.log(`  ? Nenhum grupo encontrado na se√ß√£o ${section.descricao}`);
+        }
+      } catch (error) {
+        console.error(`? Erro ao buscar grupos da se√ß√£o ${section.descricao}:`, error.message);
+      }
+    }
+    console.log(`? Total de ${allGroups.length} grupos encontrados em todas as se√ß√µes`);
+    
+    // Relat√≥rio detalhado dos grupos por se√ß√£o
+    const groupsBySection = {};
+    allGroups.forEach(group => {
+      if (!groupsBySection[group.secaoId]) {
+        groupsBySection[group.secaoId] = [];
+      }
+      groupsBySection[group.secaoId].push(group);
+    });
+    
+    console.log('\nüìã Relat√≥rio de grupos por se√ß√£o:');
+    Object.keys(groupsBySection).forEach(secaoId => {
+      const section = sections.find(s => s.id == secaoId);
+      const sectionName = section ? section.descricao : `Se√ß√£o ${secaoId}`;
+      console.log(`   - ${sectionName}: ${groupsBySection[secaoId].length} grupos`);
+    });
+
+  // 5. Buscar TODOS os pre√ßos em lotes
   const pricesData = await makeVarejoFacilRequest('/api/v1/produto/precos?count=500');
   const prices = pricesData.items || [];
-  console.log(`? ${prices.length} preÁos encontrados no total`);
+  console.log(`? ${prices.length} pre√ßos encontrados no total`);
 
-  // 5. Buscar TODOS os saldos de estoque em lotes usando funÁ„o robusta
+  // 6. Buscar TODOS os saldos de estoque em lotes usando fun√ß√£o robusta
   console.log('?? Buscando todos os saldos de estoque em lotes com controle pelo total da API...');
   const stock = await buscarTodosEstoquesEmLotes(100);
   console.log(`? ${stock.length} saldos de estoque encontrados no total (via lotes)`);
 
-    // 6. Buscar produtos em lotes de 500 e coletar todos os produtoId
+    // 7. Buscar produtos em lotes de 500 e coletar todos os produtoId
     console.log('?? Buscando produtos em lotes de 500...');
     let allProducts = [];
     let allProductIds = [];
@@ -264,14 +324,14 @@ async function syncAndFormatProducts() {
         const productsData = await makeVarejoFacilRequest(`/api/v1/produto/produtos?start=${start}&count=${batchSize}`);
         if (productsData.items && productsData.items.length > 0) {
           allProducts = allProducts.concat(productsData.items);
-          // Coletar todos os produtoId v·lidos
+          // Coletar todos os produtoId v√°lidos
           productsData.items.forEach(prod => {
             if (prod.id) allProductIds.push(prod.id);
           });
           console.log(`? Lote ${batchCount}: ${productsData.items.length} produtos (Total: ${allProducts.length})`);
           if (productsData.items.length < batchSize) {
             hasMore = false;
-            console.log('?? ⁄ltimo lote recebido. Finalizando sincronizaÁ„o...');
+            console.log('?? √öltimo lote recebido. Finalizando sincroniza√ß√£o...');
           } else {
             start += batchSize;
           }
@@ -288,8 +348,8 @@ async function syncAndFormatProducts() {
     console.log(`? Total de produtos encontrados: ${allProducts.length}`);
     console.log(`? Total de produtoIds coletados: ${allProductIds.length}`);
 
-    // Buscar todos os preÁos usando os produtoId coletados, em lotes de 500
-    console.log('?? Buscando preÁos reais dos produtos em lotes de 500...');
+    // Buscar todos os pre√ßos usando os produtoId coletados, em lotes de 500
+    console.log('?? Buscando pre√ßos reais dos produtos em lotes de 500...');
     let allPrices = [];
     for (let i = 0; i < allProductIds.length; i += batchSize) {
       const batchIds = allProductIds.slice(i, i + batchSize);
@@ -299,19 +359,19 @@ async function syncAndFormatProducts() {
         const pricesData = await makeVarejoFacilRequest(url);
         if (pricesData.items && pricesData.items.length > 0) {
           allPrices = allPrices.concat(pricesData.items);
-          console.log(`? Lote de preÁos: ${pricesData.items.length} encontrados (Total: ${allPrices.length})`);
+          console.log(`? Lote de pre√ßos: ${pricesData.items.length} encontrados (Total: ${allPrices.length})`);
         } else {
-          console.log('?? Nenhum preÁo encontrado para lote de produtoIds.');
+          console.log('?? Nenhum pre√ßo encontrado para lote de produtoIds.');
         }
       } catch (error) {
-        console.error('? Erro ao buscar preÁos para lote de produtoIds:', error);
+        console.error('? Erro ao buscar pre√ßos para lote de produtoIds:', error);
       }
     }
 
-    console.log(`? Total de preÁos coletados: ${allPrices.length}`);
+    console.log(`? Total de pre√ßos coletados: ${allPrices.length}`);
 
-    // 7. Criar Ìndices para busca r·pida (OTIMIZA«√O CRÕTICA!)
-    console.log('? Criando Ìndices para busca r·pida...');
+    // 7. Criar √≠ndices para busca r√°pida (OTIMIZA√á√ÉO CR√çTICA!)
+    console.log('? Criando √≠ndices para busca r√°pida...');
     const pricesByProductId = new Map();
     const pricesByIdExterno = new Map();
     const pricesByCodigoInterno = new Map();
@@ -319,8 +379,9 @@ async function syncAndFormatProducts() {
     const sectionsById = new Map();
     const brandsById = new Map();
     const genresById = new Map();
+    const groupsById = new Map();
     
-    // Indexar preÁos
+    // Indexar pre√ßos
     allPrices.forEach(price => {
       if (price.produtoId) pricesByProductId.set(price.produtoId, price);
       if (price.idExterno && price.idExterno.trim()) pricesByIdExterno.set(price.idExterno.trim(), price);
@@ -330,7 +391,7 @@ async function syncAndFormatProducts() {
     // Indexar estoque
     stock.forEach(stockItem => {
       if (stockItem.produtoId) {
-        // Se j· existe estoque para este produto, somar os saldos (caso tenha m˙ltiplos locais)
+        // Se j√° existe estoque para este produto, somar os saldos (caso tenha m√∫ltiplos locais)
         const existingStock = stockByProductId.get(stockItem.produtoId);
         if (existingStock) {
           existingStock.saldo += stockItem.saldo;
@@ -340,18 +401,32 @@ async function syncAndFormatProducts() {
       }
     });
     
-    // Indexar seÁıes, marcas e gÍneros
+    // Indexar se√ß√µes, marcas, g√™neros e grupos
     sections.forEach(section => sectionsById.set(section.id, section));
     brands.forEach(brand => brandsById.set(brand.id, brand));
     genres.forEach(genre => genresById.set(genre.id, genre));
     
-    console.log('? Õndices criados:');
-    console.log(`   - ${pricesByProductId.size} preÁos por produtoId`);
-    console.log(`   - ${pricesByIdExterno.size} preÁos por idExterno`);
+    // Indexar grupos com chave composta para evitar conflitos entre se√ß√µes
+    allGroups.forEach(group => {
+      // Chave composta: secaoId-grupoId
+      const compositeKey = `${group.secaoId}-${group.id}`;
+      groupsById.set(compositeKey, group);
+      
+      // Para compatibilidade, tamb√©m indexar apenas por grupoId (√∫ltimo grupo com este ID prevalece)
+      groupsById.set(group.id, group);
+    });
+    
+    console.log('? √çndices criados:');
+    console.log(`   - ${pricesByProductId.size} pre√ßos por produtoId`);
+    console.log(`   - ${pricesByIdExterno.size} pre√ßos por idExterno`);
     console.log(`   - ${stockByProductId.size} estoques por produtoId`);
+    console.log(`   - ${sectionsById.size} se√ß√µes indexadas`);
+    console.log(`   - ${brandsById.size} marcas indexadas`);
+    console.log(`   - ${genresById.size} g√™neros indexados`);
+    console.log(`   - ${groupsById.size} grupos indexados`);
 
-    // 8. Formatar produtos para o cat·logo
-    console.log('?? Formatando produtos para o cat·logo...');
+    // 8. Formatar produtos para o cat√°logo
+    console.log('?? Formatando produtos para o cat√°logo...');
     const formattedProducts = allProducts.map((product, index) => {
       if (index % 500 === 0) {
         console.log(`?? Formatando produto ${index + 1}/${allProducts.length}...`);
@@ -364,30 +439,31 @@ async function syncAndFormatProducts() {
         stockByProductId, 
         sectionsById, 
         brandsById, 
-        genresById
+        genresById,
+        groupsById
       );
     });
 
-    // RelatÛrio final: IDs dos produtos sem preÁo ou n„o encontrados
+    // Relat√≥rio final: IDs dos produtos sem pre√ßo ou n√£o encontrados
     const productsWithoutPrice = formattedProducts.filter(p => !p.price || p.price === 0);
     const productsWithStock = formattedProducts.filter(p => p.inStock);
     const productsOutOfStock = formattedProducts.filter(p => !p.inStock);
     const productsWithPrice = formattedProducts.filter(p => p.price && p.price > 0);
 
     if (productsWithoutPrice.length > 0) {
-      console.log('\n--- RELAT”RIO FINAL: PRODUTOS SEM PRE«O ---');
+      console.log('\n--- RELAT√ìRIO FINAL: PRODUTOS SEM PRE√áO ---');
       productsWithoutPrice.forEach((product, idx) => {
-        console.log(`${idx + 1}. ID: ${product.id} | Nome: ${product.name || 'Produto n„o encontrado'}`);
+        console.log(`${idx + 1}. ID: ${product.id} | Nome: ${product.name || 'Produto n√£o encontrado'}`);
       });
-      console.log(`\nTotal de produtos sem preÁo: ${productsWithoutPrice.length}`);
+      console.log(`\nTotal de produtos sem pre√ßo: ${productsWithoutPrice.length}`);
     } else {
-      console.log('? Todos os produtos possuem preÁo!');
+      console.log('? Todos os produtos possuem pre√ßo!');
     }
 
-    // Busca extra para produtoIds n„o encontrados
+    // Busca extra para produtoIds n√£o encontrados
     let produtosComPrecoAdicionado = [];
     if (productsWithoutPrice.length > 0) {
-      console.log('\n?? Tentando buscar novamente preÁos dos produtos sem preÁo em lote na API de preÁos...');
+      console.log('\n?? Tentando buscar novamente pre√ßos dos produtos sem pre√ßo em lote na API de pre√ßos...');
       const batchSize = 100;
       for (let i = 0; i < productsWithoutPrice.length; i += batchSize) {
         const batch = productsWithoutPrice.slice(i, i + batchSize);
@@ -404,7 +480,7 @@ async function syncAndFormatProducts() {
                 product.originalPrice = priceObj.precoVenda1 || 0;
                 product.varejoFacilData.precos = priceObj;
                 
-                // Atualiza tambÈm no array principal formattedProducts
+                // Atualiza tamb√©m no array principal formattedProducts
                 const idx = formattedProducts.findIndex(p => p.id === productId);
                 if (idx !== -1) {
                   formattedProducts[idx].price = product.price;
@@ -431,24 +507,24 @@ async function syncAndFormatProducts() {
                     varejoFacilData: { precos: priceObj }
                   });
                 }
-                console.log(`? PreÁo atualizado para produto ID ${productId}: R$ ${product.price}`);
+                console.log(`? Pre√ßo atualizado para produto ID ${productId}: R$ ${product.price}`);
               }
             });
           }
         } catch (err) {
-          console.log(`?? Falha ao buscar preÁos para lote: ${err.message}`);
+          console.log(`?? Falha ao buscar pre√ßos para lote: ${err.message}`);
         }
       }
       
-      // RelatÛrio final dos produtos que tiveram preÁo adicionado
+      // Relat√≥rio final dos produtos que tiveram pre√ßo adicionado
       if (produtosComPrecoAdicionado.length > 0) {
-        console.log('\n--- PRODUTOS QUE TIVERAM PRE«O ADICIONADO NA SEGUNDA BUSCA ---');
+        console.log('\n--- PRODUTOS QUE TIVERAM PRE√áO ADICIONADO NA SEGUNDA BUSCA ---');
         produtosComPrecoAdicionado.forEach((prod, idx) => {
-          console.log(`${idx + 1}. ID: ${prod.id} | Nome: ${prod.name} | PreÁo: R$ ${prod.price}`);
+          console.log(`${idx + 1}. ID: ${prod.id} | Nome: ${prod.name} | Pre√ßo: R$ ${prod.price}`);
         });
-        console.log(`\nTotal: ${produtosComPrecoAdicionado.length} produtos tiveram preÁo adicionado na segunda busca.`);
+        console.log(`\nTotal: ${produtosComPrecoAdicionado.length} produtos tiveram pre√ßo adicionado na segunda busca.`);
       } else {
-        console.log('Nenhum produto teve preÁo adicionado na segunda busca.');
+        console.log('Nenhum produto teve pre√ßo adicionado na segunda busca.');
       }
     }
 
@@ -496,7 +572,7 @@ async function syncAndFormatProducts() {
         product.image = existingImage;
         imagesPreserved++;
       } else {
-        // Se a imagem È uma URL (Unsplash ou placeholder), forÁa para vazio
+        // Se a imagem √© uma URL (Unsplash ou placeholder), for√ßa para vazio
         if (typeof product.image === 'string' && 
             (product.image.includes('images.unsplash.com') || 
              product.image.includes('placeholder'))) {
@@ -516,23 +592,24 @@ async function syncAndFormatProducts() {
     const dataDir = path.join(process.cwd(), 'data');
     const productsFilePath = path.join(dataDir, 'products.json');
     
-    // Criar diretÛrio data se n„o existir
+    // Criar diret√≥rio data se n√£o existir
     try {
       await fs.mkdir(dataDir, { recursive: true });
     } catch (error) {
-      console.log('DiretÛrio data j· existe');
+      console.log('Diret√≥rio data j√° existe');
     }
     
     await fs.writeFile(productsFilePath, JSON.stringify(formattedProducts, null, 2));
     console.log(`?? Arquivo products.json salvo com ${formattedProducts.length} produtos`);
     
-    // 12. Salvar dados completos do Varejo F·cil
+    // 12. Salvar dados completos do Varejo F√°cil
     const varejoFacilData = {
       lastSync: new Date().toISOString(),
       totalProducts: formattedProducts.length,
       totalSections: sections.length,
       totalBrands: brands.length,
       totalGenres: genres.length,
+      totalGroups: allGroups.length,
       totalPrices: allPrices.length,
       totalStock: stock.length,
       productsWithZeroPrice: productsWithoutPrice.length,
@@ -543,6 +620,7 @@ async function syncAndFormatProducts() {
       sections: sections,
       brands: brands,
       genres: genres,
+      groups: allGroups,
       prices: allPrices,
       stock: stock,
       rawProducts: allProducts
@@ -552,23 +630,22 @@ async function syncAndFormatProducts() {
     await fs.writeFile(varejoFacilFilePath, JSON.stringify(varejoFacilData, null, 2));
     console.log('?? Arquivo varejo-facil-sync.json salvo com dados completos');
     
-    console.log('? SincronizaÁ„o concluÌda!');
-    console.log('?? Resumo Final:');
-    console.log(`   - Produtos formatados: ${formattedProducts.length}`);
-    console.log(`   - Produtos com preÁo: ${productsWithPrice.length}`);
-    console.log(`   - Produtos sem preÁo: ${productsWithoutPrice.length}`);
-    console.log(`   - Taxa de sucesso de preÁos: ${((productsWithPrice.length / formattedProducts.length) * 100).toFixed(2)}%`);
-    console.log(`   - Produtos em estoque: ${productsWithStock.length}`);
-    console.log(`   - Produtos sem estoque: ${productsOutOfStock.length}`);
-    console.log(`   - Taxa de produtos em estoque: ${((productsWithStock.length / formattedProducts.length) * 100).toFixed(2)}%`);
-    console.log(`   - SeÁıes: ${sections.length}`);
-    console.log(`   - Marcas: ${brands.length}`);
-    console.log(`   - GÍneros: ${genres.length}`);
-    console.log(`   - PreÁos coletados: ${allPrices.length}`);
-    console.log(`   - Estoques coletados: ${stock.length}`);
-    console.log(`   - Lotes processados: ${batchCount}`);
-    console.log(`   - Arquivo salvo: ${productsFilePath}`);
-    console.log(`   - Dados completos: ${varejoFacilFilePath}`);
+    console.log('‚úÖ SINCRONIZA√á√ÉO CONCLU√çDA COM SUCESSO!');
+    console.log('üìä RESUMO FINAL DA SINCRONIZA√á√ÉO:');
+    console.log(`üì¶ PRODUTOS: ${formattedProducts.length} produtos formatados`);
+    console.log(`üí∞ PRE√áOS: ${productsWithPrice.length} produtos com pre√ßo | ${productsWithoutPrice.length} sem pre√ßo`);
+    console.log(`üìà TAXA DE PRE√áOS: ${((productsWithPrice.length / formattedProducts.length) * 100).toFixed(2)}%`);
+    console.log(`üì¶ ESTOQUE: ${productsWithStock.length} em estoque | ${productsOutOfStock.length} sem estoque`);
+    console.log(`üìä CATEGORIAS: ${sections.length} se√ß√µes | ${brands.length} marcas | ${genres.length} g√™neros`);
+    console.log(`üîó GRUPOS: ${allGroups.length} grupos de produtos`);
+    console.log(`üí≤ PRE√áOS COLETADOS: ${allPrices.length} registros de pre√ßo`);
+    console.log(`üìã ESTOQUES COLETADOS: ${stock.length} registros de estoque`);
+    console.log(`üîÑ LOTES PROCESSADOS: ${batchCount} lotes de dados`);
+    console.log(`üíæ ARQUIVOS SALVOS:`);
+    console.log(`   üìÑ Produtos: ${productsFilePath}`);
+    console.log(`   üìÑ Dados completos: ${varejoFacilFilePath}`);
+    console.log('üéâ SINCRONIZA√á√ÉO FINALIZADA - PROCESSO CONCLU√çDO!');
+    console.log('üéØ RETORNANDO DADOS FINAIS PARA O SISTEMA...');
     
     return {
       success: true,
@@ -582,17 +659,18 @@ async function syncAndFormatProducts() {
       totalSections: sections.length,
       totalBrands: brands.length,
       totalGenres: genres.length,
+      totalGroups: allGroups.length,
       totalPricesCollected: allPrices.length,
       totalStockCollected: stock.length,
       lastSync: varejoFacilData.lastSync
     };
   } catch (error) {
-    console.error('? Erro durante a sincronizaÁ„o:', error);
+    console.error('? Erro durante a sincroniza√ß√£o:', error);
     throw error;
   }
 }
 
-// FunÁ„o para buscar todos os saldos de estoque em lotes
+// Fun√ß√£o para buscar todos os saldos de estoque em lotes
 async function buscarTodosEstoquesEmLotes(batchSize = 100) {
   let allStock = [];
   let start = 0;
@@ -617,7 +695,7 @@ async function buscarTodosEstoquesEmLotes(batchSize = 100) {
           console.log('?? Todos os estoques coletados conforme total da API. Finalizando...');
         } else if (stockData.items.length < batchSize) {
           hasMore = false;
-          console.log('?? ⁄ltimo lote de estoque recebido. Finalizando...');
+          console.log('?? √öltimo lote de estoque recebido. Finalizando...');
         }
       } else {
         hasMore = false;
@@ -635,11 +713,19 @@ async function buscarTodosEstoquesEmLotes(batchSize = 100) {
 if (require.main === module) {
   syncAndFormatProducts()
     .then(result => {
-      console.log('?? SincronizaÁ„o concluÌda com sucesso!');
-      console.log('Resultado:', result);
+      console.log('üéØ SCRIPT EXECUTADO COM SUCESSO!');
+      console.log('üìã RESULTADO FINAL:');
+      console.log(`   ‚úÖ Total de produtos sincronizados: ${result.totalProducts || 'N/A'}`);
+      console.log(`   üìÇ Total de se√ß√µes: ${result.totalSections || 'N/A'}`);
+      console.log(`   üè∑Ô∏è Total de marcas: ${result.totalBrands || 'N/A'}`);
+      console.log(`   üé® Total de g√™neros: ${result.totalGenres || 'N/A'}`);
+      console.log('üèÅ PROCESSO FINALIZADO - SCRIPT TERMINOU');
+      process.exit(0);
     })
     .catch(error => {
-      console.error('? Erro na sincronizaÁ„o:', error);
+      console.error('‚ùå ERRO CR√çTICO NA SINCRONIZA√á√ÉO:', error.message || error);
+      console.error('üìç Stack trace:', error.stack);
+      console.log('üí• PROCESSO FINALIZADO COM ERRO - SCRIPT TERMINOU');
       process.exit(1);
     });
 }

@@ -1,24 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { promises as fs } from 'fs'
-import path from 'path'
-
-const PRODUCTS_FILE = path.join(process.cwd(), 'data', 'products.json')
-
-// Função para carregar produtos
-const loadProducts = async () => {
-  try {
-    const data = await fs.readFile(PRODUCTS_FILE, 'utf-8')
-    return JSON.parse(data)
-  } catch (error) {
-    console.log('Arquivo de produtos não encontrado, retornando array vazio')
-    return []
-  }
-}
-
-// Função para salvar produtos
-const saveProducts = async (products: any[]) => {
-  await fs.writeFile(PRODUCTS_FILE, JSON.stringify(products, null, 2))
-}
+import { updateProductInFile, getProductsFromFile } from '@/lib/data'
 
 // PUT - Atualizar produto específico
 export async function PUT(
@@ -43,31 +24,28 @@ export async function PUT(
 
     console.log('🔄 Atualizando produto:', id, updateData)
 
-    let products = await loadProducts()
-    const productIndex = products.findIndex((p: any) => p.id.toString() === id)
+    // Usar a função que salva nos dois arquivos (products.json e products2.json)
+    const result = await updateProductInFile(id, {
+      ...updateData,
+      updatedAt: new Date().toISOString()
+    })
 
-    if (productIndex === -1) {
+    if (!result.success) {
       return NextResponse.json({
         success: false,
-        error: 'Produto não encontrado'
+        error: result.message
       }, { status: 404 })
     }
 
-    // Atualizar produto
-    products[productIndex] = {
-      ...products[productIndex],
-      ...updateData,
-      id: products[productIndex].id, // Manter o ID original
-      updatedAt: new Date().toISOString()
-    }
-
-    await saveProducts(products)
-
     console.log('✅ Produto atualizado com sucesso:', id)
+
+    // Carregar o produto atualizado para retornar
+    const products = await getProductsFromFile()
+    const updatedProduct = products.find((p: any) => p.id.toString() === id)
 
     const response = NextResponse.json({
       success: true,
-      data: products[productIndex]
+      data: updatedProduct || updateData
     })
     
     // Evitar cache para prevenir problemas de request body
@@ -85,7 +63,7 @@ export async function PUT(
   }
 }
 
-// DELETE - Excluir produto específico
+// DELETE - Excluir produto específico  
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -95,26 +73,34 @@ export async function DELETE(
 
     console.log('🗑️ Deletando produto:', id)
 
-    let products = await loadProducts()
-    const productIndex = products.findIndex((p: any) => p.id.toString() === id)
+    // Buscar produto antes de deletar
+    const products = await getProductsFromFile()
+    const product = products.find((p: any) => p.id.toString() === id)
 
-    if (productIndex === -1) {
+    if (!product) {
       return NextResponse.json({
         success: false,
         error: 'Produto não encontrado'
       }, { status: 404 })
     }
 
-    // Remover produto
-    const deletedProduct = products.splice(productIndex, 1)[0]
-    await saveProducts(products)
+    // Usar função de delete que funciona nos dois arquivos
+    const { deleteProductFromFile } = await import('@/lib/data')
+    const result = await deleteProductFromFile(id)
+
+    if (!result.success) {
+      return NextResponse.json({
+        success: false,
+        error: result.message
+      }, { status: 400 })
+    }
 
     console.log('✅ Produto deletado com sucesso:', id)
 
     return NextResponse.json({
       success: true,
       message: 'Produto deletado com sucesso',
-      data: deletedProduct
+      data: product
     })
 
   } catch (error: any) {
@@ -136,7 +122,7 @@ export async function GET(
 
     console.log('🔍 Buscando produto:', id)
 
-    const products = await loadProducts()
+    const products = await getProductsFromFile()
     const product = products.find((p: any) => p.id.toString() === id)
 
     if (!product) {

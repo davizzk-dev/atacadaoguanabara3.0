@@ -13,6 +13,7 @@ async function makeVarejoFacilRequest(endpoint, options = {}) {
     'x-api-key': VAREJO_FACIL_CONFIG.apiKey,
     'Content-Type': 'application/json'
   };
+
   const fetchOptions = {
     method: options.method || 'GET',
     headers: { ...defaultHeaders, ...(options.headers || {}) },
@@ -75,8 +76,70 @@ async function getAllStock() {
 }
 
 async function getAllPrices() {
-  // Implemente aqui a lógica de busca de preços
-  return [];
+  console.log('🔍 Buscando todos os preços (incluindo ofertas) em lotes...');
+  let allPrices = [];
+  let start = 0;
+  const batchSize = 500;
+  let hasMore = true;
+  let batchCount = 0;
+  let maxRetries = 3;
+
+  while (hasMore) {
+    batchCount++;
+    console.log(`📊 Buscando lote de preços ${batchCount} (start=${start}, count=${batchSize})...`);
+    let retryCount = 0;
+    let success = false;
+    
+    while (retryCount < maxRetries && !success) {
+      try {
+        const pricesData = await makeVarejoFacilRequest(`/api/v1/produto/precos?start=${start}&count=${batchSize}`);
+        
+        if (pricesData.items && pricesData.items.length > 0) {
+          // Processar preços incluindo ofertas
+          const processedPrices = pricesData.items.map(price => ({
+            ...price,
+            // Garantir que preços de oferta estejam incluídos
+            precoOferta1: price.precoOferta1 || 0,
+            precoOferta2: price.precoOferta2 || 0,
+            precoOferta3: price.precoOferta3 || 0,
+            // Log para debug de preços de oferta
+            hasOffers: !!(price.precoOferta1 || price.precoOferta2 || price.precoOferta3)
+          }));
+          
+          allPrices = allPrices.concat(processedPrices);
+          
+          // Log de preços de oferta encontrados
+          const offersCount = processedPrices.filter(p => p.hasOffers).length;
+          console.log(`💰 Lote ${batchCount}: ${pricesData.items.length} preços (${offersCount} com ofertas) - Total: ${allPrices.length}`);
+          
+          if (pricesData.items.length < batchSize) {
+            hasMore = false;
+            console.log(`✅ Último lote de preços recebido. Finalizando...`);
+          } else {
+            start += batchSize;
+          }
+          success = true;
+        } else {
+          hasMore = false;
+          console.log(`⚠️ Nenhum preço encontrado no lote ${batchCount}. Finalizando...`);
+          success = true;
+        }
+      } catch (error) {
+        retryCount++;
+        console.error(`❌ Erro ao buscar lote de preços ${batchCount} (tentativa ${retryCount}/${maxRetries}):`, error);
+        if (retryCount < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } else {
+          console.error(`💥 Falha após ${maxRetries} tentativas. Pulando este lote.`);
+          hasMore = false;
+        }
+      }
+    }
+  }
+  
+  const totalOffers = allPrices.filter(p => p.hasOffers).length;
+  console.log(`🎯 Total de preços coletados: ${allPrices.length} (${totalOffers} com ofertas)`);
+  return allPrices;
 }
 
 function formatProductForCatalogFast(
@@ -123,9 +186,38 @@ function formatProductForCatalogFast(
     }
   }
 
+  // Buscar estoque pelo ID exato do produto com validação robusta
   const productStock = stockByProductId.get(varejoProduct.id);
-  const stockQuantity = productStock?.saldo || 0;
+  let stockQuantity = 0;
+  let stockSource = 'sem-estoque';
+  
+  if (productStock) {
+    stockQuantity = productStock.saldo || 0;
+    stockSource = 'api-estoque';
+    
+    // Validar dados de estoque e aplicar filtros de qualidade
+    if (typeof stockQuantity !== 'number' || isNaN(stockQuantity) || stockQuantity < 0) {
+      console.log(`⚠️ Saldo inválido para produto ${varejoProduct.id}: ${stockQuantity} - definindo como 0`);
+      stockQuantity = 0;
+      stockSource = 'corrigido-invalido';
+    } else if (stockQuantity > 50000) {
+      console.log(`⚠️ Saldo muito alto para produto ${varejoProduct.id}: ${stockQuantity} - possível erro de dados`);
+      stockSource = 'alto-suspeito';
+    }
+  } else {
+    // Produto não tem registro de estoque na API
+    stockQuantity = 0;
+    stockSource = 'produto-sem-estoque-api';
+  }
+  
   const inStock = stockQuantity > 0;
+  
+  // Log detalhado para produtos com estoque para debug
+  if (inStock && stockQuantity > 0) {
+    console.log(`📦 Produto ${varejoProduct.id} (${varejoProduct.descricao?.substring(0, 30)}...): ${stockQuantity} unidades (${stockSource})`);
+  }
+  
+
 
   // Busca rápida de seção, marca, gênero e grupo usando Map
   const section = sectionsById.get(varejoProduct.secaoId);
@@ -159,30 +251,61 @@ function formatProductForCatalogFast(
     'varejo-facil'
   ].filter(tag => tag && tag !== 'sem marca');
 
-  // Corrige a lógica para garantir que os preços escalonados sejam salvos corretamente
+  // Calcular preços corretamente - MANTER preços originais
+  const precoVenda1 = parseFloat(productPrice?.precoVenda1 || 0);
+  const precoOferta1 = parseFloat(productPrice?.precoOferta1 || 0);
+  const precoVenda2 = parseFloat(productPrice?.precoVenda2 || 0);
+  const precoOferta2 = parseFloat(productPrice?.precoOferta2 || 0);
+  const precoVenda3 = parseFloat(productPrice?.precoVenda3 || 0);
+  const precoOferta3 = parseFloat(productPrice?.precoOferta3 || 0);
+  
+  const hasOffer1 = precoOferta1 > 0;
+  const hasOffer2 = precoOferta2 > 0;
+  const hasOffer3 = precoOferta3 > 0;
+  
+  // SEMPRE usar o preço normal 1 como price principal - NÃO sobrescrever com oferta
+  const displayPrice = precoVenda1;
+  
+  // Verificar se tem qualquer oferta (1, 2 ou 3)
+  const hasAnyOffers = hasOffer1 || hasOffer2 || hasOffer3;
+  
+  // Log de ofertas encontradas para debug
+  if (hasAnyOffers && productPrice) {
+    console.log(`🎯 OFERTA: ${varejoProduct.descricao}`);
+    if (hasOffer1) console.log(`   Preço 1: R$${precoVenda1} → R$${precoOferta1} (${Math.round(((precoVenda1 - precoOferta1) / precoVenda1) * 100)}% off)`);
+    if (hasOffer2) console.log(`   Preço 2: R$${precoVenda2} → R$${precoOferta2} (min: ${productPrice.quantidadeMinimaPreco2})`);
+    if (hasOffer3) console.log(`   Preço 3: R$${precoVenda3} → R$${precoOferta3} (min: ${productPrice.quantidadeMinimaPreco3})`);
+  }
+  
   return {
     id: varejoProduct.id.toString(),
     name: varejoProduct.descricao || 'Produto sem nome',
-    price: parseFloat(productPrice?.precoVenda1 || 0),
-    originalPrice: parseFloat(productPrice?.precoVenda1 || 0),
+    price: displayPrice, // SEMPRE preço normal 1 - NÃO sobrescrever com oferta
+    originalPrice: precoVenda1, // Mesmo valor que price (para compatibilidade)
+    hasOffers: hasAnyOffers, // Indicar se tem qualquer oferta ativa
+    isOnSale: hasOffer1, // Só marca como "em oferta" se o preço 1 tem desconto
+    discountPercent: hasOffer1 && precoVenda1 > 0 ? Math.round(((precoVenda1 - precoOferta1) / precoVenda1) * 100) : 0,
     image: image,
     category: category,
     description: varejoProduct.descricaoReduzida || varejoProduct.descricao || 'Descrição não disponível',
     stock: stockQuantity,
     inStock: inStock,
     rating: 4.5,
-    reviews: Math.floor(Math.random() * 100) + 10,
+    reviews: 25,
     brand: brandName,
     genre: genreName,
     group: groupName,
     unit: varejoProduct.unidadeDeVenda || 'un',
     tags: tags,
     prices: {
-      price1: productPrice && productPrice.precoVenda1 !== undefined ? parseFloat(productPrice.precoVenda1) : 0,
-      offerPrice1: productPrice && productPrice.precoOferta1 !== undefined ? parseFloat(productPrice.precoOferta1) : 0,
-      price2: productPrice && productPrice.precoVenda2 !== undefined ? parseFloat(productPrice.precoVenda2) : 0,
-      offerPrice2: productPrice && productPrice.precoOferta2 !== undefined ? parseFloat(productPrice.precoOferta2) : 0,
-      minQuantityPrice2: productPrice && productPrice.quantidadeMinimaPreco2 !== undefined ? parseInt(productPrice.quantidadeMinimaPreco2) : 0
+      price1: precoVenda1,
+      offerPrice1: precoOferta1,
+      price2: precoVenda2,
+      offerPrice2: precoOferta2,
+      price3: precoVenda3,
+      offerPrice3: precoOferta3,
+      minQuantityPrice2: productPrice && productPrice.quantidadeMinimaPreco2 !== undefined ? parseInt(productPrice.quantidadeMinimaPreco2) : 0,
+      minQuantityPrice3: productPrice && productPrice.quantidadeMinimaPreco3 !== undefined ? parseInt(productPrice.quantidadeMinimaPreco3) : 0
     },
     varejoFacilData: {
       codigoInterno: varejoProduct.codigoInterno,
@@ -224,15 +347,43 @@ function formatProductForCatalogFast(
 
 function getAnyPrice(productPrice) {
   if (!productPrice) return undefined;
+  // Priorizar preço 1 (varejo) - não pegar price2 como principal
   return (
     productPrice.precoVenda1 ||
     productPrice.precoOferta1 ||
-    productPrice.precoVenda2 ||
-    productPrice.precoOferta2 ||
-    productPrice.precoVenda3 ||
-    productPrice.precoOferta3 ||
     undefined
   );
+}
+
+// Função para processar preços incluindo ofertas
+function processPrice(priceObj) {
+  if (!priceObj) return null;
+  
+  return {
+    precoVenda1: parseFloat(priceObj.precoVenda1 || 0),
+    precoOferta1: parseFloat(priceObj.precoOferta1 || 0),
+    precoVenda2: parseFloat(priceObj.precoVenda2 || 0),
+    precoOferta2: parseFloat(priceObj.precoOferta2 || 0),
+    precoVenda3: parseFloat(priceObj.precoVenda3 || 0),
+    precoOferta3: parseFloat(priceObj.precoOferta3 || 0),
+    quantidadeMinimaPreco2: parseInt(priceObj.quantidadeMinimaPreco2 || 0),
+    quantidadeMinimaPreco3: parseInt(priceObj.quantidadeMinimaPreco3 || 0),
+    // Marcar se tem ofertas ativas
+    hasOffers: !!(priceObj.precoOferta1 || priceObj.precoOferta2 || priceObj.precoOferta3)
+  };
+}
+
+// Função para obter o melhor preço do PREÇO 1 apenas (varejo)
+function getBestPrice(priceObj) {
+  if (!priceObj) return 0;
+  
+  // Se tem oferta no preço 1, usar a oferta
+  if (priceObj.precoOferta1 && priceObj.precoOferta1 > 0) {
+    return priceObj.precoOferta1;
+  }
+  
+  // Senão, usar o preço normal 1
+  return priceObj.precoVenda1 || 0;
 }
 
 async function syncAndFormatProducts() {
@@ -298,10 +449,10 @@ async function syncAndFormatProducts() {
       console.log(`   - ${sectionName}: ${groupsBySection[secaoId].length} grupos`);
     });
 
-  // 5. Buscar TODOS os preços em lotes
-  const pricesData = await makeVarejoFacilRequest('/api/v1/produto/precos?count=500');
-  const prices = pricesData.items || [];
-  console.log(`? ${prices.length} preços encontrados no total`);
+  // 5. Buscar TODOS os preços em lotes (incluindo ofertas)
+  console.log('🔍 Iniciando busca completa de preços com ofertas...');
+  const prices = await getAllPrices();
+  console.log(`💰 ${prices.length} preços encontrados no total (incluindo ofertas)`);
 
   // 6. Buscar TODOS os saldos de estoque em lotes usando função robusta
   console.log('?? Buscando todos os saldos de estoque em lotes com controle pelo total da API...');
@@ -358,10 +509,14 @@ async function syncAndFormatProducts() {
       try {
         const pricesData = await makeVarejoFacilRequest(url);
         if (pricesData.items && pricesData.items.length > 0) {
-          allPrices = allPrices.concat(pricesData.items);
-          console.log(`? Lote de preços: ${pricesData.items.length} encontrados (Total: ${allPrices.length})`);
+          // Processar preços incluindo ofertas
+          const processedPrices = pricesData.items.map(processPrice);
+          allPrices = allPrices.concat(processedPrices);
+          
+          const offersCount = processedPrices.filter(p => p.hasOffers).length;
+          console.log(`💰 Lote de preços: ${pricesData.items.length} encontrados (${offersCount} com ofertas) - Total: ${allPrices.length}`);
         } else {
-          console.log('?? Nenhum preço encontrado para lote de produtoIds.');
+          console.log('⚠️ Nenhum preço encontrado para lote de produtoIds.');
         }
       } catch (error) {
         console.error('? Erro ao buscar preços para lote de produtoIds:', error);
@@ -388,18 +543,81 @@ async function syncAndFormatProducts() {
       if (price.codigoInterno && price.codigoInterno.trim()) pricesByCodigoInterno.set(price.codigoInterno.trim(), price);
     });
     
-    // Indexar estoque
+    // Criar um conjunto de produtos válidos para validação
+    const validProductIds = new Set(allProducts.map(p => p.id));
+    
+    // Indexar estoque com validação e controle de duplicatas
+    let zeroStockItems = 0;
+    let validStockItems = 0;
+    let duplicateStockItems = 0;
+    let invalidProductStockItems = 0;
+    let stockProcessingDetails = [];
+    
+    // Primeira passada: contar e validar
     stock.forEach(stockItem => {
-      if (stockItem.produtoId) {
-        // Se já existe estoque para este produto, somar os saldos (caso tenha múltiplos locais)
-        const existingStock = stockByProductId.get(stockItem.produtoId);
-        if (existingStock) {
-          existingStock.saldo += stockItem.saldo;
-        } else {
-          stockByProductId.set(stockItem.produtoId, stockItem);
+      if (!stockItem.produtoId) {
+        return; // Pular itens sem produtoId
+      }
+      
+      const productId = stockItem.produtoId;
+      
+      // Verificar se o produto existe na lista de produtos válidos
+      if (!validProductIds.has(productId)) {
+        invalidProductStockItems++;
+        return; // Pular estoque de produto não existente
+      }
+      
+      // Verificar duplicata
+      const isDuplicate = stockByProductId.has(productId);
+      if (isDuplicate) {
+        duplicateStockItems++;
+        
+        // Para duplicatas, usar o registro com maior saldo
+        const existingStock = stockByProductId.get(productId);
+        if (stockItem.saldo > existingStock.saldo) {
+          stockByProductId.set(productId, stockItem);
+          console.log(`🔄 Estoque atualizado para produto ${productId}: ${existingStock.saldo} → ${stockItem.saldo}`);
         }
+      } else {
+        // Primeiro registro para este produto
+        stockByProductId.set(productId, stockItem);
+      }
+      
+      // Contar estatísticas
+      if (stockItem.saldo === 0) {
+        zeroStockItems++;
+      } else {
+        validStockItems++;
+      }
+      
+      // Log detalhado para primeiros 10 registros
+      if (stockProcessingDetails.length < 10) {
+        stockProcessingDetails.push({
+          produtoId: productId,
+          saldo: stockItem.saldo,
+          isDuplicate,
+          isValidProduct: true
+        });
       }
     });
+    
+    console.log(`📊 ANÁLISE DETALHADA DE ESTOQUE:`);
+    console.log(`   - Total de registros de estoque coletados: ${stock.length}`);
+    console.log(`   - Produtos válidos encontrados: ${validProductIds.size}`);
+    console.log(`   - Produtos únicos com estoque indexado: ${stockByProductId.size}`);
+    console.log(`   - Registros com estoque > 0: ${validStockItems}`);
+    console.log(`   - Registros com estoque = 0: ${zeroStockItems}`);
+    console.log(`   - Registros duplicados (mesmo produtoId): ${duplicateStockItems}`);
+    console.log(`   - Registros de produtos inexistentes: ${invalidProductStockItems}`);
+    console.log(`   - Taxa de aproveitamento: ${((stockByProductId.size / stock.length) * 100).toFixed(1)}%`);
+    
+    // Mostrar exemplos de processamento
+    if (stockProcessingDetails.length > 0) {
+      console.log(`\n📋 PRIMEIROS REGISTROS PROCESSADOS:`);
+      stockProcessingDetails.forEach((detail, index) => {
+        console.log(`   ${index + 1}. Produto ${detail.produtoId}: ${detail.saldo} unidades ${detail.isDuplicate ? '(duplicata)' : '(novo)'}`);
+      });
+    }
     
     // Indexar seções, marcas, gêneros e grupos
     sections.forEach(section => sectionsById.set(section.id, section));
@@ -424,9 +642,19 @@ async function syncAndFormatProducts() {
     console.log(`   - ${brandsById.size} marcas indexadas`);
     console.log(`   - ${genresById.size} gêneros indexados`);
     console.log(`   - ${groupsById.size} grupos indexados`);
+    
+    // Verificar compatibilidade entre produtos e estoques
+    const productsWithStockData = allProducts.filter(p => stockByProductId.has(p.id));
+    const productsWithoutStockData = allProducts.filter(p => !stockByProductId.has(p.id));
+    console.log(`🔍 COMPATIBILIDADE DE DADOS:`);
+    console.log(`   - Produtos da API: ${allProducts.length}`);
+    console.log(`   - Produtos com dados de estoque: ${productsWithStockData.length}`);
+    console.log(`   - Produtos SEM dados de estoque: ${productsWithoutStockData.length}`);
 
     // 8. Formatar produtos para o catálogo
     console.log('?? Formatando produtos para o catálogo...');
+    console.log(`📊 ANTES DA FORMATAÇÃO: ${allProducts.length} produtos brutos`);
+    
     const formattedProducts = allProducts.map((product, index) => {
       if (index % 500 === 0) {
         console.log(`?? Formatando produto ${index + 1}/${allProducts.length}...`);
@@ -443,12 +671,53 @@ async function syncAndFormatProducts() {
         groupsById
       );
     });
+    
+    console.log(`📊 APÓS FORMATAÇÃO: ${formattedProducts.length} produtos formatados`);
 
-    // Relatório final: IDs dos produtos sem preço ou não encontrados
+    // ANÁLISE COMPLETA DE RESULTADOS
     const productsWithoutPrice = formattedProducts.filter(p => !p.price || p.price === 0);
-    const productsWithStock = formattedProducts.filter(p => p.inStock);
-    const productsOutOfStock = formattedProducts.filter(p => !p.inStock);
+    const productsWithStock = formattedProducts.filter(p => p.inStock === true);
+    const productsOutOfStock = formattedProducts.filter(p => p.inStock === false);
     const productsWithPrice = formattedProducts.filter(p => p.price && p.price > 0);
+    
+    // Análise detalhada de estoque
+    const stockRawTotal = stock.length;
+    const stockRawWithStock = stock.filter(s => s.saldo > 0).length;
+    const stockIndexedTotal = stockByProductId.size;
+    const stockIndexedWithStock = Array.from(stockByProductId.values()).filter(s => s.saldo > 0).length;
+    
+    console.log(`\n🔍 ANÁLISE COMPLETA DE ESTOQUE:`);
+    console.log(`📊 DADOS BRUTOS DA API:`);
+    console.log(`   - Total de registros de estoque: ${stockRawTotal}`);
+    console.log(`   - Registros com saldo > 0: ${stockRawWithStock}`);
+    console.log(`   - Registros com saldo = 0: ${stockRawTotal - stockRawWithStock}`);
+    
+    console.log(`\n📊 DADOS INDEXADOS (após processamento):`);
+    console.log(`   - Produtos únicos com dados de estoque: ${stockIndexedTotal}`);
+    console.log(`   - Produtos com estoque > 0: ${stockIndexedWithStock}`);
+    console.log(`   - Produtos com estoque = 0: ${stockIndexedTotal - stockIndexedWithStock}`);
+    
+    console.log(`\n📊 PRODUTOS FORMATADOS FINAIS:`);
+    console.log(`   - Total de produtos formatados: ${formattedProducts.length}`);
+    console.log(`   - Produtos com estoque (inStock=true): ${productsWithStock.length}`);
+    console.log(`   - Produtos sem estoque (inStock=false): ${productsOutOfStock.length}`);
+    console.log(`   - Soma de verificação: ${productsWithStock.length + productsOutOfStock.length} = ${formattedProducts.length} ✅`);
+    
+    console.log(`\n🔍 ANÁLISE DE PERDAS/GANHOS:`);
+    console.log(`   - Registros brutos → Indexados: ${stockRawTotal} → ${stockIndexedTotal} (${stockRawTotal - stockIndexedTotal} removidos)`);
+    console.log(`   - Com estoque bruto → Com estoque indexado: ${stockRawWithStock} → ${stockIndexedWithStock} (${stockRawWithStock - stockIndexedWithStock} perdidos)`);
+    console.log(`   - Com estoque indexado → Com estoque final: ${stockIndexedWithStock} → ${productsWithStock.length} (${stockIndexedWithStock - productsWithStock.length} perdidos)`);
+    
+    // Debug: Verificar consistência
+    const totalCount = productsWithStock.length + productsOutOfStock.length;
+    if (totalCount !== formattedProducts.length) {
+      console.log(`⚠️ ERRO DE CONSISTÊNCIA DETECTADO:`);
+      console.log(`   - Produtos formatados: ${formattedProducts.length}`);
+      console.log(`   - Com estoque + Sem estoque: ${totalCount}`);
+      console.log(`   - Diferença: ${Math.abs(formattedProducts.length - totalCount)}`);
+    } else {
+      console.log(`✅ CONSISTÊNCIA VERIFICADA: Todos os produtos têm status de estoque definido`);
+    }
 
     if (productsWithoutPrice.length > 0) {
       console.log('\n--- RELATÓRIO FINAL: PRODUTOS SEM PREÇO ---');
@@ -475,16 +744,47 @@ async function syncAndFormatProducts() {
               const productId = priceObj.produtoId?.toString();
               const product = batch.find(p => p.id === productId);
               if (product) {
+                // Processar preço MANTENDO estrutura original
+                const processedPrice = processPrice(priceObj);
                 const precoAntigo = product.price;
-                product.price = priceObj.precoVenda1 || 0;
-                product.originalPrice = priceObj.precoVenda1 || 0;
-                product.varejoFacilData.precos = priceObj;
+                
+                // MANTER preço normal 1 como price principal
+                product.price = processedPrice.precoVenda1 || 0;
+                product.originalPrice = processedPrice.precoVenda1 || 0;
+                
+                // Aplicar flags de oferta corretamente
+                product.hasOffers = processedPrice.hasOffers;
+                product.isOnSale = processedPrice.precoOferta1 > 0;
+                product.discountPercent = processedPrice.precoOferta1 > 0 && processedPrice.precoVenda1 > 0 ? 
+                  Math.round(((processedPrice.precoVenda1 - processedPrice.precoOferta1) / processedPrice.precoVenda1) * 100) : 0;
+                product.varejoFacilData.precos = processedPrice;
+                
+                // Atualizar estrutura de preços detalhada
+                product.prices = {
+                  price1: processedPrice.precoVenda1 || 0,
+                  offerPrice1: processedPrice.precoOferta1 || 0,
+                  price2: processedPrice.precoVenda2 || 0,
+                  offerPrice2: processedPrice.precoOferta2 || 0,
+                  price3: processedPrice.precoVenda3 || 0,
+                  offerPrice3: processedPrice.precoOferta3 || 0,
+                  minQuantityPrice2: processedPrice.quantidadeMinimaPreco2 || 0,
+                  minQuantityPrice3: processedPrice.quantidadeMinimaPreco3 || 0
+                };
+                
+                // Log se encontrou oferta no preço 1
+                if (processedPrice.precoOferta1 > 0) {
+                  console.log(`🎯 Produto ${product.name}: Preço normal R$${processedPrice.precoVenda1} | Oferta 1 R$${processedPrice.precoOferta1} (${product.discountPercent}% off)`);
+                }
                 
                 // Atualiza também no array principal formattedProducts
                 const idx = formattedProducts.findIndex(p => p.id === productId);
                 if (idx !== -1) {
                   formattedProducts[idx].price = product.price;
                   formattedProducts[idx].originalPrice = product.originalPrice;
+                  formattedProducts[idx].hasOffers = product.hasOffers;
+                  formattedProducts[idx].isOnSale = product.isOnSale;
+                  formattedProducts[idx].discountPercent = product.discountPercent;
+                  formattedProducts[idx].prices = product.prices;
                   formattedProducts[idx].varejoFacilData.precos = priceObj;
                 }
                 
@@ -587,10 +887,16 @@ async function syncAndFormatProducts() {
       console.log('?? Nenhuma imagem customizada foi preservada');
     }
 
-    // 11. Salvar no products.json
-    console.log('?? Salvando produtos formatados no products.json...');
+    // 11. Manter todos os produtos (incluindo duplicatas)
+    console.log('📦 Mantendo todos os produtos formatados (incluindo duplicatas)...');
+    const finalProducts = formattedProducts; // Usar todos os produtos sem remoção
+    console.log(`✅ Total de produtos mantidos: ${finalProducts.length}`);
+
+    // 12. Salvar no products.json e products2.json (backup)
+    console.log('?? Salvando produtos formatados com sistema de backup...');
     const dataDir = path.join(process.cwd(), 'data');
     const productsFilePath = path.join(dataDir, 'products.json');
+    const products2FilePath = path.join(dataDir, 'products2.json');
     
     // Criar diretório data se não existir
     try {
@@ -599,13 +905,41 @@ async function syncAndFormatProducts() {
       console.log('Diretório data já existe');
     }
     
-    await fs.writeFile(productsFilePath, JSON.stringify(formattedProducts, null, 2));
-    console.log(`?? Arquivo products.json salvo com ${formattedProducts.length} produtos`);
+    // Verificar se products.json existe e tem produtos válidos
+    let shouldUpdatePrimaryFile = true;
+    try {
+      const existingData = await fs.readFile(productsFilePath, 'utf-8');
+      const existingProducts = JSON.parse(existingData);
+      
+      // Se products.json existe mas está vazio ou corrompido, não atualizar
+      if (!Array.isArray(existingProducts) || existingProducts.length === 0) {
+        console.log('⚠️ products.json está vazio ou inválido, mantendo dados atuais');
+        shouldUpdatePrimaryFile = false;
+      } else {
+        console.log(`✅ products.json válido com ${existingProducts.length} produtos, atualizando`);
+      }
+    } catch (error) {
+      console.log('ℹ️ products.json não existe, criando novo arquivo');
+    }
     
-    // 12. Salvar dados completos do Varejo Fácil
+    // Sempre salvar no products2.json (backup)
+    console.log('?? Salvando backup no products2.json...');
+    await fs.writeFile(products2FilePath, JSON.stringify(finalProducts, null, 2));
+    console.log(`✅ Backup salvo: ${finalProducts.length} produtos em products2.json`);
+    
+    // Salvar no products.json apenas se validado
+    if (shouldUpdatePrimaryFile) {
+      console.log('?? Salvando no products.json principal...');
+      await fs.writeFile(productsFilePath, JSON.stringify(finalProducts, null, 2));
+      console.log(`✅ Arquivo principal salvo: ${finalProducts.length} produtos em products.json`);
+    } else {
+      console.log('⚠️ products.json não foi atualizado para preservar dados existentes');
+    }
+    
+    // 13. Salvar dados completos do Varejo Fácil
     const varejoFacilData = {
       lastSync: new Date().toISOString(),
-      totalProducts: formattedProducts.length,
+      totalProducts: finalProducts.length,
       totalSections: sections.length,
       totalBrands: brands.length,
       totalGenres: genres.length,
@@ -632,10 +966,10 @@ async function syncAndFormatProducts() {
     
     console.log('✅ SINCRONIZAÇÃO CONCLUÍDA COM SUCESSO!');
     console.log('📊 RESUMO FINAL DA SINCRONIZAÇÃO:');
-    console.log(`📦 PRODUTOS: ${formattedProducts.length} produtos formatados`);
-    console.log(`💰 PREÇOS: ${productsWithPrice.length} produtos com preço | ${productsWithoutPrice.length} sem preço`);
-    console.log(`📈 TAXA DE PREÇOS: ${((productsWithPrice.length / formattedProducts.length) * 100).toFixed(2)}%`);
-    console.log(`📦 ESTOQUE: ${productsWithStock.length} em estoque | ${productsOutOfStock.length} sem estoque`);
+    console.log(`📦 PRODUTOS TOTAIS: ${finalProducts.length} produtos formatados (TODOS MANTIDOS)`);
+    console.log(`💰 PREÇOS: ${productsWithPrice.length} com preço | ${productsWithoutPrice.length} sem preço (${((productsWithPrice.length / finalProducts.length) * 100).toFixed(1)}%)`);
+    console.log(`📦 ESTOQUE: ${productsWithStock.length} com estoque | ${productsOutOfStock.length} sem estoque (${((productsWithStock.length / finalProducts.length) * 100).toFixed(1)}%)`);
+    console.log(`📊 VALIDAÇÃO: ${productsWithStock.length + productsOutOfStock.length} = ${finalProducts.length} ✅`);
     console.log(`📊 CATEGORIAS: ${sections.length} seções | ${brands.length} marcas | ${genres.length} gêneros`);
     console.log(`🔗 GRUPOS: ${allGroups.length} grupos de produtos`);
     console.log(`💲 PREÇOS COLETADOS: ${allPrices.length} registros de preço`);
@@ -649,7 +983,7 @@ async function syncAndFormatProducts() {
     
     return {
       success: true,
-      totalProducts: formattedProducts.length,
+      totalProducts: finalProducts.length,
       productsWithPrice: productsWithPrice.length,
       productsWithZeroPrice: productsWithoutPrice.length,
       productsWithStock: productsWithStock.length,
@@ -670,25 +1004,51 @@ async function syncAndFormatProducts() {
   }
 }
 
-// Função para buscar todos os saldos de estoque em lotes
+// Função para buscar todos os saldos de estoque em lotes com validação
 async function buscarTodosEstoquesEmLotes(batchSize = 100) {
   let allStock = [];
   let start = 0;
   let batchCount = 0;
   let totalStock = null;
   let hasMore = true;
+  
+  // Validação de mudanças abruptas
+  let previousTotalWithStock = 0;
+  const fs = require('fs').promises;
+  const path = require('path');
+  
+  // Tentar carregar histórico do último sync
+  const historyPath = path.join(process.cwd(), 'stock-history.json');
+  try {
+    const history = JSON.parse(await fs.readFile(historyPath, 'utf8'));
+    previousTotalWithStock = history.totalWithStock || 0;
+    console.log(`📊 Último sync teve ${previousTotalWithStock} produtos com estoque`);
+  } catch (error) {
+    console.log('📊 Nenhum histórico de estoque encontrado (primeira execução)');
+  }
+  
   while (hasMore) {
     batchCount++;
     console.log(`?? Buscando lote de estoque ${batchCount} (start=${start}, end=${start + batchSize - 1})...`);
     try {
       const stockData = await makeVarejoFacilRequest(`/api/v1/estoque/saldos?start=${start}&count=${batchSize}`);
       if (stockData.items && stockData.items.length > 0) {
+        // Validar se há dados estranhos no lote
+        const itemsWithStock = stockData.items.filter(item => item.saldo > 0);
+        const totalSaldos = stockData.items.reduce((sum, item) => sum + (item.saldo || 0), 0);
+        
+        console.log(`? Lote ${batchCount}: ${stockData.items.length} saldos (${itemsWithStock.length} com estoque > 0)`);
+        console.log(`   - Soma total de saldos do lote: ${totalSaldos}`);
+        
         allStock = allStock.concat(stockData.items);
+        
         if (totalStock === null && typeof stockData.total === 'number') {
           totalStock = stockData.total;
           console.log(`?? Total de estoques informado pela API: ${totalStock}`);
         }
-        console.log(`? Lote de estoque ${batchCount}: ${stockData.items.length} saldos (Total: ${allStock.length})`);
+        
+        console.log(`? Progresso: ${allStock.length}/${totalStock || '?'} saldos coletados`);
+        
         start += batchSize;
         if (totalStock !== null && allStock.length >= totalStock) {
           hasMore = false;
@@ -706,6 +1066,42 @@ async function buscarTodosEstoquesEmLotes(batchSize = 100) {
       console.error(`? Erro ao buscar lote de estoque ${batchCount}:`, error);
     }
   }
+  
+  // Validação final e detecção de anomalias
+  const finalWithStock = allStock.filter(item => item.saldo > 0).length;
+  const totalSaldos = allStock.reduce((sum, item) => sum + (item.saldo || 0), 0);
+  
+  console.log(`\n🔍 ANÁLISE FINAL DE ESTOQUE:`);
+  console.log(`   - Total de registros: ${allStock.length}`);
+  console.log(`   - Produtos com estoque > 0: ${finalWithStock}`);
+  console.log(`   - Soma total de todos os saldos: ${totalSaldos}`);
+  
+  // Detectar mudanças abruptas
+  if (previousTotalWithStock > 0) {
+    const percentChange = Math.abs((finalWithStock - previousTotalWithStock) / previousTotalWithStock) * 100;
+    if (percentChange > 20) {
+      console.log(`⚠️ MUDANÇA ABRUPTA DETECTADA!`);
+      console.log(`   - Anterior: ${previousTotalWithStock} produtos com estoque`);
+      console.log(`   - Atual: ${finalWithStock} produtos com estoque`);
+      console.log(`   - Mudança: ${percentChange.toFixed(1)}%`);
+      console.log(`   - Diferença: ${finalWithStock - previousTotalWithStock}`);
+    } else {
+      console.log(`✅ Mudança de estoque dentro do esperado: ${percentChange.toFixed(1)}%`);
+    }
+  }
+  
+  // Salvar histórico
+  try {
+    await fs.writeFile(historyPath, JSON.stringify({
+      timestamp: new Date().toISOString(),
+      totalRecords: allStock.length,
+      totalWithStock: finalWithStock,
+      totalSaldos: totalSaldos
+    }, null, 2));
+  } catch (error) {
+    console.log('⚠️ Não foi possível salvar histórico de estoque');
+  }
+  
   console.log(`?? Total de saldos de estoque coletados: ${allStock.length}`);
   return allStock;
 }

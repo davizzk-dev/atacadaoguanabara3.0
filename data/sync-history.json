@@ -1,5 +1,149 @@
 [
   {
+    "id": "1759604305935",
+    "timestamp": "2025-10-04T18:58:25.935Z",
+    "startTime": "2025-10-04T18:58:23.294Z",
+    "startedAt": "2025-10-04T18:58:23.294Z",
+    "finishedAt": "2025-10-04T18:58:24.928Z",
+    "status": "error",
+    "error": "Erro na API: 500"
+  },
+  {
+    "id": "1759604292027",
+    "timestamp": "2025-10-04T18:58:12.027Z",
+    "startTime": "2025-10-04T18:58:09.197Z",
+    "startedAt": "2025-10-04T18:58:09.197Z",
+    "finishedAt": "2025-10-04T18:58:11.019Z",
+    "status": "error",
+    "error": "Erro na API: 500"
+  },
+  {
+    "id": "1759604176819",
+    "timestamp": "2025-10-04T18:56:16.819Z",
+    "startTime": "2025-10-04T18:56:13.690Z",
+    "startedAt": "2025-10-04T18:56:13.690Z",
+    "finishedAt": "2025-10-04T18:56:15.811Z",
+    "status": "error",
+    "error": "Erro na API: 500"
+  },
+  {
+    "id": "1759603731815",
+    "timestamp": "2025-10-04T18:48:51.815Z",
+    "startTime": "2025-10-04T18:48:48.314Z",
+    "startedAt": "2025-10-04T18:48:48.314Z",
+    "finishedAt": "2025-10-04T18:48:50.785Z",
+    "status": "error",
+    "error": "Sincronização concluída! 0 produtos sincronizados."
+  },
+  {
+    "id": "1759603718697",
+    "timestamp": "2025-10-04T18:48:38.697Z",
+    "startTime": "2025-10-04T18:48:35.123Z",
+    "startedAt": "2025-10-04T18:48:35.123Z",
+    "finishedAt": "2025-10-04T18:48:37.687Z",
+    "status": "error",
+    "error": "Sincronização concluída! 0 produtos sincronizados."
+  },
+  {
+    "id": "1759603609861",
+    "timestamp": "2025-10-04T18:46:49.861Z",
+    "startTime": "2025-10-04T18:46:46.986Z",
+    "startedAt": "2025-10-04T18:46:46.986Z",
+    "finishedAt": "2025-10-04T18:46:48.831Z",
+    "status": "error",
+    "error": "Erro na API: 500"
+  },
+  {
+    "id": "1759602719272",
+    "timestamp": "2025-10-04T18:31:59.272Z",
+    "startTime": "2025-10-04T18:31:56.757Z",
+    "startedAt": "2025-10-04T18:31:56.757Z",
+    "finishedAt": "2025-10-04T18:31:58.277Z",
+    "status": "error",
+    "error": "Erro na API: 500"
+  },
+  {
+    "id": "1759602706048",
+    "timestamp": "2025-10-04T18:31:46.048Z",
+    "startTime": "2025-10-04T18:31:43.632Z",
+    "startedAt": "2025-10-04T18:31:43.632Z",
+    "finishedAt": "2025-10-04T18:31:45.051Z",
+    "status": "error",
+    "error": "Erro na API: 500"
+  },
+  {
+    "id": "1759602692839",
+    "timestamp": "2025-10-04T18:31:32.839Z",
+    "startTime": "2025-10-04T18:31:30.325Z",
+    "startedAt": "2025-10-04T18:31:30.325Z",
+    "finishedAt": "2025-10-04T18:31:31.845Z",
+    "status": "error",
+    "error": "Erro na API: 500"
+  },
+  {
+    "id": "1759602636638",
+    "timestamp": "2025-10-04T18:30:36.638Z",
+    "startTime": "2025-10-04T18:30:33.165Z",
+    "startedAt": "2025-10-04T18:30:33.165Z",
+    "finishedAt": "2025-10-04T18:30:35.624Z",
+    "status": "error",
+    "error": "Sincronização concluída! 0 produtos sincronizados."
+  },
+  {
+    "id": "1759602381033",
+    "timestamp": "2025-10-04T18:26:21.033Z",
+    "startTime": "2025-10-04T18:26:17.709Z",
+    "startedAt": "2025-10-04T18:26:17.709Z",
+    "finishedAt": "2025-10-04T18:26:20.041Z",
+    "status": "error",
+    "error": "Sincronização concluída! 0 produtos sincronizados."
+  },
+  {
+    "id": "1759602372538",
+    "timestamp": "2025-10-04T18:26:12.538Z",
+    "startTime": "2025-10-04T18:26:09.102Z",
+    "startedAt": "2025-10-04T18:26:09.102Z",
+    "finishedAt": "2025-10-04T18:26:11.548Z",
+    "status": "error",
+    "error": "Sincronização concluída! 0 produtos sincronizados."
+  },
+  {
+    "id": "1759602285919",
+    "timestamp": "2025-10-04T18:24:45.919Z",
+    "startTime": "2025-10-04T18:24:41.837Z",
+    "startedAt": "2025-10-04T18:24:41.837Z",
+    "finishedAt": "2025-10-04T18:24:44.922Z",
+    "status": "error",
+    "error": "Sincronização concluída! 0 produtos sincronizados."
+  },
+  {
+    "id": "1759602197822",
+    "timestamp": "2025-10-04T18:23:17.822Z",
+    "startTime": "2025-10-04T18:23:14.396Z",
+    "startedAt": "2025-10-04T18:23:14.396Z",
+    "finishedAt": "2025-10-04T18:23:16.831Z",
+    "status": "error",
+    "error": "Sincronização concluída! 0 produtos sincronizados."
+  },
+  {
+    "id": "1759602182996",
+    "timestamp": "2025-10-04T18:23:02.996Z",
+    "startTime": "2025-10-04T18:22:59.129Z",
+    "startedAt": "2025-10-04T18:22:59.129Z",
+    "finishedAt": "2025-10-04T18:23:02.003Z",
+    "status": "error",
+    "error": "Sincronização concluída! 0 produtos sincronizados."
+  },
+  {
+    "id": "1759602042190",
+    "timestamp": "2025-10-04T18:20:42.190Z",
+    "startTime": "2025-10-04T18:20:38.754Z",
+    "startedAt": "2025-10-04T18:20:38.754Z",
+    "finishedAt": "2025-10-04T18:20:41.204Z",
+    "status": "error",
+    "error": "Sincronização concluída! 0 produtos sincronizados."
+  },
+  {
     "id": "1759417048138",
     "timestamp": "2025-10-02T14:57:28.138Z",
     "startTime": "2025-10-02T14:57:23.120Z",
@@ -342,138 +486,5 @@
     "finishedAt": "2025-09-30T19:56:54.971Z",
     "status": "error",
     "error": "Erro na API: 504"
-  },
-  {
-    "id": "1759328675610",
-    "startTime": "2025-10-01T14:24:35.610Z",
-    "startedAt": "2025-10-01T14:23:34.536Z",
-    "finishedAt": "2025-10-01T14:24:34.782Z",
-    "status": "error",
-    "error": "Erro na API: 504"
-  },
-  {
-    "id": "1759349144522",
-    "startTime": "2025-10-01T20:05:44.522Z",
-    "startedAt": "2025-10-01T20:05:43.286Z",
-    "finishedAt": "2025-10-01T20:05:43.444Z",
-    "status": "error",
-    "error": "Sincronização já está em execução"
-  },
-  {
-    "id": "1759349167162",
-    "startTime": "2025-10-01T20:06:07.162Z",
-    "startedAt": "2025-10-01T20:06:05.957Z",
-    "finishedAt": "2025-10-01T20:06:06.149Z",
-    "status": "error",
-    "error": "Sincronização já está em execução"
-  },
-  {
-    "id": "1759349185901",
-    "startTime": "2025-10-01T20:06:25.901Z",
-    "startedAt": "2025-10-01T20:06:24.659Z",
-    "finishedAt": "2025-10-01T20:06:24.889Z",
-    "status": "error",
-    "error": "Sincronização já está em execução"
-  },
-  {
-    "id": "1759349353038",
-    "startTime": "2025-10-01T20:09:13.038Z",
-    "startedAt": "2025-10-01T20:09:11.272Z",
-    "finishedAt": "2025-10-01T20:09:12.015Z",
-    "status": "error",
-    "error": "Erro na sincronização: Erro ao parsear resposta: Unexpected end of JSON input"
-  },
-  {
-    "id": "1759349445314",
-    "startTime": "2025-10-01T20:10:45.314Z",
-    "startedAt": "2025-10-01T20:10:43.837Z",
-    "finishedAt": "2025-10-01T20:10:44.297Z",
-    "status": "error",
-    "error": "Erro na sincronização: Erro ao parsear resposta: Unexpected end of JSON input"
-  },
-  {
-    "id": "1759349449538",
-    "startTime": "2025-10-01T20:10:49.538Z",
-    "startedAt": "2025-10-01T20:10:48.226Z",
-    "finishedAt": "2025-10-01T20:10:48.523Z",
-    "status": "error",
-    "error": "Erro na sincronização: Erro ao parsear resposta: Unexpected end of JSON input"
-  },
-  {
-    "id": "1759349505120",
-    "startTime": "2025-10-01T20:11:45.120Z",
-    "startedAt": "2025-10-01T20:11:43.252Z",
-    "finishedAt": "2025-10-01T20:11:44.068Z",
-    "status": "error",
-    "error": "Erro na sincronização: Erro ao parsear resposta: Unexpected end of JSON input"
-  },
-  {
-    "id": "1759349805087",
-    "startTime": "2025-10-01T20:16:45.087Z",
-    "startedAt": "2025-10-01T20:15:43.898Z",
-    "finishedAt": "2025-10-01T20:16:44.063Z",
-    "status": "error",
-    "error": "Erro na API: 504"
-  },
-  {
-    "id": "1759350031417",
-    "startTime": "2025-10-01T20:20:31.417Z",
-    "startedAt": "2025-10-01T20:20:30.109Z",
-    "finishedAt": "2025-10-01T20:20:30.359Z",
-    "status": "error",
-    "error": "Erro na API: 500"
-  },
-  {
-    "id": "1759350411022",
-    "startTime": "2025-10-01T20:26:51.022Z",
-    "startedAt": "2025-10-01T20:26:49.851Z",
-    "finishedAt": "2025-10-01T20:26:49.997Z",
-    "status": "error",
-    "error": "Sincronização já está em execução"
-  },
-  {
-    "id": "1759351516482",
-    "startTime": "2025-10-01T20:45:16.482Z",
-    "startedAt": "2025-10-01T20:45:15.241Z",
-    "finishedAt": "2025-10-01T20:45:15.445Z",
-    "status": "error",
-    "error": "Sincronização já está em execução"
-  },
-  {
-    "id": "1759351517401",
-    "startTime": "2025-10-01T20:45:17.401Z",
-    "startedAt": "2025-10-01T20:45:16.190Z",
-    "finishedAt": "2025-10-01T20:45:16.364Z",
-    "status": "error",
-    "error": "Sincronização já está em execução"
-  },
-  {
-    "id": "1759351518320",
-    "startTime": "2025-10-01T20:45:18.320Z",
-    "startedAt": "2025-10-01T20:45:17.067Z",
-    "finishedAt": "2025-10-01T20:45:17.284Z",
-    "status": "error",
-    "error": "Sincronização já está em execução"
-  },
-  {
-    "id": "1759352164667",
-    "startTime": "2025-10-01T20:56:04.667Z",
-    "startedAt": "2025-10-01T20:56:03.469Z",
-    "finishedAt": "2025-10-01T20:56:03.623Z",
-    "status": "error",
-    "error": "Sincronização já está em execução"
-  },
-  {
-    "id": "1759352385412",
-    "startTime": "2025-10-01T20:59:45.412Z",
-    "startedAt": "2025-10-01T20:59:44.219Z",
-    "finishedAt": "2025-10-01T20:59:44.366Z",
-    "status": "success",
-    "totals": {
-      "products": 1000,
-      "sections": 50,
-      "brands": 100,
-      "genres": 20
-    }
   }
 ]

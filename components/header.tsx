@@ -79,7 +79,7 @@ export default function Header({ onToggleSidebar, showDepartmentsButton = false 
 
   // Pesquisas populares
   const popularSearches = useMemo(() => [
-    'arroz', 'feijão', 'óleo', 'açúcar', 'café',
+    'Promoções', 'arroz', 'feijão', 'óleo', 'açúcar', 'café',
     'leite', 'macarrão', 'molho de tomate', 'sal', 'farinha'
   ], []);
 
@@ -87,12 +87,12 @@ export default function Header({ onToggleSidebar, showDepartmentsButton = false 
   useEffect(() => {
     const fetchAllProducts = async () => {
       try {
-        console.log('Carregando produtos...');
+
         const response = await fetch('/api/products');
         if (response.ok) {
           const data = await response.json();
           const products = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
-          console.log(`Carregados ${products.length} produtos`);
+
           
           // Mapear precoVenda2 para priceAtacado para compatibilidade
           const mappedProducts = products.map((prod: any) => ({
@@ -177,31 +177,37 @@ export default function Header({ onToggleSidebar, showDepartmentsButton = false 
     .replace(/\s+/g, ' ')
     .trim(), []);
 
-  // Algoritmo de busca otimizado
+  // Algoritmo de busca otimizado - APENAS produtos com estoque
   const performSearch = useCallback((query: string, products: Product[], type: 'nome' | 'codigo') => {
     const normalizedQuery = normalize(query);
     if (!normalizedQuery || !products.length) return [];
+    
+    // FILTRAR APENAS PRODUTOS COM ESTOQUE
+    const productsWithStock = products.filter(prod => 
+      (prod as any).inStock === true || 
+      (prod as any).stock > 0
+    );
     
     const startTime = performance.now();
     let resultados: Product[] = [];
 
     if (type === 'codigo') {
-      // Busca por código - extremamente rápida
-      resultados = products.filter((prod: Product) => {
+      // Busca por código - extremamente rápida (apenas com estoque)
+      resultados = productsWithStock.filter((prod: Product) => {
         return prod.id?.includes(normalizedQuery) || 
                prod.codigo?.includes(normalizedQuery) ||
                prod.sku?.includes(normalizedQuery);
       }).slice(0, 10);
     } else {
-      // Busca por nome - estratégia em camadas
+      // Busca por nome - estratégia em camadas (apenas com estoque)
       
       // 1. Busca exata (case insensitive)
-      const exactMatch = products.filter(prod => 
+      const exactMatch = productsWithStock.filter(prod => 
         normalize(prod.name || '').includes(normalizedQuery)
       );
       
       // 2. Busca por palavras que começam com a query
-      const startsWithMatch = products.filter(prod => {
+      const startsWithMatch = productsWithStock.filter(prod => {
         const nomeNormalizado = normalize(prod.name || '');
         const words = nomeNormalizado.split(' ');
         return words.some(word => word.startsWith(normalizedQuery));
@@ -234,7 +240,7 @@ export default function Header({ onToggleSidebar, showDepartmentsButton = false 
     }
 
     const endTime = performance.now();
-    console.log(`Busca por "${query}" realizada em ${(endTime - startTime).toFixed(2)}ms, ${resultados.length} resultados`);
+
     
     return resultados;
   }, [normalize, maisVendidos]);
@@ -258,6 +264,24 @@ export default function Header({ onToggleSidebar, showDepartmentsButton = false 
     e.preventDefault(); // Previne o reload da página
     
     if (searchQuery.trim()) {
+      // Se há resultados visíveis no dropdown, fazer a mesma ação do "Ver mais"
+      if (showSearchResults) {
+        // Lógica do "Ver mais" diretamente aqui
+        saveRecentSearch(searchQuery);
+        setShowSearchResults(false);
+        setIsMenuOpen(false);
+        setIsSearching(false);
+        
+        // Usar router.push sem recarregar a página
+        router.push(`/catalog?search=${encodeURIComponent(searchQuery.trim())}&type=${searchType}`);
+        
+        // Limpar campo de busca após navegação
+        setTimeout(() => {
+          setSearchQuery("");
+        }, 100);
+        return false;
+      }
+      
       saveRecentSearch(searchQuery);
       setShowSearchResults(false);
       setIsSearching(false); // Para o loading
@@ -272,7 +296,7 @@ export default function Header({ onToggleSidebar, showDepartmentsButton = false 
     }
     
     return false; // Garante que não vai recarregar
-  }, [searchQuery, searchType, saveRecentSearch, router]);
+  }, [searchQuery, searchType, saveRecentSearch, router, showSearchResults, setIsMenuOpen]);
 
   // Buscar produtos em tempo real
   const handleSearchChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -358,6 +382,16 @@ export default function Header({ onToggleSidebar, showDepartmentsButton = false 
 
   // Função para usar uma sugestão
   const handleSuggestionClick = useCallback((suggestion: string) => {
+    // Se clicar em "Promoções", ir diretamente para a página de promoções
+    if (suggestion === 'Promoções') {
+      setShowSearchResults(false);
+      setIsMenuOpen(false);
+      setIsSearching(false);
+      setSearchQuery("");
+      router.push('/catalog?category=Promoções');
+      return;
+    }
+    
     setSearchQuery(suggestion);
     setTimeout(() => {
       if (searchInputRef.current) {
@@ -365,7 +399,7 @@ export default function Header({ onToggleSidebar, showDepartmentsButton = false 
       }
       handleSeeAllResults();
     }, 100);
-  }, [handleSeeAllResults]);
+  }, [handleSeeAllResults, router]);
 
   // Função de logout
   const handleLogout = useCallback(() => {
@@ -493,14 +527,37 @@ export default function Header({ onToggleSidebar, showDepartmentsButton = false 
     );
   }, [isSearching, searchQuery, searchResults, recentSearches, popularSearches, handleSuggestionClick, handleSeeAllResults, handleProductClick]);
 
-  // Componente SearchResultItem corrigido para usar precoVenda2
+  // Função para calcular dados de promoção (sincronizada com ProductCard)
+  const calculatePromotionDataHeader = (product: Product) => {
+    const originalPrice1 = product.price;
+    const originalPrice2 = (product as any).priceAtacado || (product as any).prices?.precoVenda2 || (product as any).varejoFacilData?.precos?.precoVenda2 || 0;
+    
+    let finalPrice1 = originalPrice1;
+    let finalPrice2 = originalPrice2;
+    
+    // Verificar oferta1
+    if ((product as any).varejoFacilData?.precos?.precoOferta1 > 0) {
+      finalPrice1 = (product as any).varejoFacilData.precos.precoOferta1;
+    }
+    
+    // Verificar oferta2
+    if ((product as any).varejoFacilData?.precos?.precoOferta2 > 0 && originalPrice2 > 0) {
+      finalPrice2 = (product as any).varejoFacilData.precos.precoOferta2;
+    }
+    
+    return { 
+      price1: finalPrice1, 
+      price2: finalPrice2,
+      originalPrice1,
+      originalPrice2,
+      hasOferta1: finalPrice1 < originalPrice1,
+      hasOferta2: finalPrice2 < originalPrice2 && originalPrice2 > 0
+    };
+  };
+
+  // Componente SearchResultItem corrigido para usar ofertas
   const SearchResultItem = React.memo(({ produto, onClick }: { produto: Product, onClick: () => void }) => {
-    // Usar a mesma lógica do cart page para buscar preço 2 (atacado)
-    const precoAtacado = produto.priceAtacado > 0
-      ? produto.priceAtacado
-      : (produto as any).prices?.precoVenda2 > 0
-        ? (produto as any).prices.precoVenda2
-        : (produto as any).varejoFacilData?.precos?.precoVenda2 || 0;
+    const promotionData = calculatePromotionDataHeader(produto);
     
     return (
       <button
@@ -518,12 +575,22 @@ export default function Header({ onToggleSidebar, showDepartmentsButton = false 
         <div className="flex-1 min-w-0">
           <p className="font-medium text-gray-900 truncate">{produto.name || produto.descricao}</p>
           <div className="flex gap-2 items-center mt-1">
-            <span className="text-sm text-blue-600 font-semibold">
-              R$ {produto.price?.toFixed(2).replace('.', ',')}
+            <span className={`text-sm font-semibold ${promotionData.hasOferta1 ? 'text-red-600' : 'text-blue-600'}`}>
+              R$ {promotionData.price1?.toFixed(2).replace('.', ',')}
             </span>
-            {precoAtacado && precoAtacado > 0 && (
-              <span className="text-sm text-green-600 font-semibold">
-                Atacado: R$ {precoAtacado.toFixed(2).replace('.', ',')}
+            {promotionData.hasOferta1 && (
+              <span className="text-xs line-through text-gray-400">
+                R$ {promotionData.originalPrice1.toFixed(2).replace('.', ',')}
+              </span>
+            )}
+            {promotionData.price2 > 0 && (
+              <span className={`text-sm font-semibold ${promotionData.hasOferta2 ? 'text-red-600' : 'text-green-600'}`}>
+                Atacado: R$ {promotionData.price2.toFixed(2).replace('.', ',')}
+              </span>
+            )}
+            {promotionData.hasOferta2 && (
+              <span className="text-xs line-through text-gray-400">
+                R$ {promotionData.originalPrice2.toFixed(2).replace('.', ',')}
               </span>
             )}
           </div>
@@ -567,10 +634,10 @@ export default function Header({ onToggleSidebar, showDepartmentsButton = false 
                 {/* Ícone Grid ultra criativo */}
                 <div className="relative">
                   <div className="grid grid-cols-2 gap-1.5 p-1">
-                    <div className="w-2.5 h-2.5 bg-gradient-to-br from-gray-300 to-gray-400 rounded-md group-hover/btn:from-blue-400 group-hover/btn:to-blue-600 group-hover/btn:shadow-sm group-hover/btn:rotate-12 transition-all duration-300 transform"></div>
-                    <div className="w-2.5 h-2.5 bg-gradient-to-br from-gray-300 to-gray-400 rounded-md group-hover/btn:from-orange-400 group-hover/btn:to-red-500 group-hover/btn:shadow-sm group-hover/btn:-rotate-12 transition-all duration-300 delay-75 transform"></div>
-                    <div className="w-2.5 h-2.5 bg-gradient-to-br from-gray-300 to-gray-400 rounded-md group-hover/btn:from-green-400 group-hover/btn:to-emerald-500 group-hover/btn:shadow-sm group-hover/btn:rotate-12 transition-all duration-300 delay-150 transform"></div>
-                    <div className="w-2.5 h-2.5 bg-gradient-to-br from-gray-300 to-gray-400 rounded-md group-hover/btn:from-purple-400 group-hover/btn:to-pink-500 group-hover/btn:shadow-sm group-hover/btn:-rotate-12 transition-all duration-300 delay-225 transform"></div>
+                    <div className="w-2.5 h-2.5 bg-gradient-to-br from-black to-gray-800 rounded-md group-hover/btn:from-blue-400 group-hover/btn:to-blue-600 group-hover/btn:shadow-sm group-hover/btn:rotate-12 transition-all duration-300 transform"></div>
+                    <div className="w-2.5 h-2.5 bg-gradient-to-br from-black to-gray-800 rounded-md group-hover/btn:from-orange-400 group-hover/btn:to-red-500 group-hover/btn:shadow-sm group-hover/btn:-rotate-12 transition-all duration-300 delay-75 transform"></div>
+                    <div className="w-2.5 h-2.5 bg-gradient-to-br from-black to-gray-800 rounded-md group-hover/btn:from-green-400 group-hover/btn:to-emerald-500 group-hover/btn:shadow-sm group-hover/btn:rotate-12 transition-all duration-300 delay-150 transform"></div>
+                    <div className="w-2.5 h-2.5 bg-gradient-to-br from-black to-gray-800 rounded-md group-hover/btn:from-purple-400 group-hover/btn:to-pink-500 group-hover/btn:shadow-sm group-hover/btn:-rotate-12 transition-all duration-300 delay-225 transform"></div>
                   </div>
                   
                   {/* Indicadores de ação múltiplos */}
@@ -589,9 +656,7 @@ export default function Header({ onToggleSidebar, showDepartmentsButton = false 
           )}
           
           <Link href="/catalog" className="flex items-center justify-center">
-            <div className="bg-gray-50 rounded-xl p-3 shadow-lg border border-gray-100">
               <img src="https://i.ibb.co/TBGDxS4M/guanabara-1.png" alt="Logo" className="h-12 w-56 object-contain" />
-            </div>
           </Link>
         </div>
         
@@ -668,7 +733,7 @@ export default function Header({ onToggleSidebar, showDepartmentsButton = false 
         
         {/* Ícones do header */}
         <div className="hidden md:flex items-center space-x-3">
-          {user?.role === "admin" && (
+          {(user?.role === "admin" || user?.role === "programador" || user?.role === "gerente" || user?.role === "atendente") && (
             <Link href="/admin" className="p-2 text-gray-700 hover:text-orange-600 transition-colors" title="Painel Admin">
               <Settings className="h-6 w-6" />
             </Link>
@@ -800,7 +865,7 @@ export default function Header({ onToggleSidebar, showDepartmentsButton = false 
         <div className="fixed inset-0 z-50 bg-black/50" onClick={() => setIsMenuOpen(false)}>
           <div className="fixed inset-y-0 right-0 w-72 bg-white shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="flex flex-col h-full">
-              <div className="p-4 border-b border-gray-100 bg-gray-50">
+              <div className="p-4 border-b border-gray-100">
                 <div className="flex items-center justify-between">
                   <img src="https://i.ibb.co/TBGDxS4M/guanabara-1.png" alt="Logo" className="h-8 w-32 object-contain" />
                   <button onClick={() => setIsMenuOpen(false)} className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
@@ -910,7 +975,7 @@ export default function Header({ onToggleSidebar, showDepartmentsButton = false 
                     </button>
                   )}
                   
-                  {user?.role === "admin" && (
+                  {(user?.role === "admin" || user?.role === "programador" || user?.role === "gerente" || user?.role === "atendente") && (
                     <Link href="/admin" className="flex items-center space-x-3 p-3 rounded-xl bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg" onClick={() => setIsMenuOpen(false)}>
                       <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center"><Settings className="w-5 h-5 text-white" /></div>
                       <div><span className="font-bold text-white">Admin</span><p className="text-xs text-orange-100">Painel</p></div>

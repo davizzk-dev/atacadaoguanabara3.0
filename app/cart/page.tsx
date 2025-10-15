@@ -48,6 +48,45 @@ export default function CartPage() {
   const [showThankYouDialog, setShowThankYouDialog] = useState(false)
   const [showRatingDialog, setShowRatingDialog] = useState(false)
   const [orderId, setOrderId] = useState<string | null>(null)
+
+  // Função para detectar dispositivo móvel
+  const isMobileDevice = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  }
+
+  // Função para redirecionamento do WhatsApp
+  const redirectToWhatsApp = (message: string, phone: string = '5585985147067') => {
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    console.log('URL WhatsApp:', whatsappUrl);
+
+    // Redirecionamento condicional baseado no dispositivo
+    if (isMobileDevice()) {
+      // Em dispositivos móveis, usar location.href para evitar bloqueio de pop-up
+      window.location.href = whatsappUrl;
+    } else {
+      // Em desktop, tentar abrir em nova aba primeiro
+      const newWindow = window.open(whatsappUrl, '_blank');
+      // Fallback: se não conseguir abrir nova aba (pop-up bloqueado), redirecionar na mesma aba
+      if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+        window.location.href = whatsappUrl;
+      }
+    }
+  }
+
+  // Função para verificar se está dentro do horário de pedidos
+  const isWithinOrderHours = () => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    return currentHour < 16; // Aceita pedidos até 16:00 (4:00 PM)
+  }
+
+  // Função para obter mensagem de horário
+  const getOrderTimeMessage = () => {
+    if (isWithinOrderHours()) {
+      return '📞 Pedidos aceitos até às 16h';
+    }
+    return '⏰ Pedidos encerrados - Horário: 8h às 16h';
+  }
   
   // Estados para formulário
   const [formData, setFormData] = useState({
@@ -81,6 +120,7 @@ export default function CartPage() {
   
   // Entrega vs Retirada
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery')
+  const [deliveryEnabled, setDeliveryEnabled] = useState(true)
   
   const router = useRouter()
   const errorRef = useRef<HTMLDivElement>(null)
@@ -94,6 +134,7 @@ export default function CartPage() {
     { nome: 'Jardim Iracema', preco: 7 },
     { nome: 'Padre Andrade', preco: 10 },
     { nome: 'Floresta', preco: 10 },
+    { nome: 'Presidente Kennedy', preco: 10 },
     { nome: 'Antonio Bezerra', preco: 10 },
     { nome: 'Barra do Ceara', preco: 10 },
     { nome: 'Cristo Redentor', preco: 15 },
@@ -143,6 +184,31 @@ export default function CartPage() {
   const [isLoadingUserData, setIsLoadingUserData] = useState(false);
   const lastUserId = useRef<string | null>(null);
 
+  // Carregar configurações de entrega
+  useEffect(() => {
+    const loadDeliverySettings = async () => {
+      try {
+        const response = await fetch('/api/admin/delivery-config')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success) {
+            setDeliveryEnabled(data.data.deliveryEnabled)
+            // Se a entrega está desabilitada, forçar modo retirada
+            if (!data.data.deliveryEnabled) {
+              setDeliveryType('pickup')
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao carregar configurações de entrega:', error)
+        // Em caso de erro, assumir que a entrega está habilitada
+        setDeliveryEnabled(true)
+      }
+    }
+    
+    loadDeliverySettings()
+  }, [])
+
   // Carregar dados do usuário ao montar o componente
   useEffect(() => {
     // Evitar reprocessamento se o usuário não mudou
@@ -151,7 +217,7 @@ export default function CartPage() {
     }
     
     setIsLoadingUserData(true);
-    console.log('🔄 Carregando dados do usuário (ID mudou):', user?.name, 'de', lastUserId.current, 'para', user?.id);
+
     
     // Preencher com dados do usuário se estiver autenticado
     if (user) {
@@ -252,7 +318,7 @@ export default function CartPage() {
           }));
         }
 
-        console.log('🛒 Dados carregados no carrinho para usuário:', userData.name);
+
     } else {
       // Se não há usuário logado, usar dados padrão
       setSelectedBairro(bairrosFortaleza[0].nome);
@@ -444,6 +510,12 @@ export default function CartPage() {
     // Limpar erro anterior
     setError(null);
 
+    // Verificar horário de pedidos
+    if (!isWithinOrderHours()) {
+      setError('Pedidos aceitos apenas até às 16h. Volte amanhã a partir das 8h!');
+      return;
+    }
+
     // Verificar se há itens no carrinho
     if (items.length === 0) {
       setError('Adicione produtos ao carrinho antes de finalizar o pedido.');
@@ -614,7 +686,7 @@ export default function CartPage() {
       };
 
       // Salvar pedido na API
-      console.log('📤 Enviando pedido para API:', JSON.stringify(order, null, 2));
+
 
       const response = await fetch('/api/orders', {
         method: 'POST',
@@ -624,7 +696,7 @@ export default function CartPage() {
         body: JSON.stringify(order)
       });
 
-      console.log('📥 Resposta da API:', response.status, response.statusText);
+
 
       if (response.ok) {
         const responseText = await response.text();
@@ -758,19 +830,13 @@ export default function CartPage() {
           ].filter(Boolean).join('\n');
         }
 
-        // Buscar número do WhatsApp em settings
-        let phone = '5585985694642';
+        // Salvar mensagem no localStorage para botão de fallback
         try {
-          const s = await fetch('/api/settings', { cache: 'no-store' }).then(r => r.ok ? r.json() : null);
-          if (s?.whatsapp_number) phone = String(s.whatsapp_number);
+          localStorage.setItem('lastWhatsAppMessage', message);
         } catch {}
-        
-        // Corrigir encoding para WhatsApp: usar encodeURIComponent corretamente
-        const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-        console.log('URL WhatsApp:', whatsappUrl);
 
-        // Abrir WhatsApp em nova aba
-        window.open(whatsappUrl, '_blank');
+        // Usar função centralizada de redirecionamento com número fixo
+        redirectToWhatsApp(message, '5585985147067');
 
         // Limpar carrinho
         clearCart();
@@ -910,6 +976,16 @@ export default function CartPage() {
               {/* Itens do carrinho */}
               <section className="flex flex-col gap-8">
                 <h2 className="text-3xl font-extrabold text-[#FF6600] mb-2 text-center tracking-tight drop-shadow">Seu Carrinho</h2>
+                
+                {/* Aviso de horário de pedidos */}
+                <div className={`rounded-lg p-3 text-center text-sm border ${
+                  isWithinOrderHours() 
+                    ? 'bg-blue-50 border-blue-200 text-blue-700' 
+                    : 'bg-orange-50 border-orange-200 text-orange-700'
+                }`}>
+                  {getOrderTimeMessage()}
+                </div>
+
                 {items.length === 0 ? (
                   <div className="text-center text-gray-400 py-20">
                     <span className="text-7xl block mb-6">🛒</span>
@@ -927,7 +1003,22 @@ export default function CartPage() {
                           <div className="flex-1 flex flex-col gap-2 min-w-0">
                             <div className="font-bold text-gray-900 text-base md:text-xl leading-tight mb-2">{item.product.name}</div>
                             <div className="text-gray-600 text-sm md:text-base mb-2">
-                              Quantidade: <span className="font-semibold text-blue-700 text-base md:text-lg">{item.quantity} unidade(s)</span>
+                              {(item.product as any).isWeightProduct || (item.product as any).weightInGrams ? (
+                                <span>
+                                  Peso: <span className="font-semibold text-blue-700 text-base md:text-lg">
+                                    {(item.product as any).unit || 
+                                     ((item.product as any).weightInGrams >= 1000 
+                                       ? `${((item.product as any).weightInGrams / 1000).toFixed((item.product as any).weightInGrams % 1000 === 0 ? 0 : 1)}kg`
+                                       : `${(item.product as any).weightInGrams}g`
+                                     )
+                                    }
+                                  </span>
+                                </span>
+                              ) : (
+                                <span>
+                                  Quantidade: <span className="font-semibold text-blue-700 text-base md:text-lg">{item.quantity} unidade(s)</span>
+                                </span>
+                              )}
                             </div>
                             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-start sm:items-center mb-2">
                               <span className="text-[#FF6600] font-extrabold text-lg md:text-2xl">
@@ -952,26 +1043,45 @@ export default function CartPage() {
                               Preço unitário: R$ {calculateDynamicPrice(item.product, item.quantity).toFixed(2)}
                             </div>
                             
-                            {/* Controles de quantidade - no mobile ficam aqui embaixo */}
+                            {/* Controles de quantidade/peso - diferenciados para produtos de peso */}
                             <div className="flex flex-row justify-between items-center">
-                              <div className="flex flex-row gap-2 items-center">
-                                <button 
-                                  onClick={() => updateQuantity(item.product.id, Math.max(1, item.quantity - 1))} 
-                                  className="text-blue-600 hover:text-white hover:bg-blue-600 p-2 rounded-full bg-blue-50 shadow-lg transition-all border border-blue-200 active:scale-95 min-w-[40px] min-h-[40px] flex items-center justify-center"
-                                  disabled={item.quantity <= 1}
-                                >
-                                  <Minus className="w-4 h-4" />
-                                </button>
-                                <span className="font-bold text-base px-3 py-2 bg-gray-100 rounded-lg min-w-[50px] text-center">
-                                  {item.quantity}
-                                </span>
-                                <button 
-                                  onClick={() => updateQuantity(item.product.id, item.quantity + 1)} 
-                                  className="text-green-600 hover:text-white hover:bg-green-600 p-2 rounded-full bg-green-50 shadow-lg transition-all border border-green-200 active:scale-95 min-w-[40px] min-h-[40px] flex items-center justify-center"
-                                >
-                                  <Plus className="w-4 h-4" />
-                                </button>
-                              </div>
+                              {(item.product as any).isWeightProduct || (item.product as any).weightInGrams ? (
+                                <div className="flex flex-col gap-2">
+                                  <div className="text-xs text-gray-500">Produto de peso (não alterável no carrinho)</div>
+                                  <div className="flex flex-row gap-2 items-center">
+                                    <span className="font-bold text-base px-3 py-2 bg-orange-100 rounded-lg min-w-[80px] text-center text-orange-600">
+                                      {(item.product as any).unit || 
+                                       ((item.product as any).weightInGrams >= 1000 
+                                         ? `${((item.product as any).weightInGrams / 1000).toFixed((item.product as any).weightInGrams % 1000 === 0 ? 0 : 1)}kg`
+                                         : `${(item.product as any).weightInGrams}g`
+                                       )
+                                      }
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-gray-400">
+                                    Para alterar o peso, remova este item e adicione novamente com o peso desejado
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex flex-row gap-2 items-center">
+                                  <button 
+                                    onClick={() => updateQuantity(item.product.id, Math.max(1, item.quantity - 1))} 
+                                    className="text-blue-600 hover:text-white hover:bg-blue-600 p-2 rounded-full bg-blue-50 shadow-lg transition-all border border-blue-200 active:scale-95 min-w-[40px] min-h-[40px] flex items-center justify-center"
+                                    disabled={item.quantity <= 1}
+                                  >
+                                    <Minus className="w-4 h-4" />
+                                  </button>
+                                  <span className="font-bold text-base px-3 py-2 bg-gray-100 rounded-lg min-w-[50px] text-center">
+                                    {item.quantity}
+                                  </span>
+                                  <button 
+                                    onClick={() => updateQuantity(item.product.id, item.quantity + 1)} 
+                                    className="text-green-600 hover:text-white hover:bg-green-600 p-2 rounded-full bg-green-50 shadow-lg transition-all border border-green-200 active:scale-95 min-w-[40px] min-h-[40px] flex items-center justify-center"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              )}
                               
                               {/* Botão remover */}
                               <button 
@@ -1037,18 +1147,34 @@ export default function CartPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        setDeliveryType('delivery')
+                        if (deliveryEnabled) {
+                          setDeliveryType('delivery')
+                        }
                       }}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        deliveryType === 'delivery'
+                      disabled={!deliveryEnabled}
+                      className={`p-4 rounded-lg border-2 transition-all relative ${
+                        !deliveryEnabled
+                          ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : deliveryType === 'delivery'
                           ? 'border-orange-500 bg-orange-50 text-orange-700'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
                       <div className="flex items-center justify-center flex-col">
-                        <Truck className="w-8 h-8 mb-2" />
+                        <div className="relative">
+                          <Truck className="w-8 h-8 mb-2" />
+                          {!deliveryEnabled && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center">
+                                <span className="text-xs font-bold">✕</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                         <span className="font-semibold">Entrega em Casa</span>
-                        <span className="text-sm text-gray-600">Receba no seu endereço</span>
+                        <span className="text-sm">
+                          {deliveryEnabled ? 'Receba no seu endereço' : 'Temporariamente indisponível'}
+                        </span>
                       </div>
                     </button>
                     
@@ -1285,9 +1411,9 @@ export default function CartPage() {
               {/* Botão WhatsApp */}
               <button
                 onClick={handleWhatsAppOrder}
-                disabled={isLoading || getTotal() < 100 || (paymentMethod==='cash' && wantsChange && !!changeError)}
+                disabled={isLoading || getTotal() < 100 || (paymentMethod==='cash' && wantsChange && !!changeError) || !isWithinOrderHours()}
                 className={`w-full py-5 px-10 rounded-2xl font-extrabold transition-colors flex items-center justify-center gap-3 text-2xl shadow-2xl border-2 focus:outline-none focus:ring-2 focus:ring-green-400 ${
-                  isLoading || getTotal() < 100 || (paymentMethod==='cash' && wantsChange && !!changeError)
+                  isLoading || getTotal() < 100 || (paymentMethod==='cash' && wantsChange && !!changeError) || !isWithinOrderHours()
                     ? 'bg-gray-400 text-gray-600 border-gray-400 cursor-not-allowed'
                     : 'bg-[#25D366] text-white hover:bg-[#1ebe57] border-[#25D366]'
                 }`}
@@ -1297,6 +1423,10 @@ export default function CartPage() {
                     <div className="animate-spin rounded-full h-6 w-6 border-2 border-white border-t-transparent" />
                     <span>Processando...</span>
                   </>
+                ) : !isWithinOrderHours() ? (
+                  <>
+                    <span>Horário de pedidos encerrado</span>
+                  </>
                 ) : getTotal() < 100 ? (
                   <>
                     <span>Valor mínimo: R$ 100,00</span>
@@ -1304,7 +1434,9 @@ export default function CartPage() {
                 ) : (
                   <>
                     <span>Finalizar no WhatsApp</span>
-                    <span className="ml-2"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" className="lucide lucide-whatsapp"><circle cx="12" cy="12" r="12" fill="#25D366"/><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.472-.148-.67.15-.198.297-.767.967-.94 1.164-.173.198-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.372-.025-.521-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.007-.372-.009-.571-.009-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.099 3.205 5.077 4.372.71.306 1.263.489 1.695.626.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.288.173-1.413-.074-.124-.272-.198-.57-.347z" fill="#fff"/></svg></span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor" className="ml-2">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.472-.148-.67.15-.198.297-.767.967-.94 1.164-.173.198-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.372-.025-.521-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.007-.372-.009-.571-.009-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.099 3.205 5.077 4.372.71.306 1.263.489 1.695.626.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.288.173-1.413-.074-.124-.272-.198-.57-.347zm-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893A11.821 11.821 0 0020.464 3.488z"/>
+                    </svg>
                   </>
                 )}
               </button>
@@ -1330,6 +1462,28 @@ export default function CartPage() {
             <p className="text-gray-600">
               Seu pedido foi enviado para o WhatsApp. Finalize a conversa por lá para confirmar sua compra.
             </p>
+            
+            {/* Botão de fallback para WhatsApp */}
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-green-700 mb-2">
+                Não foi redirecionado automaticamente? Clique no botão abaixo:
+              </p>
+              <Button 
+                onClick={() => {
+                  // Usar a função centralizada de redirecionamento
+                  const lastMessage = localStorage.getItem('lastWhatsAppMessage') || 'Olá! Gostaria de finalizar meu pedido.';
+                  redirectToWhatsApp(lastMessage, '5585985147067');
+                }}
+                className="w-full bg-[#25D366] hover:bg-[#1ebe57] text-white flex items-center justify-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="12" fill="currentColor"/>
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.472-.148-.67.15-.198.297-.767.967-.94 1.164-.173.198-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.372-.025-.521-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.007-.372-.009-.571-.009-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.099 3.205 5.077 4.372.71.306 1.263.489 1.695.626.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.288.173-1.413-.074-.124-.272-.198-.57-.347z" fill="#fff"/>
+                </svg>
+                Abrir WhatsApp
+              </Button>
+            </div>
+            
             <div className="flex flex-col gap-3 pt-4">
               {orderId && (
                 <Button 
@@ -1506,7 +1660,7 @@ function FormCart({
       return
     }
     
-    console.log('📋 FormCart carregando dados do usuário:', user?.name, 'ID:', currentUserId);
+
     setIsLoadingFormData(true);
     // Carregar apenas do localStorage se não há usuário, senão usar dados do usuário
     let savedData: any = {};

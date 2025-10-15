@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "id": "1760378376576",
+    "name": "Anônimo",
+    "email": "anonimo@feedback.com",
+    "phone": "",
+    "type": "elogio",
+    "rating": 5,
+    "message": "Adorei o site! agora posso comprar de casa, recebo em até 5h. Muito bom!",
+    "userId": "admin-user",
+    "createdAt": "2025-10-13T17:59:36.576Z",
+    "status": "pending"
+  }
+]

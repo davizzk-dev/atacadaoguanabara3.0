@@ -30,7 +30,7 @@ export default function FAQPage() {
     },
     {
       question: "Qual o prazo de entrega?",
-      answer: "O prazo de entrega varia de 1 a 3 dias úteis, dependendo da sua localização e disponibilidade dos produtos."
+      answer: "O prazo de entrega varia de 1 a 5 horas, dependendo da sua localização e disponibilidade dos produtos."
     },
     {
       question: "Posso trocar ou devolver um produto?",
@@ -50,7 +50,7 @@ export default function FAQPage() {
     },
     {
       question: "Qual o horário de funcionamento?",
-      answer: "Funcionamos de segunda a sábado, das 8h às 18h. Aos domingos estamos fechados."
+      answer: "Funcionamos de segunda a sábado, das 7h às 19h. Aos domingos das 7h às 13h."
     },
     {
       question: "Vocês têm promoções?",

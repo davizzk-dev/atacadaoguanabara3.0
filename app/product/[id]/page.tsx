@@ -32,6 +32,88 @@ interface PriceData {
   permiteDesconto: boolean
 }
 
+// Função para calcular dados de promoção do produto (sincronizada com product-card)
+function calculateProductPromotionData(product: Product) {
+  // Preços originais
+  const originalPrice1 = product.price;
+  const originalPrice2 = (product as any).priceAtacado || (product as any).prices?.precoVenda2 || (product as any).varejoFacilData?.precos?.precoVenda2 || 0;
+  
+  // Preços finais (iniciam como originais, depois podem ser sobrescritos pelas ofertas)
+  let finalPrice1 = originalPrice1;
+  let finalPrice2 = originalPrice2;
+  
+  let hasOffers = false;
+  let bestPrice = originalPrice1;
+  let originalPrice = originalPrice1;
+  let discountPercent = 0;
+  let priceSource = "normal";
+
+  // Verificar se existe oferta1 e sobrescrever price1
+  if (product.varejoFacilData?.precos?.precoOferta1 > 0) {
+    finalPrice1 = product.varejoFacilData.precos.precoOferta1;
+    hasOffers = true;
+    
+    // Calcular desconto para oferta1
+    if (originalPrice1 > finalPrice1) {
+      discountPercent = Math.round(((originalPrice1 - finalPrice1) / originalPrice1) * 100);
+      bestPrice = finalPrice1;
+      originalPrice = originalPrice1;
+      priceSource = "oferta1";
+    }
+  }
+
+  // Verificar se existe oferta2 e sobrescrever price2
+  if (product.varejoFacilData?.precos?.precoOferta2 > 0 && originalPrice2 > 0) {
+    finalPrice2 = product.varejoFacilData.precos.precoOferta2;
+    hasOffers = true;
+    
+    // Se não temos oferta1, ou se oferta2 tem desconto melhor, usar oferta2 como principal
+    const desconto2 = originalPrice2 > finalPrice2 ? Math.round(((originalPrice2 - finalPrice2) / originalPrice2) * 100) : 0;
+    
+    if (priceSource === "normal" || desconto2 > discountPercent) {
+      discountPercent = desconto2;
+      bestPrice = finalPrice2;
+      originalPrice = originalPrice2;
+      priceSource = priceSource === "oferta1" ? "oferta1_e_oferta2" : "oferta2";
+    } else if (priceSource === "oferta1") {
+      priceSource = "oferta1_e_oferta2";
+    }
+  }
+
+  // Fallback para compatibilidade com estrutura prices antiga
+  if (!hasOffers && product.prices) {
+    if (product.prices.offerPrice1 > 0 && product.prices.price1 > 0 && 
+        product.prices.offerPrice1 < product.prices.price1) {
+      hasOffers = true;
+      bestPrice = product.prices.offerPrice1;
+      originalPrice = product.prices.price1;
+      discountPercent = Math.round(((originalPrice - bestPrice) / originalPrice) * 100);
+      priceSource = "prices_oferta1";
+    }
+    else if (product.prices.offerPrice2 > 0 && product.prices.price2 > 0 && 
+             product.prices.offerPrice2 < product.prices.price2) {
+      hasOffers = true;
+      bestPrice = product.prices.offerPrice2;
+      originalPrice = product.prices.price2;
+      discountPercent = Math.round(((originalPrice - bestPrice) / originalPrice) * 100);
+      priceSource = "prices_oferta2";
+    }
+  }
+
+  return {
+    hasOffers,
+    bestPrice,
+    originalPrice,
+    discountPercent,
+    priceSource,
+    isPromotion: hasOffers && discountPercent > 0,
+    price1: finalPrice1, // Preço 1 (original ou oferta1)
+    price2: finalPrice2, // Preço 2 (original ou oferta2)
+    originalPrice1, // Preço 1 original para comparação
+    originalPrice2  // Preço 2 original para comparação
+  };
+}
+
 export default function ProductPage() {
   const params = useParams()
   const productId = params && typeof params.id === 'string' ? params.id : ''
@@ -60,22 +142,20 @@ export default function ProductPage() {
     return product?.brand === "PRODUTOS DE PESO"
   }
 
-  // Função para calcular preço baseado em gramas
+  // Função para calcular preço baseado em gramas (usando dados de promoção)
   const calculatePriceForGrams = (product: Product, grams: number) => {
-    // Assume que o preço do produto é por kg (1000g)
-    const pricePerGram = product.price / 1000
+    const promotionData = calculateProductPromotionData(product);
+    // Usar price1 (que pode ter oferta1 aplicada) como base para o cálculo por grama
+    const pricePerGram = promotionData.price1 / 1000
     return pricePerGram * grams
   }
 
-  // Função para buscar preços escalonados (igual ao ProductCard)
+  // Função para buscar preços escalonados (usando dados de promoção)
   const getScaledPrices = (product: Product) => {
+    const promotionData = calculateProductPromotionData(product);
     const productData = product as any;
-    // Prioriza priceAtacado, depois precoVenda2 dos objetos prices/varejoFacilData
-    const precoVenda2 = productData.priceAtacado > 0
-      ? productData.priceAtacado
-      : productData.prices?.precoVenda2 > 0
-        ? productData.prices.precoVenda2
-        : productData.varejoFacilData?.precos?.precoVenda2 || 0;
+    // Usar price2 do promotionData (que já pode ter sido sobrescrito por oferta2)
+    const precoVenda2 = promotionData.price2;
     const quantidadeMinimaPreco2 = productData.prices?.quantidadeMinimaPreco2 > 1
       ? productData.prices.quantidadeMinimaPreco2
       : productData.varejoFacilData?.precos?.quantidadeMinimaPreco2 || 0;
@@ -87,17 +167,21 @@ export default function ProductPage() {
     return precoVenda2 > 0 && quantidadeMinimaPreco2 > 1
   }
 
-  // Função para calcular o preço baseado na quantidade (igual ao ProductCard)
+  // Função para calcular o preço baseado na quantidade (usando dados de promoção)
   const calculatePrice = (product: Product, quantity: number) => {
+    const promotionData = calculateProductPromotionData(product);
+    
     if (!hasValidScaledPrices(product)) {
-      return product.price
+      return promotionData.price1 // Usar price1 (que pode ser sobrescrito por oferta1)
     }
+    
     const { precoVenda2, quantidadeMinimaPreco2 } = getScaledPrices(product)
-    if (precoVenda2 && quantidadeMinimaPreco2 && quantity >= quantidadeMinimaPreco2) {
-      return precoVenda2
-    } else {
-      return product.price
+    
+    if (quantity >= quantidadeMinimaPreco2 && precoVenda2 > 0) {
+      return promotionData.price2 // Usar price2 (que pode ser sobrescrito por oferta2)
     }
+    
+    return promotionData.price1 // Usar price1 (que pode ser sobrescrito por oferta1)
   }
 
   // Função para sincronizar kg com gramas
@@ -179,14 +263,94 @@ export default function ProductPage() {
             }
           }
           
-          // Buscar produtos relacionados da mesma categoria
-          const related = products
-            .filter((p: Product) => 
-              p.category === foundProduct.category && 
-              p.id !== foundProduct.id
-            )
-            .slice(0, 8)
-          setRelatedProducts(related)
+          // Buscar produtos relacionados dos mais vendidos
+          try {
+            const csvResponse = await fetch('/relatorioABCVenda.csv', {
+              cache: 'no-store'
+            })
+            
+            let relacionadosDosCsv: Product[] = []
+            
+            if (csvResponse.ok) {
+              const csvText = await csvResponse.text()
+              const lines = csvText.split('\n').slice(1).filter(line => line.trim())
+              
+              // Função para normalizar texto (mesma do admin)
+              const normalize = (str: string) => {
+                return str.toLowerCase()
+                  .normalize('NFD')
+                  .replace(/[\u0300-\u036f]/g, '')
+                  .replace(/[^a-z0-9\s]/g, ' ')
+                  .replace(/\s+/g, ' ')
+                  .trim()
+              }
+              
+              // Buscar produtos do CSV que são da mesma categoria
+              for (const line of lines.slice(0, 50)) { // Pegar apenas os 50 primeiros mais vendidos
+                const columns = line.split(',')
+                if (columns.length >= 2) {
+                  const nomeCSV = columns[1]?.replace(/"/g, '').trim()
+                  const codigoCSV = columns[0]?.replace(/"/g, '').trim()
+                  
+                  if (nomeCSV) {
+                    // Buscar produto correspondente (APENAS COM ESTOQUE)
+                    const produtoEncontrado = products.find(p => {
+                      if (p.id === foundProduct.id) return false // Excluir o produto atual
+                      if (p.category !== foundProduct.category) return false // Só da mesma categoria
+                      if (!p.inStock) return false // APENAS produtos em estoque
+                      
+                      // Busca por nome normalizado
+                      const nomeNormalizadoCSV = normalize(nomeCSV)
+                      const nomeProdutoNormalizado = normalize(p.name)
+                      
+                      if (nomeNormalizadoCSV === nomeProdutoNormalizado) return true
+                      
+                      // Busca por código (últimos 4 dígitos)
+                      if (codigoCSV && codigoCSV.length >= 4) {
+                        const ultimosDigitos = codigoCSV.replace(/\D/g, '').slice(-4)
+                        if (p.id.endsWith(ultimosDigitos)) return true
+                      }
+                      
+                      return false
+                    })
+                    
+                    if (produtoEncontrado && !relacionadosDosCsv.some(p => p.id === produtoEncontrado.id)) {
+                      relacionadosDosCsv.push(produtoEncontrado)
+                      if (relacionadosDosCsv.length >= 8) break // Máximo 8 produtos relacionados
+                    }
+                  }
+                }
+              }
+            }
+            
+            // Se não encontrou suficientes dos mais vendidos, completar com produtos da mesma categoria (APENAS COM ESTOQUE)
+            if (relacionadosDosCsv.length < 8) {
+              const produtosRestantes = products
+                .filter((p: Product) => 
+                  p.category === foundProduct.category && 
+                  p.id !== foundProduct.id &&
+                  p.inStock && // APENAS produtos em estoque
+                  !relacionadosDosCsv.some(r => r.id === p.id)
+                )
+                .slice(0, 8 - relacionadosDosCsv.length)
+              
+              relacionadosDosCsv = [...relacionadosDosCsv, ...produtosRestantes]
+            }
+            
+            setRelatedProducts(relacionadosDosCsv)
+            console.log(`🎯 Produtos relacionados carregados: ${relacionadosDosCsv.length} produtos dos mais vendidos`)
+          } catch (error) {
+            console.error('Erro ao carregar produtos relacionados dos mais vendidos:', error)
+            // Fallback para produtos da mesma categoria (APENAS COM ESTOQUE)
+            const related = products
+              .filter((p: Product) => 
+                p.category === foundProduct.category && 
+                p.id !== foundProduct.id &&
+                p.inStock // APENAS produtos em estoque
+              )
+              .slice(0, 8)
+            setRelatedProducts(related)
+          }
         } else {
           setProduct(null)
         }
@@ -201,53 +365,24 @@ export default function ProductPage() {
     fetchProduct()
   }, [productId])
 
-  // Calcular preço baseado na quantidade e opção selecionada
+  // Calcular preço baseado na quantidade e opção selecionada (usando dados de promoção)
   useEffect(() => {
     if (!product) return
 
     let newPrice = product.price
     
-    // Se é produto de peso, calcular por gramas
+    // Se é produto de peso, calcular por gramas (já inclui ofertas)
     if (isWeightProduct(product)) {
       newPrice = calculatePriceForGrams(product, selectedGrams)
     }
-    // Usar o sistema de cálculo do ProductCard como prioridade
-    else if (hasValidScaledPrices(product)) {
+    // Usar sempre o sistema atualizado que inclui ofertas
+    else {
       newPrice = calculatePrice(product, quantity)
-    } 
-    // Fallback para o sistema antigo se não tiver preços escalonados válidos
-    else if (priceData) {
-      // Se o usuário selecionou preço unitário, usar sempre preço 1
-      if (selectedPriceOption === 'unitario') {
-        newPrice = priceData.precoOferta1 !== undefined && priceData.precoOferta1 !== 0
-          ? priceData.precoOferta1
-          : priceData.precoVenda1 !== undefined && priceData.precoVenda1 !== 0
-          ? priceData.precoVenda1
-          : product.price
-      } 
-      // Se o usuário selecionou preço de atacado
-      else if (selectedPriceOption === 'atacado') {
-        // Verificar se quantidade atinge preço 2 (atacado)
-        if (quantity >= priceData.quantidadeMinimaPreco2) {
-          newPrice = priceData.precoOferta2 !== undefined && priceData.precoOferta2 !== 0
-            ? priceData.precoOferta2
-            : priceData.priceAtacado !== undefined && priceData.priceAtacado !== 0
-            ? priceData.priceAtacado
-            : product.price
-        }
-        // Se não atingiu quantidade mínima, usar preço unitário
-        else {
-          newPrice = priceData.precoOferta1 !== undefined && priceData.precoOferta1 !== 0
-            ? priceData.precoOferta1
-            : priceData.precoVenda1 !== undefined && priceData.precoVenda1 !== 0
-            ? priceData.precoVenda1
-            : product.price
-        }
-      }
     }
 
     setCurrentPrice(newPrice)
-  }, [quantity, selectedGrams, priceData, product, selectedPriceOption])
+    console.log(`💰 Preço atual calculado para ${product.name}: R$ ${newPrice.toFixed(2)} (quantidade: ${quantity})`);
+  }, [quantity, selectedGrams, product])
 
   // Sincronizar kg com gramas
   useEffect(() => {
@@ -268,8 +403,12 @@ export default function ProductPage() {
       }
       addItem(dynamicProduct)
     } else {
-      // Para produtos normais
-      for (let i = 0; i < quantity; i++) addItem(product)
+      // Para produtos normais, usar preço calculado (incluindo ofertas)
+      const dynamicProduct = { 
+        ...product, 
+        price: calculatePrice(product, quantity)
+      }
+      for (let i = 0; i < quantity; i++) addItem(dynamicProduct)
     }
     
     setIsAdding(false)
@@ -541,26 +680,45 @@ export default function ProductPage() {
 
               {/* Preço principal */}
               <div className="flex items-center gap-4 mb-6">
-                {currentPrice > 0 ? (
-                  <span className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-                    R$ {currentPrice.toFixed(2)}
-                  </span>
-                ) : (
-                  <span className="text-3xl font-bold text-gray-500">
-                    Consulte o preço
-                  </span>
-                )}
-                
-                {product.originalPrice && product.originalPrice > currentPrice && (
-                  <>
-                    <span className="text-xl text-gray-400 line-through">
-                      R$ {product.originalPrice.toFixed(2)}
+                {(() => {
+                  const promotionData = calculateProductPromotionData(product);
+                  const displayPrice = isWeightProduct(product) 
+                    ? calculatePriceForGrams(product, selectedGrams)
+                    : calculatePrice(product, quantity);
+                  
+                  return displayPrice > 0 ? (
+                    <>
+                      <span className={`text-4xl md:text-5xl font-bold bg-gradient-to-r ${
+                        promotionData.isPromotion ? 'from-red-600 to-pink-600' : 'from-orange-600 to-red-600'
+                      } bg-clip-text text-transparent`}>
+                        R$ {displayPrice.toFixed(2)}
+                      </span>
+                      
+                      {/* Preço original riscado se há oferta */}
+                      {promotionData.isPromotion && (
+                        <>
+                          <span className="text-xl text-gray-400 line-through">
+                            R$ {promotionData.originalPrice.toFixed(2)}
+                          </span>
+                          <Badge className="bg-gradient-to-r from-red-500 to-pink-500 text-white animate-pulse">
+                            {promotionData.discountPercent}% OFF
+                          </Badge>
+                        </>
+                      )}
+                      
+                      {/* Badge de promoção se há oferta */}
+                      {promotionData.isPromotion && (
+                        <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
+                          🔥 OFERTA
+                        </Badge>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-3xl font-bold text-gray-500">
+                      Consulte o preço
                     </span>
-                    <Badge className="bg-gradient-to-r from-red-500 to-pink-500 text-white">
-                      {Math.round((1 - currentPrice / product.originalPrice) * 100)}% OFF
-                    </Badge>
-                  </>
-                )}
+                  );
+                })()}
               </div>
 
               {/* Informações de preços escalonados */}
@@ -570,38 +728,73 @@ export default function ProductPage() {
                   
                   <div className="space-y-2">
                     {/* Preço 1 */}
-                    <button 
-                      onClick={() => setQuantity(1)}
-                      className={`w-full flex items-center justify-between p-3 rounded-lg transition-all duration-200 hover:shadow-md ${
-                        quantity < scaledPrices.quantidadeMinimaPreco2
-                          ? 'bg-blue-100 border border-blue-300 ring-2 ring-blue-200' 
-                          : 'bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300'
-                      }`}
-                    >
-                      <span className="text-sm text-gray-700 font-medium">
-                        1 - {scaledPrices.quantidadeMinimaPreco2 - 1} {isWeightProduct(product) ? 'kg' : 'unidades'}
-                      </span>
-                      <span className="text-sm font-bold text-blue-600">
-                        R$ {product.price.toFixed(2)}
-                      </span>
-                    </button>
+                    {(() => {
+                      const promotionData = calculateProductPromotionData(product);
+                      return (
+                        <button 
+                          onClick={() => setQuantity(1)}
+                          className={`w-full flex items-center justify-between p-3 rounded-lg transition-all duration-200 hover:shadow-md ${
+                            quantity < scaledPrices.quantidadeMinimaPreco2
+                              ? 'bg-blue-100 border border-blue-300 ring-2 ring-blue-200' 
+                              : 'bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300'
+                          }`}
+                        >
+                          <span className="text-sm text-gray-700 font-medium">
+                            1 - {scaledPrices.quantidadeMinimaPreco2 - 1} {isWeightProduct(product) ? 'kg' : 'unidades'}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-blue-600">
+                              R$ {promotionData.price1.toFixed(2)}
+                            </span>
+                            {promotionData.price1 < promotionData.originalPrice1 && (
+                              <span className="text-xs line-through text-gray-400">
+                                R$ {promotionData.originalPrice1.toFixed(2)}
+                              </span>
+                            )}
+                            {promotionData.price1 < promotionData.originalPrice1 && (
+                              <Badge className="bg-red-500 text-white text-xs px-1 py-0.5">
+                                -{Math.round(((promotionData.originalPrice1 - promotionData.price1) / promotionData.originalPrice1) * 100)}%
+                              </Badge>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })()}
 
                     {/* Preço 2 (Atacado) */}
-                    <button 
-                      onClick={() => setQuantity(scaledPrices.quantidadeMinimaPreco2)}
-                      className={`w-full flex items-center justify-between p-3 rounded-lg transition-all duration-200 hover:shadow-md ${
-                        quantity >= scaledPrices.quantidadeMinimaPreco2
-                          ? 'bg-green-100 border border-green-400 ring-2 ring-green-200' 
-                          : 'bg-gray-50 hover:bg-green-50 border border-gray-200 hover:border-green-300'
-                      }`}
-                    >
-                      <span className="text-sm text-gray-700 font-medium">
-                        {scaledPrices.quantidadeMinimaPreco2}+ {isWeightProduct(product) ? 'kg' : 'unidades'}
-                      </span>
-                      <span className="text-sm font-bold text-green-600">
-                        R$ {scaledPrices.precoVenda2.toFixed(2)}
-                      </span>
-                    </button>
+                    {(() => {
+                      const promotionData = calculateProductPromotionData(product);
+                      return (
+                        <button 
+                          onClick={() => setQuantity(scaledPrices.quantidadeMinimaPreco2)}
+                          className={`w-full flex items-center justify-between p-3 rounded-lg transition-all duration-200 hover:shadow-md ${
+                            quantity >= scaledPrices.quantidadeMinimaPreco2
+                              ? 'bg-green-100 border border-green-400 ring-2 ring-green-200' 
+                              : 'bg-gray-50 hover:bg-green-50 border border-gray-200 hover:border-green-300'
+                          }`}
+                        >
+                          <span className="text-sm text-gray-700 font-medium">
+                            {scaledPrices.quantidadeMinimaPreco2}+ {isWeightProduct(product) ? 'kg' : 'unidades'}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-green-600">
+                              R$ {promotionData.price2.toFixed(2)}
+                            </span>
+                            {promotionData.price2 < promotionData.originalPrice2 && (
+                              <span className="text-xs line-through text-gray-400">
+                                R$ {promotionData.originalPrice2.toFixed(2)}
+                              </span>
+                            )}
+                            {promotionData.price2 < promotionData.originalPrice2 && (
+                              <Badge className="bg-red-500 text-white text-xs px-1 py-0.5">
+                                -{Math.round(((promotionData.originalPrice2 - promotionData.price2) / promotionData.originalPrice2) * 100)}%
+                              </Badge>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })()}
+                    
                   </div>
                 </div>
               )}
@@ -618,98 +811,92 @@ export default function ProductPage() {
                 </div>
                 
                 {isWeightProduct(product) ? (
-                  // Controles para produtos de peso
+                  // Controles simplificados para produtos de peso
                   <div className="space-y-4">
+                    {/* Controles principais */}
                     <div className="flex items-center gap-4 mb-4">
-                      <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
+                      <div className="flex items-center gap-2 bg-orange-50 rounded-lg p-3 border border-orange-200">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setSelectedGrams(Math.max(0, selectedGrams - 100))}
-                          disabled={selectedGrams <= 0}
-                          className="w-10 h-10 p-0 border-gray-300 hover:border-orange-400 hover:bg-orange-50"
+                          onClick={() => setSelectedGrams(Math.max(100, selectedGrams - 100))}
+                          disabled={selectedGrams <= 100}
+                          className="w-8 h-8 p-0 border-orange-300 hover:border-orange-400 hover:bg-orange-100"
                         >
-                          <Minus className="w-5 h-5" />
+                          <Minus className="w-4 h-4" />
                         </Button>
-                        <div className="w-16 text-center">
-                          <div className="text-2xl font-bold text-orange-600">{selectedGrams}</div>
-                          <div className="text-xs text-gray-500">gramas</div>
+                        <div className="w-20 text-center">
+                          <div className="text-xl font-bold text-orange-600">
+                            {selectedGrams >= 1000 
+                              ? `${(selectedGrams / 1000).toFixed(selectedGrams % 1000 === 0 ? 0 : 1)}kg`
+                              : `${selectedGrams}g`
+                            }
+                          </div>
                         </div>
                         <Button 
                           variant="outline" 
                           size="sm"
                           onClick={() => setSelectedGrams(selectedGrams + 100)}
-                          className="w-10 h-10 p-0 border-gray-300 hover:border-orange-400 hover:bg-orange-50"
-                        >
-                          <Plus className="w-5 h-5" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Seletor rápido de gramas */}
-                    <div className="space-y-3">
-                      <div className="text-sm font-medium text-gray-700">Seleções rápidas:</div>
-                      <div className="flex gap-2 flex-wrap">
-                        {[0, 100, 200, 300, 400, 500, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 11000, 12000, 13000, 14000, 15000, 20000, 25000, 30000, 40000, 50000].map((grams) => (
-                          <Button
-                            key={grams}
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setSelectedGrams(grams)}
-                            className={`${
-                              selectedGrams === grams 
-                                ? 'bg-orange-100 border-orange-400 text-orange-700' 
-                                : 'border-orange-300 text-orange-600 hover:bg-orange-50'
-                            }`}
-                          >
-                            {grams >= 1000 ? `${grams/1000}kg` : `${grams}g`}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Input personalizado em kg */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600">Ou digite:</span>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleKgChange(Math.max(0, selectedKg - 1))}
-                          disabled={selectedKg <= 0}
-                          className="w-8 h-8 p-0 border-gray-300 hover:border-orange-400 hover:bg-orange-50"
-                        >
-                          <Minus className="w-4 h-4" />
-                        </Button>
-                        <Input
-                          type="number"
-                          min="0"
-                          max="50"
-                          step="1"
-                          value={selectedKg}
-                          onChange={(e) => {
-                            const value = Math.max(0, Math.min(50, Number(e.target.value) || 0))
-                            handleKgChange(value)
-                          }}
-                          className="w-20 text-center text-orange-600 font-bold"
-                        />
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleKgChange(selectedKg + 1)}
-                          className="w-8 h-8 p-0 border-gray-300 hover:border-orange-400 hover:bg-orange-50"
+                          className="w-8 h-8 p-0 border-orange-300 hover:border-orange-400 hover:bg-orange-100"
                         >
                           <Plus className="w-4 h-4" />
                         </Button>
                       </div>
-                      <span className="text-sm text-gray-600">kg</span>
                     </div>
 
-                    {/* Mostrar preço por kg */}
+                    {/* Botões de quantidade comum */}
+                    <div className="grid grid-cols-4 gap-2">
+                      {[200, 500, 1000, 2000].map((grams) => (
+                        <Button
+                          key={grams}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedGrams(grams)}
+                          className={`${
+                            selectedGrams === grams 
+                              ? 'bg-orange-100 border-orange-400 text-orange-700' 
+                              : 'border-orange-300 text-orange-600 hover:bg-orange-50'
+                          }`}
+                        >
+                          {grams >= 1000 ? `${grams/1000}kg` : `${grams}g`}
+                        </Button>
+                      ))}
+                    </div>
+
+                    {/* Input personalizado simplificado */}
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-sm text-gray-600">Personalizado:</span>
+                      <Input
+                        type="number"
+                        min="100"
+                        max="50000"
+                        step="100"
+                        value={selectedGrams}
+                        onChange={(e) => {
+                          const value = Math.max(100, Math.min(50000, Number(e.target.value) || 100))
+                          setSelectedGrams(value)
+                        }}
+                        className="w-24 text-center text-orange-600 font-bold"
+                        placeholder="gramas"
+                      />
+                      <span className="text-sm text-gray-600">gramas</span>
+                    </div>
+
+                    {/* Info do preço */}
                     <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
-                      <div className="text-sm text-orange-700">
-                        Preço por kg: <span className="font-bold">R$ {product.price.toFixed(2)}</span>
-                      </div>
+                      {(() => {
+                        const promotionData = calculateProductPromotionData(product);
+                        return (
+                          <div className="text-sm text-orange-700">
+                            <div>Preço/kg: <span className="font-bold">R$ {promotionData.price1.toFixed(2)}</span></div>
+                            {promotionData.price1 < promotionData.originalPrice1 && (
+                              <div className="text-xs text-green-600 font-bold">
+                                {Math.round(((promotionData.originalPrice1 - promotionData.price1) / promotionData.originalPrice1) * 100)}% OFF
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 ) : (

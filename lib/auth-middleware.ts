@@ -55,7 +55,7 @@ export async function verifyAdminAuth(request: NextRequest): Promise<AdminAuthRe
         const userData = authData?.state?.user || authData?.user
         
         if (userData && (
-          userData.role === 'admin' || 
+          ['admin', 'programador', 'gerente', 'atendente'].includes(userData.role) || 
           userData.email === 'admin' || 
           userData.email === 'davikalebe20020602@gmail.com'
         )) {

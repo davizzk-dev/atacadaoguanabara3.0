@@ -22,10 +22,51 @@ export async function GET(request: NextRequest) {
 
     // Filtrar por categoria
     if (category && category !== 'Todos') {
-      filteredProducts = filteredProducts.filter((product: any) => 
-        product.category === category
-      );
-      console.log(`🏷️ Filtrado por categoria "${category}": ${filteredProducts.length} produtos`);
+      if (category === 'Promoções') {
+        // Função para calcular dados de promoção (sincronizada com catalog page)
+        function calculatePromotionData(product: any) {
+          const originalPrice1 = product.price;
+          const originalPrice2 = (product as any).priceAtacado || (product as any).prices?.precoVenda2 || (product as any).varejoFacilData?.precos?.precoVenda2 || 0;
+          
+          let finalPrice1 = originalPrice1;
+          let finalPrice2 = originalPrice2;
+          
+          // Verificar se existe oferta1 e sobrescrever price1
+          if (product.varejoFacilData?.precos?.precoOferta1 > 0) {
+            finalPrice1 = product.varejoFacilData.precos.precoOferta1;
+          }
+
+          // Verificar se existe oferta2 e sobrescrever price2  
+          if (product.varejoFacilData?.precos?.precoOferta2 > 0) {
+            finalPrice2 = product.varejoFacilData.precos.precoOferta2;
+          }
+
+          return {
+            price1: finalPrice1,
+            price2: finalPrice2,
+            originalPrice1,
+            originalPrice2
+          };
+        }
+
+        // Filtrar produtos com ofertas ativas
+        filteredProducts = filteredProducts.filter((product: any) => {
+          const promotionData = calculatePromotionData(product);
+          
+          // Retornar true se há ofertas (price1 < originalPrice1 OU price2 < originalPrice2)
+          const hasPromotion = promotionData.price1 < promotionData.originalPrice1 || 
+                             (promotionData.originalPrice2 > 0 && promotionData.price2 < promotionData.originalPrice2);
+          
+          return hasPromotion;
+        });
+        
+        console.log(`🔥 Filtrado por categoria "Promoções": ${filteredProducts.length} produtos em oferta`);
+      } else {
+        filteredProducts = filteredProducts.filter((product: any) => 
+          product.category === category
+        );
+        console.log(`🏷️ Filtrado por categoria "${category}": ${filteredProducts.length} produtos`);
+      }
     }
 
     // Filtrar por grupo

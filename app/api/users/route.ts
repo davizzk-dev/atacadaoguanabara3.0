@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { withAPIProtection } from '@/lib/auth-middleware'
+import { hashPassword } from '@/lib/password'
 
 const dataDir = join(process.cwd(), 'data')
 const dataPath = join(dataDir, 'users.json')
@@ -103,18 +104,32 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
     
+    // Verificar se senha foi fornecida (obrigatória para novos usuários)
+    if (!password || password.trim() === '') {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Senha é obrigatória' 
+      }, { status: 400 })
+    }
+    
     const data = readFileSync(dataPath, 'utf-8')
     const users = JSON.parse(data)
+    
+    // Verificar se email já existe
+    const existingUser = users.find((u: any) => u.email === email)
+    if (existingUser) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Email já cadastrado' 
+      }, { status: 409 })
+    }
     
     const newUser = {
       id: Date.now().toString(),
       name,
       email,
-      role,
-      ranking,
       phone: phone || '',
-      // Nota: senha não é salva por questões de segurança
-      // Em produção, você usaria hash da senha
+      password: hashPassword(password), // Criptografar senha corretamente
       address: address || {
         street: '',
         number: '',
@@ -124,6 +139,8 @@ export async function POST(request: NextRequest) {
         state: 'Ceará',
         zipCode: ''
       },
+      role,
+      ranking,
       createdAt: new Date().toISOString(),
       status: 'active'
     }

@@ -1,3 +1,4 @@
+'use client'
 import { Facebook, Instagram, Twitter, Phone, Mail, MapPin, Clock, CreditCard, Truck, Shield } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -186,7 +187,7 @@ export function Footer() {
               </div>
               <div>
                 <h5 className="font-bold">Pagamento</h5>
-                <p className="text-gray-300 text-sm">Cartão, PIX, Boleto</p>
+                <p className="text-gray-300 text-sm">Cartão, PIX, Dinheiro.</p>
               </div>
             </div>
 
@@ -230,8 +231,7 @@ export function Footer() {
 
               {/* Selo de Segurança */}
               <div className="flex items-center">
-                <a
-                  href="#"
+                <button
                   onClick={(e) => {
                     e.preventDefault();
                     window.open('https://www.sitelock.com/verify.php?site=atacadaoguanabara.com','SiteLock','width=600,height=600,left=160,top=170');
@@ -245,7 +245,7 @@ export function Footer() {
                     title="SiteLock"
                     src="https://shield.sitelock.com/shield/atacadaoguanabara.com"
                   />
-                </a>
+                </button>
               </div>
             </div>
           </div>

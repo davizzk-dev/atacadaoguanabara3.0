@@ -3,16 +3,16 @@
   "startTime": null,
   "lastResult": {
     "success": true,
-    "totalProducts": 500,
+    "totalProducts": 2948,
     "totalSections": 15,
     "totalBrands": 3,
     "totalGenres": 100,
     "output": "?? Iniciando sincronização completa do Varejo Fácil...\n?? Buscando seções...\n? 15 seções encontradas\n??? Buscando marcas...\n? 3 marcas encontradas\n?? Buscando gêneros...\n? 100 gêneros encontrados\n?? Buscando grupos por seção...\n?? Buscando grupos da seção: DESCARTÁVEIS (ID: 1)\n  ? 10 grupos encontrados na seção DESCARTÁVEIS\n?? Buscando grupos da seção: CONFEITARIA E OUTROS (ID: 2)\n  ? 13 grupos encontrados na seção CONFEITARIA E OUTROS\n?? Buscando grupos da seção: PANIFICAÇÃO (ID: 3)\n  ? 7 grupos encontrados na seção PANIFICAÇÃO\n?? Buscando grupos da seção: MOLHOS (ID: 4)\n  ? 7 grupos encontrados na seção MOLHOS\n?? Buscando grupos da seção: SUSHITERIA (ID: 5)\n  ? 8 grupos encontrados na seção SUSHITERIA\n?? Buscando grupos da seção: PRODUTOS DE LIMPEZA (ID: 6)\n  ? 6 grupos encontrados na seção PRODUTOS DE LIMPEZA\n?? Buscando grupos da seção: TEMPEROS (ID: 7)\n  ? 6 grupos encontrados na seção TEMPEROS\n?? Buscando grupos da seção: ENLATADOS E EM CONSERVA (ID: 8)\n  ? 3 grupos encontrados n",
     "completed": true,
-    "duration": 186631,
-    "completedAt": "2025-10-02T16:35:43.952Z"
+    "duration": 299246,
+    "completedAt": "2025-10-15T17:41:46.650Z"
   },
   "lastError": null,
-  "lastUpdate": "2025-10-02T16:35:43.953Z",
-  "savedAt": 1759422943953
+  "lastUpdate": "2025-10-15T17:41:46.650Z",
+  "savedAt": 1760550106650
 }

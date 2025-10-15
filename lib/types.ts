@@ -12,6 +12,8 @@ export interface Product {
   // Sistema de avaliações removido
   isOnSale?: boolean
   discount?: number
+  discountPercent?: number // Porcentagem de desconto calculada
+  hasOffers?: boolean // Indica se o produto tem ofertas ativas
   isFavorite?: boolean
   tags?: string[]
   brand?: string
@@ -85,7 +87,7 @@ export interface User {
   state?: string
   zipCode?: string
   neighborhood?: string
-  role: "user" | "admin"
+  role: "user" | "atendente" | "gerente" | "admin" | "programador"
   createdAt?: string
   updatedAt?: string
   orders?: number

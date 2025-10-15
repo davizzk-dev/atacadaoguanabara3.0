@@ -19,6 +19,88 @@ import { CategoryCarousel } from '@/components/category-carousel'
 import { useAuthStore, useCartStore } from '@/lib/store'
 import Link from 'next/link'
 
+// Função para calcular dados de promoção do produto (sincronizada com product-card)
+function calculatePromotionData(product: Product) {
+  // Preços originais
+  const originalPrice1 = product.price;
+  const originalPrice2 = (product as any).priceAtacado || (product as any).prices?.precoVenda2 || (product as any).varejoFacilData?.precos?.precoVenda2 || 0;
+  
+  // Preços finais (iniciam como originais, depois podem ser sobrescritos pelas ofertas)
+  let finalPrice1 = originalPrice1;
+  let finalPrice2 = originalPrice2;
+  
+  let hasOffers = false;
+  let bestPrice = originalPrice1;
+  let originalPrice = originalPrice1;
+  let discountPercent = 0;
+  let priceSource = "normal";
+
+  // Verificar se existe oferta1 e sobrescrever price1
+  if (product.varejoFacilData?.precos?.precoOferta1 > 0) {
+    finalPrice1 = product.varejoFacilData.precos.precoOferta1;
+    hasOffers = true;
+    
+    // Calcular desconto para oferta1
+    if (originalPrice1 > finalPrice1) {
+      discountPercent = Math.round(((originalPrice1 - finalPrice1) / originalPrice1) * 100);
+      bestPrice = finalPrice1;
+      originalPrice = originalPrice1;
+      priceSource = "oferta1";
+    }
+  }
+
+  // Verificar se existe oferta2 e sobrescrever price2
+  if (product.varejoFacilData?.precos?.precoOferta2 > 0 && originalPrice2 > 0) {
+    finalPrice2 = product.varejoFacilData.precos.precoOferta2;
+    hasOffers = true;
+    
+    // Se não temos oferta1, ou se oferta2 tem desconto melhor, usar oferta2 como principal
+    const desconto2 = originalPrice2 > finalPrice2 ? Math.round(((originalPrice2 - finalPrice2) / originalPrice2) * 100) : 0;
+    
+    if (priceSource === "normal" || desconto2 > discountPercent) {
+      discountPercent = desconto2;
+      bestPrice = finalPrice2;
+      originalPrice = originalPrice2;
+      priceSource = priceSource === "oferta1" ? "oferta1_e_oferta2" : "oferta2";
+    } else if (priceSource === "oferta1") {
+      priceSource = "oferta1_e_oferta2";
+    }
+  }
+
+  // Fallback para compatibilidade com estrutura prices antiga
+  if (!hasOffers && product.prices) {
+    if (product.prices.offerPrice1 > 0 && product.prices.price1 > 0 && 
+        product.prices.offerPrice1 < product.prices.price1) {
+      hasOffers = true;
+      bestPrice = product.prices.offerPrice1;
+      originalPrice = product.prices.price1;
+      discountPercent = Math.round(((originalPrice - bestPrice) / originalPrice) * 100);
+      priceSource = "prices_oferta1";
+    }
+    else if (product.prices.offerPrice2 > 0 && product.prices.price2 > 0 && 
+             product.prices.offerPrice2 < product.prices.price2) {
+      hasOffers = true;
+      bestPrice = product.prices.offerPrice2;
+      originalPrice = product.prices.price2;
+      discountPercent = Math.round(((originalPrice - bestPrice) / originalPrice) * 100);
+      priceSource = "prices_oferta2";
+    }
+  }
+
+  return {
+    hasOffers,
+    bestPrice,
+    originalPrice,
+    discountPercent,
+    priceSource,
+    isPromotion: hasOffers && discountPercent > 0,
+    price1: finalPrice1, // Preço 1 (original ou oferta1)
+    price2: finalPrice2, // Preço 2 (original ou oferta2)
+    originalPrice1, // Preço 1 original para comparação
+    originalPrice2  // Preço 2 original para comparação
+  };
+}
+
 export default function CatalogPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("Todos")
@@ -40,7 +122,6 @@ export default function CatalogPage() {
   // Handler para receber parâmetros de busca da URL
   const handleSearchParams = (search: string | null, type: string | null) => {
     if (search) {
-      console.log('🔍 Busca capturada da URL:', search)
       setSearchTerm(search)
       setSelectedCategory("Todos") // Reset categoria quando há busca
       setCurrentPage(1) // Reset para primeira página
@@ -64,7 +145,6 @@ export default function CatalogPage() {
 
   // Handlers para o sidebar
   const handleCategoryChange = (category: string) => {
-    console.log('🔄 Mudando categoria para:', category)
     setSelectedCategory(category)
     setSelectedGroup(null) // Limpar seleção de grupo ao mudar categoria
     setSearchTerm('') // Limpar busca
@@ -102,14 +182,12 @@ export default function CatalogPage() {
         return group ? group.nome : groupId
       }
     } catch (error) {
-      console.error('Erro ao buscar nome do grupo:', error)
       setSelectedGroupName(groupId)
       return groupId
     }
   }
 
   const handleGroupChange = async (groupId: string | null) => {
-    console.log('🏷️ Selecionando grupo:', groupId)
     setSelectedGroup(groupId)
     setSearchTerm('') // Limpar busca ao selecionar grupo
     setCurrentPage(1)
@@ -160,11 +238,9 @@ export default function CatalogPage() {
           const hasAll = categoriesData.includes('Todos')
           setCategories(hasAll ? categoriesData : ['Todos', ...categoriesData])
         } else {
-          console.error('Erro ao carregar categorias:', categoriesResponse.status)
           setCategories(['Todos', 'Promoções'])
         }
       } catch (error) {
-        console.error('Erro ao carregar categorias:', error)
         setCategories(['Todos', 'Promoções'])
       }
     }
@@ -189,7 +265,6 @@ export default function CatalogPage() {
         }
         
         if (selectedGroup) {
-          console.log('🎯 Adicionando grupo à consulta:', selectedGroup);
           params.append('groupId', selectedGroup)
           apiUrl = '/api/catalog/products'
         }
@@ -202,26 +277,14 @@ export default function CatalogPage() {
         }
         
         const fullUrl = params.toString() ? `${apiUrl}?${params}` : apiUrl
-        console.log('🌐 Fazendo requisição para:', fullUrl);
         
         const productsResponse = await fetch(fullUrl)
         if (productsResponse.ok && isMounted) {
           const productsData = await productsResponse.json()
-          console.log('📦 Resposta da API:', {
-            url: fullUrl,
-            dataLength: Array.isArray(productsData) ? productsData.length : 'não é array',
-            data: productsData
-          });
           setProducts(productsData)
-        } else {
-          console.error('❌ Erro na resposta da API:', {
-            status: productsResponse.status,
-            statusText: productsResponse.statusText,
-            url: fullUrl
-          });
         }
       } catch (error) {
-        console.error('Erro ao carregar produtos:', error)
+        // Erro silencioso
       } finally {
         if (isMounted) {
           setProductsLoading(false)
@@ -262,28 +325,28 @@ export default function CatalogPage() {
         }
       } catch (error) {
         setMaisVendidos([]);
-        console.error('Erro ao carregar mais vendidos:', error);
       }
     };
     fetchMaisVendidos();
   }, []);
 
-  // Algoritmo de busca inteligente (mesmo do header) - com tolerância a erros de ortografia
+  // Algoritmo de busca otimizado (EXATAMENTE igual ao header)
   const performSmartSearch = useMemo(() => {
     return (query: string, products: Product[]) => {
       const normalizedQuery = normalize(query);
       if (!normalizedQuery || !products.length) return [];
       
+      const startTime = performance.now();
       let resultados: Product[] = [];
 
       if (query.startsWith('#')) {
-        // Busca por código
+        // Busca por código - extremamente rápida
         const code = query.replace('#', '').trim();
         resultados = products.filter((prod: Product) => {
           return prod.id?.includes(code);
-        });
+        }).slice(0, 10);
       } else {
-        // Busca por nome - estratégia em camadas para tolerância a erros
+        // Busca por nome - estratégia em camadas
         
         // 1. Busca exata (case insensitive)
         const exactMatch = products.filter(prod => 
@@ -297,32 +360,13 @@ export default function CatalogPage() {
           return words.some(word => word.startsWith(normalizedQuery));
         });
         
-        // 3. Busca por similaridade (para erros de ortografia)
-        const similarityMatch = products.filter(prod => {
-          const nomeNormalizado = normalize(prod.name || '');
-          const queryWords = normalizedQuery.split(' ');
-          const nameWords = nomeNormalizado.split(' ');
-          
-          return queryWords.some(qWord => 
-            nameWords.some(nWord => 
-              // Busca por palavras que contenham pelo menos 70% das letras para tolerância
-              (qWord.length >= 3 && nWord.includes(qWord.slice(0, -1))) ||
-              (nWord.length >= 3 && qWord.includes(nWord.slice(0, -1))) ||
-              // Busca por Levenshtein simples - 1 caractere de diferença
-              (Math.abs(qWord.length - nWord.length) <= 1 && 
-               qWord.slice(0, Math.min(qWord.length, nWord.length) - 1) === 
-               nWord.slice(0, Math.min(qWord.length, nWord.length) - 1))
-            )
-          );
-        });
-        
-        // 4. Combinar resultados e remover duplicatas
-        resultados = [...exactMatch, ...startsWithMatch, ...similarityMatch];
+        // 3. Combinar resultados e remover duplicatas
+        resultados = [...exactMatch, ...startsWithMatch];
         const uniqueResults = resultados.filter((prod, index, self) =>
           index === self.findIndex(p => p.id === prod.id)
-        );
+        ).slice(0, 8);
         
-        // Ordenar por relevância (priorizar produtos do CSV)
+        // Ordenar por relevância (produtos mais vendidos primeiro)
         resultados = uniqueResults.sort((a: Product, b: Product) => {
           // Verificar se estão no CSV de mais vendidos
           const aNoCSV = maisVendidos.some(item => normalize(item.nome) === normalize(a.name || ''));
@@ -335,6 +379,9 @@ export default function CatalogPage() {
           return (a.name || '').localeCompare(b.name || '');
         });
       }
+
+      const endTime = performance.now();
+      console.log(`🔍 Busca no catálogo: "${query}" -> ${resultados.length} resultados em ${(endTime - startTime).toFixed(2)}ms`);
       
       return resultados;
     };
@@ -389,22 +436,79 @@ export default function CatalogPage() {
 
   // Produtos filtrados por categoria e ordenados por mais vendidos (otimizado)
   const produtosFiltrados = useMemo(() => {
+    console.log('🔄 RECALCULANDO produtosFiltrados', { 
+      selectedCategory, 
+      productsLength: products.length,
+      selectedGroup
+    });
+    
     if (!products.length) return [];
     
     // Se estamos usando as novas APIs (com grupo selecionado ou filtros específicos), 
     // os produtos já vem filtrados da API
     if (selectedGroup || (selectedCategory !== "Todos" && selectedCategory !== "Promoções")) {
+      console.log('✅ Usando produtos da API (filtros específicos)');
       return products;
     }
     
     if (selectedCategory === "Todos") {
+      console.log('✅ Categoria TODOS - usando CSV');
       return getProdutosDoCSV(products);
     } else if (selectedCategory === "Promoções") {
-      // Para promoções, filtrar produtos com isOnSale ou originalPrice maior que price
-      const produtosComPromocao = products.filter(p => 
-        p.isOnSale || (p.originalPrice && p.originalPrice > p.price) || 
-        (p.prices?.offerPrice1 && p.prices.offerPrice1 < p.prices.price1)
-      );
+      console.log('🔥 PROCESSANDO CATEGORIA PROMOÇÕES!');
+      // DEBUG: Log inicial
+      console.log(`🔍 FILTRO PROMOÇÕES ATIVADO - Total de produtos: ${products.length}`);
+      console.log(`🔍 Selected Category: ${selectedCategory}`);
+      
+      // Filtrar produtos com ofertas ativas usando a função de cálculo
+      const produtosComPromocao = products.filter(p => {
+        const promotionData = calculatePromotionData(p);
+        
+        // DEBUG: Log detalhado para os primeiros produtos
+        if (products.indexOf(p) < 5) {
+          console.log(`DEBUG ${p.id} - ${p.name}:`, {
+            hasOffers: promotionData.hasOffers,
+            isPromotion: promotionData.isPromotion,
+            bestPrice: promotionData.bestPrice,
+            originalPrice: promotionData.originalPrice,
+            priceSource: promotionData.priceSource,
+            price1: promotionData.price1,
+            price2: promotionData.price2,
+            originalPrice1: promotionData.originalPrice1,
+            originalPrice2: promotionData.originalPrice2,
+            varejoFacilData: p.varejoFacilData?.precos
+          });
+        }
+        
+        // Retornar true se há ofertas (price1 < originalPrice1 OU price2 < originalPrice2)
+        const hasPromotion = promotionData.price1 < promotionData.originalPrice1 || 
+                           (promotionData.originalPrice2 > 0 && promotionData.price2 < promotionData.originalPrice2);
+        
+        if (products.indexOf(p) < 5) {
+          console.log(`   → ${p.name} tem promoção: ${hasPromotion}`);
+        }
+        
+        return hasPromotion || promotionData.isPromotion;
+      });
+      
+      console.log(`🎯 RESULTADO: ${produtosComPromocao.length} produtos em promoção encontrados`);
+      
+      // DEBUG: Mostrar alguns produtos encontrados
+      if (produtosComPromocao.length > 0) {
+        console.log('📋 Primeiros produtos em promoção:', produtosComPromocao.slice(0, 3).map(p => p.name));
+      } else {
+        console.log('❌ ERRO: Nenhum produto em promoção encontrado!');
+        // Verificar se pelo menos um produto tem dados de promoção
+        const temDadosVarejoFacil = products.filter(p => p.varejoFacilData?.precos).length;
+        console.log(`📊 Produtos com dados varejoFacilData.precos: ${temDadosVarejoFacil}`);
+        
+        const temOfertas = products.filter(p => 
+          p.varejoFacilData?.precos?.precoOferta1 > 0 || 
+          p.varejoFacilData?.precos?.precoOferta2 > 0
+        ).length;
+        console.log(`💰 Produtos com ofertas nos dados: ${temOfertas}`);
+      }
+      
       return getProdutosDoCSV(produtosComPromocao);
     } else {
       return products;
@@ -429,14 +533,32 @@ export default function CatalogPage() {
 
   // Busca inteligente nos produtos (com tolerância a erros de ortografia)
   const filteredProducts = useMemo(() => {
-    // Se há grupo selecionado ou não há busca, usar produtos já filtrados
-    if (selectedGroup || !searchTerm) {
-      return produtosParaExibir;
+    console.log('🔍 Calculando filteredProducts:', { 
+      searchTerm, 
+      selectedGroup, 
+      selectedCategory, 
+      productsLength: products.length, 
+      produtosFiltradosLength: produtosFiltrados.length 
+    });
+    
+    // Se há busca e estamos usando a API (com grupo ou categoria específica), 
+    // os produtos já vêm filtrados da API
+    if (searchTerm && (selectedGroup || selectedCategory !== 'Todos')) {
+      console.log('✅ Usando produtos da API (já filtrados):', products.length);
+      return products; // Produtos já filtrados pela API
     }
     
-    // Usar a busca inteligente que tolera erros de ortografia
-    return performSmartSearch(searchTerm, produtosFiltrados);
-  }, [produtosFiltrados, searchTerm, selectedGroup, performSmartSearch, produtosParaExibir]);
+    // Se há busca mas sem filtros específicos, usar busca inteligente local
+    if (searchTerm) {
+      const searchResults = performSmartSearch(searchTerm, produtosFiltrados);
+      console.log('✅ Usando busca inteligente local:', searchResults.length, 'de', produtosFiltrados.length);
+      return searchResults;
+    }
+    
+    // Se não há busca, usar produtos com paginação
+    console.log('✅ Usando produtos com paginação:', produtosParaExibir.length);
+    return produtosParaExibir;
+  }, [searchTerm, selectedGroup, selectedCategory, products, performSmartSearch, produtosFiltrados, produtosParaExibir]);
 
   // useEffect para buscar parâmetros da URL - Corrrigido para evitar o erro React #423
   useEffect(() => {
@@ -445,13 +567,24 @@ export default function CatalogPage() {
     const qParam = urlParams.get('q');
     const categoryParam = urlParams.get('category');
     const groupParam = urlParams.get('groupId') || urlParams.get('group');
+    const typeParam = urlParams.get('type');
+    
+    console.log('📊 PARÂMETROS DA URL:', { searchParam, qParam, categoryParam, groupParam, typeParam });
+    console.log('🌍 URL completa:', window.location.href);
     
     if (categoryParam) {
-      console.log('📋 Parâmetro de categoria da URL:', categoryParam);
+      console.log(`🎯 Definindo categoria para: ${categoryParam}`);
       setSelectedCategory(categoryParam);
+      
+      // Se categoria é Promoções, forçar atualização
+      if (categoryParam === 'Promoções') {
+        console.log('🔥 CATEGORIA PROMOÇÕES DETECTADA NA URL!');
+        setTimeout(() => {
+          console.log('🔄 Forçando re-render para categoria Promoções');
+        }, 100);
+      }
     }
     if (groupParam) {
-      console.log('🏷️ Parâmetro de grupo da URL:', groupParam);
       setSelectedGroup(groupParam);
       // Buscar nome do grupo se categoria já estiver definida
       if (categoryParam || selectedCategory !== "Todos") {
@@ -509,7 +642,6 @@ export default function CatalogPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-orange-50 page-transition" style={{ overflow: 'visible' }}>
       <Header 
         onToggleSidebar={() => {
-          console.log('🔄 Toggle sidebar chamado! Estado atual:', isSidebarOpen);
           setIsSidebarOpen(!isSidebarOpen);
         }}
         showDepartmentsButton={true}

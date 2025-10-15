@@ -34,8 +34,7 @@ export default function OrdersPage() {
     
     const loadOrders = async () => {
       try {
-        console.log('🔍 Carregando pedidos...')
-        console.log('👤 Usuário atual:', user)
+
         
         // Se não há usuário logado, não carregar pedidos
         if (!user) {
@@ -45,7 +44,7 @@ export default function OrdersPage() {
           return
         }
 
-        console.log('👤 Dados completos do usuário:', JSON.stringify(user, null, 2))
+
 
         // Fazer requisição com o ID do usuário logado
         let url = `/api/orders?userId=${user.id}`
@@ -60,7 +59,7 @@ export default function OrdersPage() {
           url += `&userEmail=${encodeURIComponent(user.email)}`
         }
         
-        console.log('🌐 Fazendo requisição para:', url)
+
         
         const response = await fetch(url)
         console.log('📡 Status da resposta:', response.status)

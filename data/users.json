@@ -8,7 +8,7 @@
     "role": "admin",
     "createdAt": "2025-01-27T10:00:00.000Z",
     "orders": 0,
-    "updatedAt": "2025-10-02T12:13:56.649Z",
+    "updatedAt": "2025-10-09T14:22:14.373Z",
     "address": {
       "street": "rua avenida",
       "number": "1111qhhaha",
@@ -31,45 +31,6 @@
     "orders": 0
   },
   {
-    "id": "1753642224890",
-    "name": "José Arimatéa Costa Alexandre",
-    "email": "Aryalexandre430@gmail.com",
-    "phone": "85986992962",
-    "password": "8de1b0e28dd35b13024f6f552efc124918cf3f1097bb4ba0a299c25994161ba1",
-    "role": "user",
-    "createdAt": "2025-07-27T18:50:24.890Z",
-    "orders": 0
-  },
-  {
-    "id": "1753751332283",
-    "name": "JOSE ARIMATEA COSTA ALEXANDRE",
-    "email": "admin@gmail.com",
-    "phone": "(11) 11111-1111",
-    "password": "61be55a8e2f6b4e172338bddf184d6dbee29c98853e0a0485ecee7f27b9af0b4",
-    "role": "user",
-    "createdAt": "2025-07-29T01:08:52.283Z"
-  },
-  {
-    "id": "1754863783274",
-    "name": "Teste",
-    "email": "teste@gmail.com",
-    "phone": "8888888888",
-    "password": "289160db0d9f39f9ae1754c4ec9c16f90b50e32e09c5fb5481ae642b3d3d1a36",
-    "address": {
-      "street": "Rua Coronel Luiz David de Souza",
-      "number": "72",
-      "complement": "Apto",
-      "neighborhood": "Presidente Kennedy",
-      "city": "Fortaleza",
-      "state": "CE",
-      "zipCode": "60355-337",
-      "reference": "a"
-    },
-    "role": "user",
-    "createdAt": "2025-08-10T22:09:43.275Z",
-    "orders": 0
-  },
-  {
     "id": "1755038191107",
     "name": "José Arimatéa Costa Alexandre",
     "email": "aryalexandre430@gmail.com",
@@ -85,29 +46,10 @@
       "zipCode": "60355-337",
       "reference": "Charlespedras"
     },
-    "role": "user",
+    "role": "admin",
     "createdAt": "2025-08-12T22:36:31.107Z",
-    "orders": 0
-  },
-  {
-    "id": "1755967646275",
-    "name": "conta 100 porcento de teste",
-    "email": "seu@gmail.com",
-    "phone": "85988286178",
-    "password": "33a5dc2f4c65ed3f7155af1f9e15b30e2ff796433392a348275f579222d0a677",
-    "address": {
-      "street": "Rua Coronel Correia",
-      "number": "382",
-      "complement": "Apto",
-      "neighborhood": "Padre Julio Maria",
-      "city": "Caucaia",
-      "state": "CE",
-      "zipCode": "61610-000",
-      "reference": "a"
-    },
-    "role": "user",
-    "createdAt": "2025-08-23T16:47:26.275Z",
-    "orders": 0
+    "orders": 0,
+    "updatedAt": "2025-10-09T13:05:06.793Z"
   },
   {
     "id": "1757169940764",
@@ -124,46 +66,6 @@
     "city": "Fortaleza",
     "zipCode": "60356-001",
     "updatedAt": "2025-09-30T14:02:08.308Z"
-  },
-  {
-    "id": "1757191116613",
-    "name": "Teste Usuario",
-    "email": "teste_1757191115647@exemplo.com",
-    "phone": "85999999999",
-    "password": "teste123",
-    "address": {
-      "street": "Rua Teste",
-      "number": "123",
-      "complement": "",
-      "neighborhood": "Bairro Teste",
-      "city": "Fortaleza",
-      "state": "CE",
-      "zipCode": "60000000",
-      "reference": ""
-    },
-    "role": "user",
-    "createdAt": "2025-09-06T20:38:36.613Z",
-    "orders": 0
-  },
-  {
-    "id": "1757250477675",
-    "name": "aaaaaaaaaaaa",
-    "email": "a@gmsil.com",
-    "phone": "85555555555",
-    "password": "323db22657c4c06ee2b86c734fdbf1de4fc182fd48a1effb3272f556fef327e4",
-    "address": {
-      "street": "Avenida Mister Hull",
-      "number": "2933",
-      "complement": "AP 1401B VIOLET",
-      "neighborhood": "Presidente Kennedy",
-      "city": "Fortaleza",
-      "state": "CE",
-      "zipCode": "60356-001",
-      "reference": "Ap harmony"
-    },
-    "role": "user",
-    "createdAt": "2025-09-07T13:07:57.676Z",
-    "orders": 0
   },
   {
     "id": "admin-atacadao",
@@ -206,26 +108,6 @@
     "orders": 0
   },
   {
-    "id": "1757540952215",
-    "name": "JOSE ARIMATEA COSTA ALEXANDRE",
-    "email": "davikalebe20020602@gmail.sss",
-    "phone": "85988286178",
-    "password": "036a046a04b2758786984acebea5e1f46e99842147418cd5651aa24d3b6f7f36",
-    "address": {
-      "street": "Rua Coronel Luiz David de Souza",
-      "number": "72",
-      "complement": "Apto",
-      "neighborhood": "Presidente Kennedy",
-      "city": "Fortaleza",
-      "state": "CE",
-      "zipCode": "60355-337",
-      "reference": ""
-    },
-    "role": "user",
-    "createdAt": "2025-09-10T21:49:12.216Z",
-    "orders": 0
-  },
-  {
     "id": "1757683868624",
     "name": "Osmilton Almeida",
     "email": "josmiltonalmeida@gmail.com",
@@ -247,81 +129,46 @@
     "orders": 0
   },
   {
-    "id": "1757777933504",
+    "id": "1760012524939",
     "name": "Davi Kalebe de Vasconcelos Alexandre",
     "email": "davikalebe20020602@gmail.com",
     "phone": "(85) 98828-6178",
     "password": "1e0517c7611bbd353113d08955b48fea7d9e9093ae68520c0a729d60a4d95b80",
     "address": {
       "street": "Rua Coronel Correia",
-      "number": "38222",
-      "complement": "apto",
-      "neighborhood": "Parangaba",
+      "number": "382",
+      "complement": "casa",
+      "neighborhood": "Parque Soledade",
       "city": "Caucaia",
       "state": "CE",
       "zipCode": "61603-005",
-      "reference": "ACULA"
+      "reference": "No charles pedras"
     },
     "role": "admin",
     "provider": "google",
-    "createdAt": "2025-09-13T15:38:53.504Z",
+    "createdAt": "2025-10-09T12:22:04.939Z",
     "orders": 0,
-    "updatedAt": "2025-10-02T12:10:39.042Z"
+    "updatedAt": "2025-10-09T14:23:30.908Z"
   },
   {
-    "id": "1758386807801",
-    "name": "Usuario de teste para admin",
-    "email": "adminzinho",
-    "role": "admin",
-    "createdAt": "2025-09-20T16:46:47.801Z",
-    "status": "active"
-  },
-  {
-    "id": "1758387729991",
-    "name": "adminzinho 2",
-    "email": "adminzinho 2",
-    "role": "admin",
-    "createdAt": "2025-09-20T17:02:09.991Z",
-    "status": "active",
-    "phone": "",
+    "id": "1760207140155",
+    "name": "ALEJANDRO EMILLY",
+    "email": "aleemilly2006@gmail.com",
+    "phone": "(85) 99759-0687",
+    "password": "08413636c4b87ce8eec4fb94dda334dc1fc0e49e164d05ab3e303d28a7d9b225",
     "address": {
-      "street": "",
-      "number": "",
-      "complement": "",
-      "neighborhood": "",
-      "city": "",
-      "state": "",
-      "zipCode": ""
-    },
-    "updatedAt": "2025-09-20T17:03:37.228Z"
-  },
-  {
-    "id": "1758387845726",
-    "name": "amin",
-    "email": "amin",
-    "role": "user",
-    "createdAt": "2025-09-20T17:04:05.726Z",
-    "status": "active"
-  },
-  {
-    "id": "1758400802597",
-    "name": "Presidente kenede",
-    "email": "davikalebe20020602@gmail.caaaom",
-    "phone": "85988286171",
-    "password": "14ce27c896e1d01db9abef10f8ba8a3b3735f4b3ebe75a9cc470b2e30ed68cb1",
-    "address": {
-      "street": "Avenida Mister Hull",
-      "number": "6625",
-      "complement": "aprto",
-      "neighborhood": "Presidente Kennedy",
+      "street": "Avenida Major Assis",
+      "number": "3186",
+      "complement": "Casa",
+      "neighborhood": "Vila Velha",
       "city": "Fortaleza",
       "state": "CE",
-      "zipCode": "60356-001",
-      "reference": "a"
+      "zipCode": "60345-632",
+      "reference": "Próx ao antigo GPM "
     },
     "role": "user",
-    "createdAt": "2025-09-20T20:40:02.597Z",
-    "orders": 0,
-    "updatedAt": "2025-09-20T22:28:18.254Z"
+    "provider": "google",
+    "createdAt": "2025-10-11T18:25:40.155Z",
+    "orders": 0
   }
 ]

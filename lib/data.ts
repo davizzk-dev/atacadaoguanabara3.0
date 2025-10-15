@@ -16,6 +16,22 @@ export const categories = ['Todos', 'Eletrônicos', 'Roupas', 'Casa', 'Esportes'
 // Caminho para o arquivo products.json
 const productsFilePath = path.join(process.cwd(), 'data', 'products.json')
 
+// Caminho para o arquivo products2.json (backup)
+const products2FilePath = path.join(process.cwd(), 'data', 'products2.json')
+
+// Estado global para controlar se estamos usando backup
+let usingBackupFile = false
+let lastBackupUsedTime = 0
+
+// Função para obter status do sistema de arquivos
+export const getSystemFileStatus = () => {
+  return {
+    usingBackupFile,
+    lastBackupUsedTime,
+    backupUsedRecently: lastBackupUsedTime > 0 && (Date.now() - lastBackupUsedTime) < 300000, // 5 minutos
+  }
+}
+
 // Função para garantir que o arquivo products.json existe
 const ensureFileExists = async () => {
   try {
@@ -26,59 +42,92 @@ const ensureFileExists = async () => {
   }
 }
 
-// Função para obter produtos do arquivo JSON (fonte primária)
+// Função para obter produtos do arquivo JSON (fonte primária com fallback)
 export const getProductsFromFile = async () => {
   try {
-    console.log('📂 Lendo produtos do arquivo JSON...')
-    console.log('📂 Caminho completo:', productsFilePath)
+    console.log('📂 Iniciando leitura de produtos...')
     
-    // Verificar se o arquivo existe
+    // Reset estado global
+    usingBackupFile = false
+    
+    // PRIORIDADE 1: SEMPRE tentar products.json primeiro
+    console.log('� Tentando carregar products.json (PRINCIPAL)...')
+    
     try {
+      // Verificar se products.json existe
       await fs.access(productsFilePath)
-      console.log('✅ Arquivo products.json encontrado')
-    } catch {
-      console.log('❌ Arquivo products.json não encontrado')
-      return []
+      console.log('✅ products.json encontrado')
+      
+      // Ler products.json
+      const productsData = await fs.readFile(productsFilePath, 'utf8')
+      console.log(`📄 Tamanho: ${productsData.length} chars`)
+      
+      // Verificar se não está vazio
+      if (productsData.trim()) {
+        const products = JSON.parse(productsData)
+        
+        // Verificar se é array válido com produtos
+        if (Array.isArray(products) && products.length > 0) {
+          console.log(`✅ SUCCESS: ${products.length} produtos carregados do products.json (PRINCIPAL)`)
+          
+          // Verificar se são dados do Varejo Fácil
+          const first = products[0]
+          if (first?.varejoFacilData) {
+            console.log('✅ Dados do Varejo Fácil detectados (PRINCIPAL)')
+          }
+          
+          return products
+        }
+      }
+      
+      // Se chegou aqui, products.json existe mas está vazio/inválido
+      console.log('⚠️ products.json existe mas está vazio/inválido')
+      throw new Error('Arquivo principal vazio ou inválido')
+      
+    } catch (primaryError) {
+      // PRIORIDADE 2: Só usar backup se principal falhou
+      console.log('❌ products.json falhou:', primaryError instanceof Error ? primaryError.message : String(primaryError))
+      console.log('� Tentando products2.json (BACKUP)...')
+      
+      try {
+        await fs.access(products2FilePath)
+        console.log('✅ products2.json encontrado')
+        
+        const backupData = await fs.readFile(products2FilePath, 'utf8')
+        console.log(`📄 Backup tamanho: ${backupData.length} chars`)
+        
+        if (backupData.trim()) {
+          const backupProducts = JSON.parse(backupData)
+          
+          if (Array.isArray(backupProducts) && backupProducts.length > 0) {
+            // ATIVAR MODO BACKUP
+            usingBackupFile = true
+            lastBackupUsedTime = Date.now()
+            
+            console.log('🚨 ATENÇÃO: USANDO BACKUP!')
+            console.log(`🔥 ${backupProducts.length} produtos carregados do products2.json (BACKUP)`)
+            
+            // Alertas críticos para admin
+            console.error('🚨🚨🚨 ADMIN: SISTEMA USANDO BACKUP! 🚨🚨🚨')
+            console.error(`🚨 Motivo: ${primaryError instanceof Error ? primaryError.message : String(primaryError)}`)
+            console.error('🚨 Verifique products.json e execute sincronização!')
+            
+            return backupProducts
+          }
+        }
+        
+        console.error('❌ Backup também está vazio/inválido')
+        return []
+        
+      } catch (backupError) {
+        console.error('❌ Backup também falhou:', backupError instanceof Error ? backupError.message : String(backupError))
+        console.error('🚨 SITUAÇÃO CRÍTICA: Nenhum arquivo de produtos válido!')
+        return []
+      }
     }
     
-    const productsData = await fs.readFile(productsFilePath, 'utf8')
-    console.log(`📄 Tamanho do arquivo: ${productsData.length} caracteres`)
-    
-    if (productsData.trim() === '') {
-      console.log('⚠️ Arquivo está vazio')
-      return []
-    }
-    
-    const fileProducts = JSON.parse(productsData)
-    console.log(`📦 Produtos parseados do JSON: ${fileProducts.length}`)
-    
-    // Verificar se é um array válido
-    if (!Array.isArray(fileProducts)) {
-      console.error('❌ Arquivo não contém um array válido de produtos')
-      return []
-    }
-    
-    // Se o arquivo está vazio, retornar array vazio
-    if (fileProducts.length === 0) {
-      console.log('⚠️ Array de produtos está vazio')
-      return []
-    }
-    
-    // Verificar se são produtos do Varejo Fácil (têm varejoFacilData)
-    const firstProduct = fileProducts[0]
-    if (firstProduct && firstProduct.varejoFacilData) {
-      console.log('✅ Produtos são do Varejo Fácil (products.json)')
-      console.log(`   - Código interno: ${firstProduct.varejoFacilData.codigoInterno}`)
-    } else {
-      console.log('⚠️ Produtos não parecem ser do Varejo Fácil')
-      console.log('   - Primeiro produto:', firstProduct ? firstProduct.name : 'null')
-    }
-    
-    console.log(`✅ Retornando ${fileProducts.length} produtos do arquivo`)
-    return fileProducts
   } catch (error) {
-    console.error('❌ Erro ao ler produtos do arquivo:', error)
-    console.error('❌ Detalhes do erro:', error.message)
+    console.error('❌ ERRO GERAL na leitura de produtos:', error instanceof Error ? error.message : String(error))
     return []
   }
 }
@@ -151,16 +200,39 @@ export const updateProductInFile = async (productId: string, updatedProduct: any
     }
     
     // Preservar o ID original
-    products[productIndex] = { 
+    const updatedProductData = { 
       ...products[productIndex], 
       ...updatedProduct,
       id: productId // Garantir que o ID não seja alterado
     }
+    products[productIndex] = updatedProductData
     
     // Salvar no products.json
     await fs.writeFile(productsFilePath, JSON.stringify(products, null, 2))
+    console.log(`✅ Produto ${productId} atualizado no products.json`)
     
-    return { success: true, message: 'Produto atualizado com sucesso!' }
+    // Também atualizar no products2.json (backup) se existir
+    try {
+      const products2Data = await fs.readFile(products2FilePath, 'utf8')
+      let products2 = JSON.parse(products2Data)
+      
+      const productIndex2 = products2.findIndex((p: any) => p.id === productId)
+      if (productIndex2 !== -1) {
+        products2[productIndex2] = updatedProductData
+        await fs.writeFile(products2FilePath, JSON.stringify(products2, null, 2))
+        console.log(`✅ Produto ${productId} atualizado no products2.json (backup)`)
+      } else {
+        console.log(`⚠️ Produto ${productId} não encontrado no backup, adicionando...`)
+        products2.push(updatedProductData)
+        await fs.writeFile(products2FilePath, JSON.stringify(products2, null, 2))
+        console.log(`✅ Produto ${productId} adicionado ao products2.json (backup)`)
+      }
+    } catch (backupError) {
+      console.log('ℹ️ products2.json não existe ou erro ao atualizar backup:', backupError instanceof Error ? backupError.message : String(backupError))
+      // Não falhar se o backup não existir
+    }
+    
+    return { success: true, message: 'Produto atualizado com sucesso nos arquivos principal e backup!' }
   } catch (error) {
     console.error('Erro ao atualizar produto:', error)
     return { success: false, message: `Erro ao atualizar produto: ${error}` }

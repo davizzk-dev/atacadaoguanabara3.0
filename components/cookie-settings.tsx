@@ -6,9 +6,10 @@ import { X, Settings, Shield, BarChart3, Megaphone } from 'lucide-react'
 interface CookieSettingsProps {
   isOpen: boolean
   onClose: () => void
+  onSaveAndClose?: () => void
 }
 
-export default function CookieSettings({ isOpen, onClose }: CookieSettingsProps) {
+export default function CookieSettings({ isOpen, onClose, onSaveAndClose }: CookieSettingsProps) {
   const [settings, setSettings] = useState({
     necessary: true, // Sempre true, não pode ser desabilitado
     analytics: localStorage.getItem('cookie_analytics') === 'true',
@@ -19,7 +20,11 @@ export default function CookieSettings({ isOpen, onClose }: CookieSettingsProps)
     localStorage.setItem('cookie_analytics', settings.analytics.toString())
     localStorage.setItem('cookie_marketing', settings.marketing.toString())
     localStorage.setItem('cookie_settings_saved', 'true')
+    localStorage.setItem('cookie_consent', 'true') // ✅ Definir consentimento como dado
     onClose()
+    if (onSaveAndClose) {
+      onSaveAndClose() // ✅ Notificar o banner para fechar
+    }
   }
 
   const handleAcceptAll = () => {

@@ -54,7 +54,7 @@ async function fetchCompleteUserData(email: string, setUser: any, sessionUser: a
           name: userData.name || sessionUser.name || '',
           email: userData.email || sessionUser.email || '',
           phone: userData.phone || '',
-          role: (userData.role || sessionUser.role || 'user') as 'user' | 'admin',
+          role: (userData.role || sessionUser.role || 'user') as 'user' | 'atendente' | 'gerente' | 'admin' | 'programador',
           address: userData.address || undefined,
           provider: userData.provider || 'google',
         })
@@ -69,7 +69,7 @@ async function fetchCompleteUserData(email: string, setUser: any, sessionUser: a
       name: sessionUser.name || '',
       email: sessionUser.email || '',
       phone: '',
-      role: (sessionUser.role || 'user') as 'user' | 'admin',
+      role: (sessionUser.role || 'user') as 'user' | 'atendente' | 'gerente' | 'admin' | 'programador',
       address: undefined,
     })
   } catch (error) {
@@ -81,7 +81,7 @@ async function fetchCompleteUserData(email: string, setUser: any, sessionUser: a
       name: sessionUser.name || '',
       email: sessionUser.email || '',
       phone: '',
-      role: (sessionUser.role || 'user') as 'user' | 'admin',
+      role: (sessionUser.role || 'user') as 'user' | 'atendente' | 'gerente' | 'admin' | 'programador',
       address: undefined,
     })
   }

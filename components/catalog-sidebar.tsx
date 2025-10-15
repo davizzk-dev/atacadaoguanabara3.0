@@ -91,12 +91,12 @@ export default function CatalogSidebar({
 
       {/* Sidebar Principal */}
       <div className={`
-        fixed top-0 left-0 h-full w-80 bg-white shadow-2xl z-[100]
-        transform transition-all duration-300 ease-out border-r border-gray-100
+        fixed top-0 left-0 h-screen w-80 bg-white shadow-2xl z-[100]
+        transform transition-all duration-300 ease-out border-r border-gray-100 flex flex-col
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         {/* Header Simples */}
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-4">
+        <div className="flex-shrink-0 bg-white border-b border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-gray-800 font-semibold text-lg">Categorias</h2>
             <Button
@@ -111,8 +111,8 @@ export default function CatalogSidebar({
         </div>
 
         {/* Lista de Categorias */}
-        <div className="h-full overflow-y-auto pb-6">
-          <div className="p-4 space-y-3">
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 space-y-3 pb-8">
             
             {/* Categoria Todos */}
             <button

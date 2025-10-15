@@ -44,7 +44,7 @@ export function SessionSync() {
             name: session.user.name || '',
             email: session.user.email || '',
             phone: '',
-            role: (session.user.role as 'user' | 'admin') || 'user',
+            role: (session.user.role as 'user' | 'atendente' | 'gerente' | 'admin' | 'programador') || 'user',
           })
         } catch (error) {
           console.error('Erro ao buscar dados do usuário:', error)
@@ -53,7 +53,7 @@ export function SessionSync() {
             name: session.user.name || '',
             email: session.user.email || '',
             phone: '',
-            role: (session.user.role as 'user' | 'admin') || 'user',
+            role: (session.user.role as 'user' | 'atendente' | 'gerente' | 'admin' | 'programador') || 'user',
           })
         }
       }

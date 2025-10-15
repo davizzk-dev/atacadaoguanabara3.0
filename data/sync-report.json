@@ -1,0 +1,24 @@
+{
+  "timestamp": "2025-10-11T19:03:27.733Z",
+  "produtos": {
+    "total": 6658,
+    "comPreco": 5145,
+    "comEstoque": 2192,
+    "comOferta": 21
+  },
+  "fontes": {
+    "produtos": 6658,
+    "precos": 6658,
+    "estoques": 6323,
+    "secoes": 15,
+    "marcas": 3,
+    "generos": 100,
+    "grupos": 106
+  },
+  "debug": {
+    "produtosProcessados": 6658,
+    "produtosComEstoque": 2192,
+    "produtosComPreco": 5145,
+    "lotesEstoque": 14
+  }
+}

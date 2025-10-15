@@ -1,0 +1,189 @@
+[
+  {
+    "id": "admin-user",
+    "name": "Administrador",
+    "email": "admin",
+    "phone": "",
+    "password": "c9033f6d0721998f6b8e52fdfe2f8ca388629e360d3878d289e7fe3a2761f6bd",
+    "role": "admin",
+    "createdAt": "2025-01-27T10:00:00.000Z",
+    "orders": 0,
+    "updatedAt": "2025-10-02T12:13:56.649Z",
+    "address": {
+      "street": "rua avenida",
+      "number": "1111qhhaha",
+      "complement": "111111111111",
+      "neighborhood": "Genibau",
+      "city": "cidaddeeeddde",
+      "state": "CE",
+      "zipCode": "625004101111111111111",
+      "reference": "Atacadão Guanabaraaa"
+    }
+  },
+  {
+    "id": "admin",
+    "name": "Administrador",
+    "email": "adminn",
+    "phone": "85985147067",
+    "password": "a47eb1cf4bfff2cfc6b7fe0566e21c047939190ae31dad905d6773b218222856",
+    "role": "admin",
+    "createdAt": "2025-07-20T01:02:50.937Z",
+    "orders": 0
+  },
+  {
+    "id": "1753642224890",
+    "name": "José Arimatéa Costa Alexandre",
+    "email": "Aryalexandre430@gmail.com",
+    "phone": "85986992962",
+    "password": "8de1b0e28dd35b13024f6f552efc124918cf3f1097bb4ba0a299c25994161ba1",
+    "role": "user",
+    "createdAt": "2025-07-27T18:50:24.890Z",
+    "orders": 0
+  },
+  {
+    "id": "1753751332283",
+    "name": "JOSE ARIMATEA COSTA ALEXANDRE",
+    "email": "admin@gmail.com",
+    "phone": "(11) 11111-1111",
+    "password": "61be55a8e2f6b4e172338bddf184d6dbee29c98853e0a0485ecee7f27b9af0b4",
+    "role": "user",
+    "createdAt": "2025-07-29T01:08:52.283Z"
+  },
+  {
+    "id": "1755038191107",
+    "name": "José Arimatéa Costa Alexandre",
+    "email": "aryalexandre430@gmail.com",
+    "phone": "85986992962",
+    "password": "79eaf8a94645128c07e849c26fab47b7c712c3e6faf2f607c387f64e4d7ebcba",
+    "address": {
+      "street": "Rua Coronel Luiz David de Souza",
+      "number": "382",
+      "complement": "Casa",
+      "neighborhood": "Presidente Kennedy",
+      "city": "Fortaleza",
+      "state": "CE",
+      "zipCode": "60355-337",
+      "reference": "Charlespedras"
+    },
+    "role": "user",
+    "createdAt": "2025-08-12T22:36:31.107Z",
+    "orders": 0
+  },
+  {
+    "id": "1757169940764",
+    "name": "Guilherme Oliveira",
+    "email": "guilhermevasconcelosguilhermeg@gmail.com",
+    "phone": "85986124380",
+    "password": "c9033f6d0721998f6b8e52fdfe2f8ca388629e360d3878d289e7fe3a2761f6bd",
+    "address": "Avenida Mister Hull",
+    "role": "user",
+    "provider": "google",
+    "createdAt": "2025-09-06T14:45:40.764Z",
+    "orders": 0,
+    "neighborhood": "Presidente Kennedy",
+    "city": "Fortaleza",
+    "zipCode": "60356-001",
+    "updatedAt": "2025-09-30T14:02:08.308Z"
+  },
+  {
+    "id": "1757191116613",
+    "name": "Teste Usuario",
+    "email": "teste_1757191115647@exemplo.com",
+    "phone": "85999999999",
+    "password": "teste123",
+    "address": {
+      "street": "Rua Teste",
+      "number": "123",
+      "complement": "",
+      "neighborhood": "Bairro Teste",
+      "city": "Fortaleza",
+      "state": "CE",
+      "zipCode": "60000000",
+      "reference": ""
+    },
+    "role": "user",
+    "createdAt": "2025-09-06T20:38:36.613Z",
+    "orders": 0
+  },
+  {
+    "id": "admin-atacadao",
+    "name": "Administrador Sistema",
+    "email": "admin@atacadao.com",
+    "phone": "85999999999",
+    "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+    "address": {
+      "street": "Rua Admin",
+      "number": "123",
+      "complement": "",
+      "neighborhood": "Centro",
+      "city": "Fortaleza",
+      "state": "CE",
+      "zipCode": "60000000",
+      "reference": ""
+    },
+    "role": "admin",
+    "createdAt": "2025-09-09T17:22:29.469Z",
+    "orders": 0
+  },
+  {
+    "id": "1757459611086",
+    "name": "Guilherme Do gta legal",
+    "email": "guilhermevasconcelosfort@gmail.com",
+    "phone": "85986124380",
+    "password": "c9033f6d0721998f6b8e52fdfe2f8ca388629e360d3878d289e7fe3a2761f6bd",
+    "address": {
+      "street": "Rua Antônio Arruda",
+      "number": "1170",
+      "complement": "Loja",
+      "neighborhood": "Vila Velha",
+      "city": "Fortaleza",
+      "state": "CE",
+      "zipCode": "60347-255",
+      "reference": ""
+    },
+    "role": "user",
+    "createdAt": "2025-09-09T23:13:31.087Z",
+    "orders": 0
+  },
+  {
+    "id": "1757540952215",
+    "name": "JOSE ARIMATEA COSTA ALEXANDRE",
+    "email": "davikalebe20020602@gmail.sss",
+    "phone": "85988286178",
+    "password": "036a046a04b2758786984acebea5e1f46e99842147418cd5651aa24d3b6f7f36",
+    "address": {
+      "street": "Rua Coronel Luiz David de Souza",
+      "number": "72",
+      "complement": "Apto",
+      "neighborhood": "Presidente Kennedy",
+      "city": "Fortaleza",
+      "state": "CE",
+      "zipCode": "60355-337",
+      "reference": ""
+    },
+    "role": "user",
+    "createdAt": "2025-09-10T21:49:12.216Z",
+    "orders": 0
+  },
+  {
+    "id": "1757683868624",
+    "name": "Osmilton Almeida",
+    "email": "josmiltonalmeida@gmail.com",
+    "phone": "",
+    "password": "",
+    "address": {
+      "street": "Povoado Imbé",
+      "number": "5",
+      "complement": "depois da igreja católica ",
+      "neighborhood": "Imbé",
+      "city": "Acaraú",
+      "state": "CE",
+      "zipCode": "62580-000",
+      "reference": "rua da cagece"
+    },
+    "role": "user",
+    "provider": "google",
+    "createdAt": "2025-09-12T13:31:08.624Z",
+    "orders": 0
+  }
+]

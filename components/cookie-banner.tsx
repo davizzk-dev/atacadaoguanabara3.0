@@ -29,6 +29,11 @@ export default function CookieBanner() {
     setIsVisible(false)
   }
 
+  const handleSavePreferences = () => {
+    setIsVisible(false)
+    setShowSettings(false)
+  }
+
   if (!isVisible) return null
 
   return (
@@ -74,7 +79,8 @@ export default function CookieBanner() {
 
       <CookieSettings 
         isOpen={showSettings} 
-        onClose={() => setShowSettings(false)} 
+        onClose={() => setShowSettings(false)}
+        onSaveAndClose={handleSavePreferences}
       />
     </>
   )

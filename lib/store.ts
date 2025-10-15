@@ -54,6 +54,21 @@ export const useCartStore = create<CartStore>()(
       items: [],
       addItem: (product) => {
         const items = get().items
+        
+        // Para produtos de peso, sempre adicionar como item único
+        if ((product as any).isWeightProduct || (product as any).weightInGrams) {
+          // Criar um ID único para produtos de peso incluindo a gramatura
+          const uniqueId = `${product.id}-${(product as any).weightInGrams || 'weight'}-${Date.now()}`
+          const weightProduct = {
+            ...product,
+            id: uniqueId,
+            originalId: product.id
+          }
+          set({ items: [...items, { product: weightProduct, quantity: 1 }] })
+          return
+        }
+        
+        // Para produtos normais, agrupar por ID como antes
         const existingItem = items.find((item) => item.product.id === product.id)
 
         if (existingItem) {

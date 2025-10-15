@@ -12,7 +12,8 @@ import {
   BarChart3, TrendingUp, Activity, Globe, Store,
   MessageCircle, Camera, RefreshCw, RotateCcw,
   CheckCircle, AlertCircle, Clock, Zap, Star, Tag,
-  PieChart, BarChart, ImageIcon, Upload, Smartphone
+  PieChart, BarChart, ImageIcon, Upload, Smartphone,
+  Truck, MapPin
 } from 'lucide-react'
 
 // Hook personalizado para debounce
@@ -92,7 +93,7 @@ interface User {
   name: string
   email: string
   phone?: string
-  role: 'user' | 'manager' | 'admin'
+  role: 'user' | 'atendente' | 'gerente' | 'admin' | 'programador'
   address?: {
     street: string
     number: string
@@ -115,6 +116,34 @@ interface Feedback {
   status: 'pending' | 'reviewed' | 'resolved'
   userId?: string
   category?: string
+}
+
+// Sistema de permissões por role
+const ROLE_PERMISSIONS = {
+  user: [],
+  atendente: ['orders'], // Apenas pedidos
+  gerente: ['orders', 'dashboard', 'products', 'users', 'delivery-settings', 'varejo-facil'], // Pedidos, Dashboard, Produtos, Usuários, Config Entrega, Varejo Fácil
+  admin: ['dashboard', 'analytics', 'products', 'orders', 'users', 'feedback', 'camera-requests', 'returns', 'varejo-facil', 'promotions', 'delivery-settings'], // Tudo exceto programação
+  programador: ['dashboard', 'analytics', 'products', 'orders', 'users', 'feedback', 'camera-requests', 'returns', 'varejo-facil', 'promotions', 'delivery-settings', 'system', 'logs'] // Tudo incluindo sistema
+}
+
+const ROLE_NAMES = {
+  user: 'Cliente',
+  atendente: 'Atendente',
+  gerente: 'Gerente', 
+  admin: 'Administrador',
+  programador: 'Programador'
+}
+
+// Função para verificar se o usuário tem permissão para uma seção
+const hasPermission = (userRole: string, section: string): boolean => {
+  const permissions = ROLE_PERMISSIONS[userRole as keyof typeof ROLE_PERMISSIONS] || []
+  return permissions.includes(section)
+}
+
+// Função para obter seções disponíveis para o usuário
+const getAvailableSections = (userRole: string): string[] => {
+  return ROLE_PERMISSIONS[userRole as keyof typeof ROLE_PERMISSIONS] || []
 }
 
 interface CameraRequest {
@@ -159,10 +188,26 @@ export default function AdminPage() {
   const storeUser = useAuthStore((s) => s.user)
 
   // Estados principais
+  // Inicializar com a primeira aba disponível para o usuário
+  const getDefaultTab = (userRole: string) => {
+    const availableSections = getAvailableSections(userRole)
+    if (availableSections.includes('dashboard')) return 'dashboard'
+    if (availableSections.includes('orders')) return 'orders'
+    return availableSections[0] || 'dashboard'
+  }
+  
   const [activeTab, setActiveTab] = useState('dashboard')
   const [isMainLoading, setIsMainLoading] = useState(true)
   const [isDataLoading, setIsDataLoading] = useState(false)
   const [lastLoadTime, setLastLoadTime] = useState(0)
+  
+  // Atualizar aba padrão quando o usuário carrega
+  useEffect(() => {
+    if (storeUser?.role) {
+      const defaultTab = getDefaultTab(storeUser.role)
+      setActiveTab(defaultTab)
+    }
+  }, [storeUser?.role])
   
   // Estados de dados
   const [stats, setStats] = useState<DashboardStats>({
@@ -257,9 +302,38 @@ export default function AdminPage() {
   const [selectedChat, setSelectedChat] = useState<string | null>(null)
   const [chatMessage, setChatMessage] = useState('')
   
+  // Estados do sistema de arquivos
+  const [systemStatus, setSystemStatus] = useState<any>(null)
+  const [systemAlerts, setSystemAlerts] = useState<any[]>([])
+  const [showSystemAlert, setShowSystemAlert] = useState(false)
+  
   // Estados das abas das seções
   const [cameraSubTab, setCameraSubTab] = useState('list')
   const [returnSubTab, setReturnSubTab] = useState('list')
+
+  // Estados de notificações toast
+  const [notifications, setNotifications] = useState<Array<{
+    id: string
+    type: 'success' | 'error' | 'info' | 'warning'
+    message: string
+    timestamp: number
+  }>>([])
+
+  // Estados de configuração de entrega
+  const [deliverySettings, setDeliverySettings] = useState({
+    deliveryEnabled: true,
+    lastUpdated: '',
+    updatedBy: ''
+  })
+  const [isUpdatingDelivery, setIsUpdatingDelivery] = useState(false)
+
+  // Estados de configuração de estoque
+  const [stockSettings, setStockSettings] = useState({
+    syncWithVarejoFacil: true,
+    lastUpdated: '',
+    updatedBy: ''
+  })
+  const [isUpdatingStock, setIsUpdatingStock] = useState(false)
 
   // Estados de promoções
   const [showPromotionModal, setShowPromotionModal] = useState(false)
@@ -291,7 +365,8 @@ export default function AdminPage() {
     category: '',
     description: '',
     image: '',
-    inStock: true
+    inStock: true,
+    syncWithVarejoFacil: false
   })
   const [isSubmittingProduct, setIsSubmittingProduct] = useState(false)
 
@@ -308,7 +383,7 @@ export default function AdminPage() {
   const [userForm, setUserForm] = useState({
     name: '',
     email: '',
-    role: 'user' as 'user' | 'manager' | 'admin',
+    role: 'user' as 'user' | 'atendente' | 'gerente' | 'admin' | 'programador',
     phone: '',
     password: '',
     confirmPassword: '',
@@ -344,10 +419,128 @@ export default function AdminPage() {
     .replace(/\s+/g, ' ')
     .trim(), [])
 
+  // Função para mostrar notificações toast
+  const showNotification = useCallback((message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+    const id = Date.now().toString()
+    const newNotification = {
+      id,
+      type,
+      message,
+      timestamp: Date.now()
+    }
+    
+    setNotifications(prev => [...prev, newNotification])
+    
+    // Auto remover após 4 segundos
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id))
+    }, 4000)
+  }, [])
+
+  // Funções de configuração de entrega
+  const loadDeliverySettings = async () => {
+    try {
+      const response = await fetch('/api/admin/delivery-config')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setDeliverySettings(data.data)
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configurações de entrega:', error)
+    }
+  }
+
+  const updateDeliverySettings = async (enabled: boolean) => {
+    if (isUpdatingDelivery) return
+    
+    setIsUpdatingDelivery(true)
+    try {
+      const response = await fetch('/api/admin/delivery-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deliveryEnabled: enabled,
+          updatedBy: user?.name || storeUser?.name || 'admin'
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setDeliverySettings(data.data)
+          showNotification(
+            `Entrega ${enabled ? 'ativada' : 'desativada'} com sucesso!`, 
+            'success'
+          )
+        }
+      } else {
+        throw new Error('Erro na resposta do servidor')
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar configurações de entrega:', error)
+      showNotification('Erro ao atualizar configurações de entrega', 'error')
+    } finally {
+      setIsUpdatingDelivery(false)
+    }
+  }
+
+  // Funções de configuração de estoque
+  const loadStockSettings = async () => {
+    try {
+      const response = await fetch('/api/admin/stock-config')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setStockSettings(data.data)
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configurações de estoque:', error)
+    }
+  }
+
+  const updateStockSettings = async (syncEnabled: boolean) => {
+    if (isUpdatingStock) return
+    
+    setIsUpdatingStock(true)
+    try {
+      const response = await fetch('/api/admin/stock-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          syncWithVarejoFacil: syncEnabled,
+          updatedBy: user?.name || storeUser?.name || 'admin'
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setStockSettings(data.data)
+          showNotification(
+            syncEnabled 
+              ? 'Sincronização de estoque ativada! Produtos seguirão estoque real do Varejo Fácil' 
+              : 'Sincronização de estoque desativada! Todos os produtos têm estoque infinito', 
+            'success'
+          )
+        }
+      } else {
+        throw new Error('Erro na resposta do servidor')
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar configurações de estoque:', error)
+      showNotification('Erro ao atualizar configurações de estoque', 'error')
+    } finally {
+      setIsUpdatingStock(false)
+    }
+  }
+
   // Verificações de autenticação e permissões
   const nextAuthEmail = user?.email || null
   const isNextAuthAdmin = nextAuthEmail === 'davikalebe20020602@gmail.com'
-  const isStoreAdmin = !!(storeUser && (storeUser.role === 'admin' || storeUser.email === 'admin' || storeUser.email === 'davikalebe20020602@gmail.com'))
+  const isStoreAdmin = !!(storeUser && (['admin', 'programador', 'gerente', 'atendente'].includes(storeUser.role) || storeUser.email === 'admin' || storeUser.email === 'davikalebe20020602@gmail.com'))
   const isAdmin = isNextAuthAdmin || isStoreAdmin
 
   // Carregar categorias
@@ -400,44 +593,157 @@ export default function AdminPage() {
     }
   }, [searchTermAdmin, debouncedSearchTermAdmin])
 
+  // Verificar status do sistema de arquivos
+  const checkSystemStatus = async () => {
+    try {
+      const response = await fetch('/api/admin/system-status')
+      if (response.ok) {
+        const data = await response.json()
+        setSystemStatus(data.data)
+        setSystemAlerts(data.data.alerts)
+        
+        // Mostrar alerta se está usando backup
+        if (data.data.usingBackup) {
+          setShowSystemAlert(true)
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao verificar status do sistema:', error)
+    }
+  }
+
+  // Verificar status do sistema na inicialização e periodicamente
+  useEffect(() => {
+    checkSystemStatus()
+    
+    // Verificar a cada 5 minutos
+    const interval = setInterval(checkSystemStatus, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Auto Sync - Executa /api/sync a cada 1 hora quando ativado
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null
+
+    if (autoSync) {
+      console.log('🔄 Auto Sync ativado - executando a cada 1 hora')
+      
+      // Função para executar o sync
+      const executeAutoSync = async () => {
+        try {
+          console.log('⏰ Executando Auto Sync...')
+          const response = await fetch('/api/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'start-sync' })
+          })
+          
+          if (response.ok) {
+            console.log('✅ Auto Sync executado com sucesso')
+            // Recarregar dados após sync
+            await loadData()
+            await loadVarejoFacilData()
+          } else {
+            console.error('❌ Erro no Auto Sync:', response.statusText)
+          }
+        } catch (error) {
+          console.error('❌ Erro no Auto Sync:', error)
+        }
+      }
+
+      // Executar sync imediatamente quando ativado
+      executeAutoSync()
+
+      // Configurar interval para 1 hora (3600000 ms)
+      intervalId = setInterval(executeAutoSync, 3600000)
+      
+      console.log('⏲️ Auto Sync configurado para executar a cada 1 hora')
+    }
+
+    // Cleanup - limpar interval quando desativado ou component desmontado
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId)
+        console.log('⏹️ Auto Sync desativado')
+      }
+    }
+  }, [autoSync])
+
   // Função para encontrar produtos do CSV nos produtos disponíveis
   const getProdutosDoCSVAdmin = useMemo(() => {
-    return (produtosOriginais: Product[], categoria?: string, maxCount?: number) => {
+    return (produtosOriginais: Product[], categoria?: string, maxCount?: number, ignorarEstoque?: boolean) => {
       if (!produtosOriginais.length) return []
+      
+      console.log(`🔍 Buscando produtos - Total: ${produtosOriginais.length}, Categoria: ${categoria}, IgnorarEstoque: ${ignorarEstoque}`)
+      
+      // CORREÇÃO: Para "Mais Vendidos" (ignorarEstoque=true), incluir TODOS os produtos independente do inStock
+      const produtosFiltrados = ignorarEstoque 
+        ? produtosOriginais.filter(prod => !categoria || prod.category === categoria)
+        : produtosOriginais.filter(prod => prod.inStock && (!categoria || prod.category === categoria))
+      
+      console.log(`📦 Produtos após filtro inicial: ${produtosFiltrados.length}`)
+      console.log(`📊 Produtos com estoque: ${produtosOriginais.filter(p => p.inStock).length}`)
+      console.log(`📊 Produtos sem estoque: ${produtosOriginais.filter(p => !p.inStock).length}`)
+      
+      // Criar mapa para busca rápida - INCLUIR TODOS os produtos se ignorarEstoque=true
       const produtosMap = new Map<string, Product>()
-      produtosOriginais.forEach(prod => {
-        if (prod.inStock && (!categoria || prod.category === categoria)) {
+      const produtosParaBuscar = ignorarEstoque ? produtosOriginais : produtosFiltrados
+      
+      produtosParaBuscar.forEach(prod => {
+        if (!categoria || prod.category === categoria) {
           produtosMap.set(normalizeAdmin(prod.name), prod)
         }
       })
+      
+      console.log(`🗺️ Produtos no mapa para busca: ${produtosMap.size}`)
+      
       const produtosEncontrados: Product[] = []
       const produtosNaoEncontrados: string[] = []
       const maisVendidosLote = maxCount ? maisVendidosAdmin.slice(0, maxCount) : maisVendidosAdmin
+      
+      console.log(`📋 Itens do CSV para processar: ${maisVendidosLote.length}`)
+      
+      // Busca exata primeiro
       maisVendidosLote.forEach((itemCSV) => {
         const nomeNormalizadoCSV = normalizeAdmin(itemCSV.nome)
         const produtoEncontrado = produtosMap.get(nomeNormalizadoCSV)
         if (produtoEncontrado) {
           produtosEncontrados.push(produtoEncontrado)
+          console.log(`✅ Produto encontrado: ${itemCSV.nome} -> ${produtoEncontrado.name} (InStock: ${produtoEncontrado.inStock})`)
         } else {
           produtosNaoEncontrados.push(itemCSV.nome)
         }
       })
+      
+      console.log(`🔍 Busca exata concluída: ${produtosEncontrados.length} encontrados, ${produtosNaoEncontrados.length} não encontrados`)
+      
       // Para produtos não encontrados, tenta encontrar correspondências parciais
       produtosNaoEncontrados.forEach((nomeProduto) => {
         const nomeNormalizadoCSV = normalizeAdmin(nomeProduto)
         for (const [nome, prod] of produtosMap.entries()) {
           if ((nome.includes(nomeNormalizadoCSV) || nomeNormalizadoCSV.includes(nome)) && 
-              prod.inStock && 
               !produtosEncontrados.some(p => p.id === prod.id)) {
             produtosEncontrados.push(prod)
+            console.log(`🔍 Correspondência parcial: ${nomeProduto} -> ${prod.name} (InStock: ${prod.inStock})`)
             break
           }
         }
       })
-      // Adiciona os produtos da categoria que não estão no CSV no final
-      const idsCSV = produtosEncontrados.map(p => p.id)
-      const outros = Array.from(produtosMap.values()).filter(p => !idsCSV.includes(p.id))
-      return [...produtosEncontrados, ...outros]
+      
+      console.log(`🎯 Total de produtos encontrados do CSV: ${produtosEncontrados.length}`)
+      console.log(`📊 Com estoque: ${produtosEncontrados.filter(p => p.inStock).length}`)
+      console.log(`📊 Sem estoque: ${produtosEncontrados.filter(p => !p.inStock).length}`)
+      
+      // Adiciona os produtos da categoria que não estão no CSV no final (só se não for "Mais Vendidos")
+      if (!ignorarEstoque || categoria) {
+        const idsCSV = produtosEncontrados.map(p => p.id)
+        const outros = produtosFiltrados.filter(p => !idsCSV.includes(p.id))
+        console.log(`📋 Total final: ${produtosEncontrados.length} do CSV + ${outros.length} outros = ${produtosEncontrados.length + outros.length}`)
+        return [...produtosEncontrados, ...outros]
+      }
+      
+      console.log(`📋 Total final (só CSV): ${produtosEncontrados.length}`)
+      return produtosEncontrados
     }
   }, [maisVendidosAdmin, normalizeAdmin])
 
@@ -455,35 +761,47 @@ export default function AdminPage() {
       const produtosNovos = products.filter(p => (p as any).createdAt && new Date((p as any).createdAt) > thirtyDaysAgo)
       return getProdutosDoCSVAdmin(produtosNovos)
     } else if (selectedCategoryAdmin === "Mais Vendidos") {
-      return getProdutosDoCSVAdmin(products).filter(p => 
-        maisVendidosAdmin.some(item => {
-          const nomeProdutoNormalizado = normalizeAdmin(p.name)
-          const nomeCSVNormalizado = normalizeAdmin(item.nome)
-          return nomeProdutoNormalizado === nomeCSVNormalizado || 
-                 nomeProdutoNormalizado.includes(nomeCSVNormalizado) ||
-                 nomeCSVNormalizado.includes(nomeProdutoNormalizado)
-        })
-      )
+      // Para "Mais Vendidos" usar função específica que ignora status de estoque
+      return getProdutosDoCSVAdmin(products, undefined, undefined, true)
     } else {
       return getProdutosDoCSVAdmin(products, selectedCategoryAdmin)
     }
   }, [products, maisVendidosAdmin, selectedCategoryAdmin, getProdutosDoCSVAdmin, normalizeAdmin])
 
-  // Busca nos produtos filtrados - otimizada com limite de resultados
+  // Busca nos produtos - quando há busca, procura em TODOS os 6588 produtos
   const filteredProductsAdmin = useMemo(() => {
+    // Sem busca: mostrar apenas produtos do CSV (filtrados por categoria)
     if (!debouncedSearchTermAdmin) return produtosFiltradosAdmin
     
-    // Limitar busca para evitar travamento com muitos produtos
+    // Com busca: pesquisar em TODOS os produtos (6588)
+    console.log(`🔍 Buscando em todos os ${products.length} produtos por: "${debouncedSearchTermAdmin}"`)
+    
     const maxResults = 500
-    let result = [...produtosFiltradosAdmin]
+    let todosOsProdutos = products
+    
+    // Filtrar por categoria se selecionada
+    if (selectedCategoryAdmin && selectedCategoryAdmin !== "Todos" && selectedCategoryAdmin !== "Mais Vendidos") {
+      if (selectedCategoryAdmin === "Promoções") {
+        todosOsProdutos = products.filter(p => (p as any).salePrice !== undefined && (p as any).salePrice < p.price)
+      } else if (selectedCategoryAdmin === "Novidades") {
+        const thirtyDaysAgo = new Date()
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+        todosOsProdutos = products.filter(p => (p as any).createdAt && new Date((p as any).createdAt) > thirtyDaysAgo)
+      } else {
+        todosOsProdutos = products.filter(p => p.category === selectedCategoryAdmin)
+      }
+    }
+    
+    let result: Product[] = []
     
     if (debouncedSearchTermAdmin.startsWith('#')) {
+      // Busca por código em todos os produtos
       const code = debouncedSearchTermAdmin.replace('#', '').trim()
-      result = result.filter((p: Product) => p.id === code)
+      result = todosOsProdutos.filter((p: Product) => p.id === code)
     } else {
       const q = normalizeAdmin(debouncedSearchTermAdmin.trim())
       
-      // Busca mais eficiente
+      // Busca por nome em todos os produtos
       const produtosDoCSV: Product[] = []
       const outrosProdutos: Product[] = []
       
@@ -496,13 +814,13 @@ export default function AdminPage() {
         return normalizedNames.get(name)!
       }
       
-      // Busca otimizada com early break
-      for (let i = 0; i < result.length && (produtosDoCSV.length + outrosProdutos.length) < maxResults; i++) {
-        const prod = result[i]
+      // Busca em todos os produtos (não apenas do CSV)
+      for (let i = 0; i < todosOsProdutos.length && (produtosDoCSV.length + outrosProdutos.length) < maxResults; i++) {
+        const prod = todosOsProdutos[i]
         const nomeProduto = getNormalizedName(prod.name)
         
         if (nomeProduto.includes(q)) {
-          // Verificar se está no CSV (busca mais eficiente)
+          // Verificar se está no CSV para dar prioridade
           const estaNoCSV = maisVendidosAdmin.some(item => {
             const nomeCSV = getNormalizedName(item.nome)
             return nomeCSV === nomeProduto || nomeProduto.includes(nomeCSV)
@@ -516,11 +834,13 @@ export default function AdminPage() {
         }
       }
       
+      // Produtos do CSV primeiro, depois outros
       result = [...produtosDoCSV, ...outrosProdutos]
     }
     
+    console.log(`📋 Encontrados ${result.length} produtos na busca`)
     return result
-  }, [produtosFiltradosAdmin, debouncedSearchTermAdmin, maisVendidosAdmin, normalizeAdmin])
+  }, [produtosFiltradosAdmin, debouncedSearchTermAdmin, maisVendidosAdmin, normalizeAdmin, products, selectedCategoryAdmin])
 
   // Helper function to safely parse JSON responses
   const safeJsonParse = async (response: Response) => {
@@ -692,12 +1012,58 @@ export default function AdminPage() {
         pendingReturns: returnRequests.filter(r => r.status === 'pending').length
       })
     }
+
+    // Carregar configurações de entrega
+    await loadDeliverySettings()
+
+    // Carregar configurações de estoque
+    await loadStockSettings()
   }
 
   // Função para carregar dados do Varejo Fácil
   const loadVarejoFacilData = async () => {
     try {
-      // Carregar apenas dados essenciais para economizar memória
+      // Primeiro, verificar status da última sincronização
+      const syncStatusRes = await fetch('/api/sync')
+      if (syncStatusRes.ok) {
+        const syncData = await safeJsonParse(syncStatusRes)
+        if (syncData?.success && syncData?.data) {
+          // Atualizar contadores com dados da última sincronização
+          setVarejoFacilData(prev => ({
+            ...prev,
+            products: { 
+              total: syncData.data.totalProducts || 0,
+              items: syncData.data.products || []
+            },
+            sections: { 
+              total: syncData.data.totalSections || 0,
+              items: syncData.data.sections || []
+            },
+            brands: { 
+              total: syncData.data.totalBrands || 0,
+              items: syncData.data.brands || []
+            },
+            genres: { 
+              total: syncData.data.totalGenres || 0,
+              items: []
+            },
+            lastSync: syncData.data.lastSync
+          }))
+          
+          console.log('📊 Dados da última sincronização carregados:', {
+            produtos: syncData.data.totalProducts,
+            seções: syncData.data.totalSections,
+            marcas: syncData.data.totalBrands,
+            gêneros: syncData.data.totalGenres
+          })
+          
+          // Se temos dados da sincronização, não precisamos carregar via API
+          return
+        }
+      }
+      
+      // Se não tem dados de sincronização, carregar via API
+      console.log('📡 Carregando dados via API do Varejo Fácil...')
       const [productsRes, sectionsRes, brandsRes, genresRes] = await Promise.all([
         fetch('/api/varejo-facil/products?count=5'),  // Reduzido
         fetch('/api/varejo-facil/sections?count=10'), // Reduzido
@@ -731,7 +1097,7 @@ export default function AdminPage() {
 
       // Carregar histórico de sincronização
       try {
-        const histRes = await fetch('/api/varejo-facil/sync-history')
+        const histRes = await fetch('/api/sync')
         if (histRes.ok) {
           const histData = await histRes.json()
           setSyncHistory(Array.isArray(histData?.data) ? histData.data : [])
@@ -777,10 +1143,10 @@ export default function AdminPage() {
         status: 'running',
         current: 5,
         total: 100,
-        message: '🚀 Iniciando nova sincronização... (aguardando logs)'
+        message: '🚀 Iniciando sincronização do Varejo Fácil...'
       })
 
-      // Iniciar sincronização em background para evitar timeout 504
+      // Chamar API de sincronização padrão
       const syncRes = await fetch('/api/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -825,7 +1191,7 @@ export default function AdminPage() {
           }
 
           try {
-            const statusRes = await fetch('/api/sync/status')
+            const statusRes = await fetch('/api/sync')
             if (statusRes.ok) {
               const statusData = await statusRes.json()
               const status = statusData.data
@@ -876,17 +1242,17 @@ export default function AdminPage() {
                   const syncStartTime = new Date(startTime).getTime()
                   const now = Date.now()
                   
-                  // Resultado deve ser:
-                  // 1. POSTERIOR ao início da sincronização
-                  // 2. Nos últimos 30 segundos (resultado recente)
-                  const isRecentResult = (now - resultTime) < 30000 // 30 segundos
+                  // Simplificar: se resultado é posterior ao início da sync, aceitar
                   const isAfterStart = resultTime > syncStartTime
                   
-                  // Verificar se passou muito tempo esperando (mais de 2 minutos)
-                  const waitingTooLong = (now - syncStartTime) > 120000 // 2 minutos
+                  console.log(`📊 Verificando resultado:`)
+                  console.log(`   - Resultado em: ${new Date(resultTime).toLocaleString()}`)
+                  console.log(`   - Início sync: ${new Date(syncStartTime).toLocaleString()}`)
+                  console.log(`   - É posterior: ${isAfterStart}`)
                   
-                  if (isAfterStart && isRecentResult) {
-                    // TERMINOU COM SUCESSO RECENTE!
+                  if (isAfterStart) {
+                    // TERMINOU COM SUCESSO!
+                    console.log('✅ Sincronização detectada como concluída!')
                     isMonitoring = false
                     const result = status.lastResult
                     const endTime = new Date().toISOString()
@@ -898,44 +1264,8 @@ export default function AdminPage() {
                       total: 100,
                       message: `✅ Sincronização concluída! ${result.totalProducts || 0} produtos sincronizados.`
                     })
-                  } else if (waitingTooLong) {
-                    // Esperou muito tempo e não há sincronização rodando
-                    // Provavelmente a sincronização não iniciou corretamente
-                    console.log(`⚠️ Sincronização não iniciou corretamente. Parando monitoramento.`)
-                    console.log(`   - Tempo de espera: ${Math.floor((now - syncStartTime) / 60000)}min`)
-                    console.log(`   - isRunning: ${status.isRunning}`)
-                    console.log(`   - Último resultado: ${new Date(resultTime).toLocaleTimeString()}`)
-                    
-                    isMonitoring = false
-                    setSyncProgress({
-                      status: 'error',
-                      current: 0,
-                      total: 100,
-                      message: '⚠️ Sincronização não iniciou. Tente novamente ou verifique o servidor.'
-                    })
-                    return
-                  } else {
-                    // Resultado antigo, continuar aguardando (mas com limite)
-                    const ageMinutes = Math.floor((now - resultTime) / 60000)
-                    console.log(`📊 Resultado antigo detectado (${ageMinutes}min atrás), aguardando nova sincronização...`)
-                    console.log(`   - Resultado em: ${new Date(resultTime).toLocaleTimeString()}`)
-                    console.log(`   - Início sync: ${new Date(syncStartTime).toLocaleTimeString()}`)
-                    console.log(`   - Agora: ${new Date(now).toLocaleTimeString()}`)
-                    
-                    setSyncProgress({
-                      status: 'running',
-                      current: Math.min(10 + (attemptCount * 0.5), 90),
-                      total: 100,
-                      message: `⏳ Aguardando nova sincronização... (tentativa ${attemptCount}/${maxAttempts})`
-                    })
-                    
-                    if (isMonitoring) {
-                      setTimeout(monitorProgress, 3000)
-                    }
-                    return
-                  }
 
-                  // Salvar no histórico
+                    // Salvar no histórico
                   try {
                     await saveSyncToHistory({
                       startedAt: startTime,
@@ -963,13 +1293,26 @@ export default function AdminPage() {
                     genres: { total: result.totalGenres || 0, items: [] }
                   }))
 
-                  // Recarregar dados
-                  setTimeout(() => {
-                    loadSyncHistory()
-                    loadData()
-                  }, 1000)
-
-                } else if (status.lastError) {
+                    // Recarregar dados
+                    setTimeout(() => {
+                      loadSyncHistory()
+                      loadData()
+                      loadVarejoFacilData() // Recarregar dados do Varejo Fácil especificamente
+                    }, 1000)
+                  } else {
+                    // Resultado antigo, continuar aguardando
+                    console.log('📊 Resultado antigo detectado, continuando monitoramento...')
+                    setSyncProgress({
+                      status: 'running',
+                      current: Math.min(10 + (attemptCount * 0.5), 90),
+                      total: 100,
+                      message: `⏳ Aguardando sincronização... (tentativa ${attemptCount}/${maxAttempts})`
+                    })
+                    
+                    if (isMonitoring) {
+                      setTimeout(monitorProgress, 3000)
+                    }
+                  }                } else if (status.lastError) {
                   // TERMINOU COM ERRO
                   isMonitoring = false
                   setSyncProgress({
@@ -1291,11 +1634,12 @@ export default function AdminPage() {
       // Recarregar dados
       loadData()
       
-      alert('Promoção salva com sucesso!')
+      console.log('✅ Promoção salva com sucesso!')
+      showNotification('Promoção salva com sucesso!', 'success')
       
     } catch (error: any) {
       console.error('❌ Erro ao salvar promoção:', error)
-      alert(`Erro ao salvar promoção: ${error.message || error}`)
+      showNotification(`Erro ao salvar promoção: ${error.message || error}`, 'error')
     } finally {
       setIsSubmittingPromotion(false)
     }
@@ -1359,7 +1703,8 @@ export default function AdminPage() {
       const productData = {
         ...productForm,
         id: editingProduct?.id,
-        price: parseFloat(productForm.price)
+        price: parseFloat(productForm.price),
+        syncWithVarejoFacil: productForm.syncWithVarejoFacil
       }
 
       console.log('🚀 Enviando produto:', productData)
@@ -1386,21 +1731,22 @@ export default function AdminPage() {
           category: '',
           description: '',
           image: '',
-          inStock: true
+          inStock: true,
+          syncWithVarejoFacil: true // Por padrão true para novos produtos
         })
         
         // Recarregar dados para garantir que a imagem apareça
         await loadData()
         
         console.log('✅ Produto salvo e dados recarregados!')
-        alert('Produto salvo com sucesso!')
+        showNotification('Produto salvo com sucesso!', 'success')
       } else {
         console.error('❌ Erro na resposta produto:', result)
-        alert(`Erro ao salvar produto: ${result.error || 'Erro desconhecido'}`)
+        showNotification(`Erro ao salvar produto: ${result.error || 'Erro desconhecido'}`, 'error')
       }
     } catch (error) {
       console.error('❌ Erro ao salvar produto:', error)
-      alert(`Erro de rede produto: ${error}`)
+      showNotification(`Erro de rede: ${error}`, 'error')
     } finally {
       setIsSubmittingProduct(false)
     }
@@ -1415,7 +1761,8 @@ export default function AdminPage() {
       category: product.category || '',
       description: product.description || '',
       image: product.image || '',
-      inStock: product.inStock !== false
+      inStock: product.inStock !== false,
+      syncWithVarejoFacil: product.syncWithVarejoFacil !== undefined ? product.syncWithVarejoFacil : true // Por padrão true se não definido
     })
     setShowProductModal(true)
   }
@@ -1493,13 +1840,14 @@ export default function AdminPage() {
       if (response.ok) {
         setCategoryImages(updatedImages)
         setEditingCategory(null)
-        alert('Imagem da categoria atualizada com sucesso!')
+        console.log('✅ Imagem da categoria atualizada com sucesso!')
+        showNotification('Imagem da categoria atualizada!', 'success')
       } else {
         throw new Error('Erro no servidor')
       }
     } catch (error) {
       console.error('Erro ao atualizar imagem da categoria:', error)
-      alert('Erro ao atualizar imagem da categoria')
+      showNotification('Erro ao atualizar imagem da categoria', 'error')
     }
   }
 
@@ -1514,13 +1862,14 @@ export default function AdminPage() {
 
       if (response.ok) {
         setBanners(newBanners)
-        alert('Banners atualizados com sucesso!')
+        console.log('✅ Banners atualizados com sucesso!')
+        showNotification('Banners atualizados!', 'success')
       } else {
         throw new Error('Erro no servidor')
       }
     } catch (error) {
       console.error('Erro ao atualizar banners:', error)
-      alert('Erro ao atualizar banners')
+      showNotification('Erro ao atualizar banners', 'error')
     }
   }
 
@@ -1896,21 +2245,7 @@ export default function AdminPage() {
     return () => clearTimeout(safetyTimeout)
   }, [])
 
-  // AutoSync
-  useEffect(() => {
-    if (autoSync) {
-      // Executar sincronização imediatamente quando ativar
-      startVarejoFacilSync()
-      
-      // Configurar sincronização automática a cada hora
-      const interval = setInterval(() => {
-        console.log('🔄 Executando sincronização automática...')
-        startVarejoFacilSync()
-      }, 4 * 60 * 60 * 1000) // 4 horas (reduzir uso de recursos)
-      
-      return () => clearInterval(interval)
-    }
-  }, [autoSync])
+
 
   // Carregar imagens salvas
   useEffect(() => {
@@ -2076,109 +2411,219 @@ export default function AdminPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Alerta do Sistema */}
+        {systemStatus?.usingBackup && showSystemAlert && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 shadow-sm">
+            <div className="flex justify-between items-start">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <AlertCircle className="h-5 w-5 text-red-500" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">
+                    ⚠️ Sistema Usando Arquivo de Backup
+                  </h3>
+                  <div className="mt-2 text-sm text-red-700">
+                    <p>
+                      O catálogo está atualmente usando o arquivo de backup (products2.json) com {systemStatus.backupFile.count} produtos.
+                      O arquivo principal (products.json) está com problemas.
+                    </p>
+                    <div className="mt-2">
+                      <button
+                        onClick={() => {
+                          setActiveTab('sync')
+                          setShowSystemAlert(false)
+                        }}
+                        className="bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded text-xs font-medium transition-colors"
+                      >
+                        Ir para Sincronização
+                      </button>
+                      <button
+                        onClick={() => setShowSystemAlert(false)}
+                        className="ml-2 bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1 rounded text-xs font-medium transition-colors"
+                      >
+                        Dispensar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Outros Alertas do Sistema */}
+        {systemAlerts.length > 0 && systemAlerts.some(alert => alert.severity === 'critical') && (
+          <div className="mb-6 bg-red-100 border border-red-300 rounded-lg p-4 shadow-sm">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">Alertas Críticos do Sistema</h3>
+                <div className="mt-2 text-sm text-red-700">
+                  {systemAlerts.filter(alert => alert.severity === 'critical').map((alert, index) => (
+                    <div key={index} className="mb-2">
+                      <strong>{alert.title}:</strong> {alert.message}
+                      {alert.action && (
+                        <div className="mt-1 text-xs text-red-600 italic">
+                          Ação recomendada: {alert.action}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Sidebar Navigation */}
         <div className="flex gap-6">
           <div className="w-64 bg-white rounded-lg shadow-sm p-4">
             <nav className="space-y-2">
-              <button
-                onClick={() => setActiveTab('dashboard')}
-                className={`w-full flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  activeTab === 'dashboard' ? 'bg-gradient-to-r from-blue-600 to-orange-500 text-white shadow-md' : 'text-gray-600 hover:text-gray-900 hover:bg-gradient-to-r hover:from-blue-50 hover:to-orange-50'
-                }`}
-              >
-                <BarChart3 className="h-5 w-5 mr-3" />
-                Dashboard
-              </button>
+              {/* Dashboard */}
+              {hasPermission(storeUser?.role || 'user', 'dashboard') && (
+                <button
+                  onClick={() => setActiveTab('dashboard')}
+                  className={`w-full flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+                    activeTab === 'dashboard' ? 'bg-gradient-to-r from-blue-600 to-orange-500 text-white shadow-md' : 'text-gray-600 hover:text-gray-900 hover:bg-gradient-to-r hover:from-blue-50 hover:to-orange-50'
+                  }`}
+                >
+                  <BarChart3 className="h-5 w-5 mr-3" />
+                  Dashboard
+                </button>
+              )}
               
-              <button
-                onClick={() => setActiveTab('analytics')}
-                className={`w-full flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  activeTab === 'analytics' ? 'bg-gradient-to-r from-blue-600 to-orange-500 text-white shadow-md' : 'text-gray-600 hover:text-gray-900 hover:bg-gradient-to-r hover:from-blue-50 hover:to-orange-50'
-                }`}
-              >
-                <PieChart className="h-5 w-5 mr-3" />
-                Analytics
-              </button>
+              {/* Analytics */}
+              {hasPermission(storeUser?.role || 'user', 'analytics') && (
+                <button
+                  onClick={() => setActiveTab('analytics')}
+                  className={`w-full flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+                    activeTab === 'analytics' ? 'bg-gradient-to-r from-blue-600 to-orange-500 text-white shadow-md' : 'text-gray-600 hover:text-gray-900 hover:bg-gradient-to-r hover:from-blue-50 hover:to-orange-50'
+                  }`}
+                >
+                  <PieChart className="h-5 w-5 mr-3" />
+                  Analytics
+                </button>
+              )}
               
-              <button
-                onClick={() => setActiveTab('products')}
-                className={`w-full flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  activeTab === 'products' ? 'bg-gradient-to-r from-blue-600 to-orange-500 text-white shadow-md' : 'text-gray-600 hover:text-gray-900 hover:bg-gradient-to-r hover:from-blue-50 hover:to-orange-50'
-                }`}
-              >
-                <Package className="h-5 w-5 mr-3" />
-                Produtos
-              </button>
+              {/* Produtos */}
+              {hasPermission(storeUser?.role || 'user', 'products') && (
+                <button
+                  onClick={() => setActiveTab('products')}
+                  className={`w-full flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+                    activeTab === 'products' ? 'bg-gradient-to-r from-blue-600 to-orange-500 text-white shadow-md' : 'text-gray-600 hover:text-gray-900 hover:bg-gradient-to-r hover:from-blue-50 hover:to-orange-50'
+                  }`}
+                >
+                  <Package className="h-5 w-5 mr-3" />
+                  Produtos
+                </button>
+              )}
               
-              <button
-                onClick={() => setActiveTab('orders')}
-                className={`w-full flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  activeTab === 'orders' ? 'bg-gradient-to-r from-blue-600 to-orange-500 text-white shadow-md' : 'text-gray-600 hover:text-gray-900 hover:bg-gradient-to-r hover:from-blue-50 hover:to-orange-50'
-                }`}
-              >
-                <ShoppingCart className="h-5 w-5 mr-3" />
-                Pedidos
-              </button>
+              {/* Pedidos */}
+              {hasPermission(storeUser?.role || 'user', 'orders') && (
+                <button
+                  onClick={() => setActiveTab('orders')}
+                  className={`w-full flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+                    activeTab === 'orders' ? 'bg-gradient-to-r from-blue-600 to-orange-500 text-white shadow-md' : 'text-gray-600 hover:text-gray-900 hover:bg-gradient-to-r hover:from-blue-50 hover:to-orange-50'
+                  }`}
+                >
+                  <ShoppingCart className="h-5 w-5 mr-3" />
+                  Pedidos
+                </button>
+              )}
               
-              <button
-                onClick={() => setActiveTab('users')}
-                className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
-                  activeTab === 'users' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <Users className="h-4 w-4 mr-3" />
-                Usuários
-              </button>
+              {/* Usuários */}
+              {hasPermission(storeUser?.role || 'user', 'users') && (
+                <button
+                  onClick={() => setActiveTab('users')}
+                  className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
+                    activeTab === 'users' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <Users className="h-4 w-4 mr-3" />
+                  Usuários
+                </button>
+              )}
               
-              <button
-                onClick={() => setActiveTab('feedback')}
-                className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
-                  activeTab === 'feedback' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <MessageCircle className="h-4 w-4 mr-3" />
-                Feedbacks
-              </button>
+              {/* Feedbacks */}
+              {hasPermission(storeUser?.role || 'user', 'feedback') && (
+                <button
+                  onClick={() => setActiveTab('feedback')}
+                  className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
+                    activeTab === 'feedback' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <MessageCircle className="h-4 w-4 mr-3" />
+                  Feedbacks
+                </button>
+              )}
               
-              <button
-                onClick={() => setActiveTab('camera-requests')}
-                className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
-                  activeTab === 'camera-requests' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <Camera className="h-4 w-4 mr-3" />
-                Câmeras
-              </button>
+              {/* Câmeras */}
+              {hasPermission(storeUser?.role || 'user', 'camera-requests') && (
+                <button
+                  onClick={() => setActiveTab('camera-requests')}
+                  className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
+                    activeTab === 'camera-requests' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <Camera className="h-4 w-4 mr-3" />
+                  Câmeras
+                </button>
+              )}
               
-              <button
-                onClick={() => setActiveTab('returns')}
-                className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
-                  activeTab === 'returns' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <RotateCcw className="h-4 w-4 mr-3" />
+              {/* Trocas/Devoluções */}
+              {hasPermission(storeUser?.role || 'user', 'returns') && (
+                <button
+                  onClick={() => setActiveTab('returns')}
+                  className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
+                    activeTab === 'returns' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <RotateCcw className="h-4 w-4 mr-3" />
                 Trocas/Devoluções
               </button>
+              )}
               
-              <button
-                onClick={() => setActiveTab('varejo-facil')}
-                className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
-                  activeTab === 'varejo-facil' ? 'bg-green-100 text-green-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <Globe className="h-4 w-4 mr-3" />
-                Varejo Fácil
-              </button>
+              {/* Varejo Fácil */}
+              {hasPermission(storeUser?.role || 'user', 'varejo-facil') && (
+                <button
+                  onClick={() => setActiveTab('varejo-facil')}
+                  className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
+                    activeTab === 'varejo-facil' ? 'bg-green-100 text-green-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <Globe className="h-4 w-4 mr-3" />
+                  Varejo Fácil
+                </button>
+              )}
               
-              <button
-                onClick={() => setActiveTab('promotions')}
-                className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
-                  activeTab === 'promotions' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <Tag className="h-4 w-4 mr-3" />
-                Promoções
-              </button>
+              {/* Promoções */}
+              {hasPermission(storeUser?.role || 'user', 'promotions') && (
+                <button
+                  onClick={() => setActiveTab('promotions')}
+                  className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
+                    activeTab === 'promotions' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <Tag className="h-4 w-4 mr-3" />
+                  Promoções
+                </button>
+              )}
+              
+              {/* Config Entrega */}
+              {hasPermission(storeUser?.role || 'user', 'delivery-settings') && (
+                <button
+                  onClick={() => setActiveTab('delivery-settings')}
+                  className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
+                    activeTab === 'delivery-settings' ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <Truck className="h-4 w-4 mr-3" />
+                  Config. Entrega
+                </button>
+              )}
               
              
             </nav>
@@ -2814,14 +3259,15 @@ export default function AdminPage() {
                   <div className="flex space-x-3">
                     <button 
                       onClick={() => setAutoSync(!autoSync)} 
-                      className={`px-4 py-2 rounded-md text-sm font-medium ${
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                         autoSync 
-                          ? 'bg-green-600 text-white hover:bg-green-700' 
+                          ? 'bg-green-600 text-white hover:bg-green-700 shadow-md' 
                           : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                       }`}
+                      title={autoSync ? 'Auto Sync ativo - executa /api/sync a cada 1 hora' : 'Ativar sincronização automática a cada 1 hora'}
                     >
-                      <Zap className="h-4 w-4 mr-2 inline" />
-                      {autoSync ? 'Auto Sync Ativo' : 'Ativar Auto Sync'}
+                      <Zap className={`h-4 w-4 mr-2 inline ${autoSync ? 'animate-pulse text-yellow-300' : ''}`} />
+                      {autoSync ? 'Auto Sync Ativo (1h)' : 'Ativar Auto Sync'}
                     </button>
                     <button 
                       onClick={startVarejoFacilSync} 
@@ -4181,12 +4627,13 @@ export default function AdminPage() {
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  user.role === 'programador' ? 'bg-red-100 text-red-800' :
                                   user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                                  user.role === 'manager' ? 'bg-blue-100 text-blue-800' :
+                                  user.role === 'gerente' ? 'bg-blue-100 text-blue-800' :
+                                  user.role === 'atendente' ? 'bg-green-100 text-green-800' :
                                   'bg-gray-100 text-gray-800'
                                 }`}>
-                                  {user.role === 'admin' ? 'Administrador' :
-                                   user.role === 'manager' ? 'Gerente' : 'Cliente'}
+                                  {ROLE_NAMES[user.role as keyof typeof ROLE_NAMES] || 'Cliente'}
                                 </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -4210,7 +4657,7 @@ export default function AdminPage() {
                                       setUserForm({
                                         name: user.name,
                                         email: user.email,
-                                        role: user.role as 'user' | 'manager' | 'admin',
+                                        role: user.role as 'user' | 'atendente' | 'gerente' | 'admin' | 'programador',
                                         phone: user.phone || '',
                                         password: '',
                                         confirmPassword: '',
@@ -4300,11 +4747,13 @@ export default function AdminPage() {
                           <select 
                             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
                             value={userForm.role}
-                            onChange={(e) => setUserForm(prev => ({ ...prev, role: e.target.value as any }))}
+                            onChange={(e) => setUserForm(prev => ({ ...prev, role: e.target.value as 'user' | 'atendente' | 'gerente' | 'admin' | 'programador' }))}
                           >
                             <option value="user">Cliente</option>
-                            <option value="manager">Gerente</option>
+                            <option value="atendente">Atendente</option>
+                            <option value="gerente">Gerente</option>
                             <option value="admin">Administrador</option>
+                            <option value="programador">Programador</option>
                           </select>
                         </div>
                       </div>
@@ -4492,12 +4941,13 @@ export default function AdminPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Função</label>
                         <div className="p-3 bg-gray-50 rounded-md text-sm">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            viewingUser.role === 'programador' ? 'bg-red-100 text-red-800' :
                             viewingUser.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                            viewingUser.role === 'manager' ? 'bg-blue-100 text-blue-800' :
+                            viewingUser.role === 'gerente' ? 'bg-blue-100 text-blue-800' :
+                            viewingUser.role === 'atendente' ? 'bg-green-100 text-green-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>
-                            {viewingUser.role === 'admin' ? 'Administrador' :
-                             viewingUser.role === 'manager' ? 'Gerente' : 'Cliente'}
+                            {ROLE_NAMES[viewingUser.role as keyof typeof ROLE_NAMES] || 'Cliente'}
                           </span>
                         </div>
                       </div>
@@ -4627,7 +5077,7 @@ export default function AdminPage() {
                         setUserForm({
                           name: viewingUser.name,
                           email: viewingUser.email,
-                          role: viewingUser.role as 'user' | 'manager' | 'admin',
+                          role: viewingUser.role as 'user' | 'atendente' | 'gerente' | 'admin' | 'programador',
                           phone: viewingUser.phone || '',
                           password: '',
                           confirmPassword: '',
@@ -5092,8 +5542,10 @@ export default function AdminPage() {
                                     try {
                                       const url = await uploadImage(file)
                                       updateCategoryImage(category, url)
+                                      showNotification('Imagem enviada!', 'success')
                                     } catch (error) {
-                                      alert('Erro ao enviar imagem')
+                                      console.error('❌ Erro ao enviar imagem da categoria:', error)
+                                      showNotification('Erro ao enviar imagem', 'error')
                                     }
                                   }
                                 }}
@@ -5198,8 +5650,10 @@ export default function AdminPage() {
                                   ...prev,
                                   hero: { ...prev.hero, image: url }
                                 }))
+                                showNotification('Imagem hero enviada!', 'success')
                               } catch (error) {
-                                alert('Erro ao enviar imagem')
+                                console.error('❌ Erro ao enviar imagem hero:', error)
+                                showNotification('Erro ao enviar imagem hero', 'error')
                               }
                             }
                           }}
@@ -5304,8 +5758,10 @@ export default function AdminPage() {
                                     const newBanners = { ...banners }
                                     newBanners.promotional[index].image = url
                                     setBanners(newBanners)
+                                    showNotification('Imagem banner enviada!', 'success')
                                   } catch (error) {
-                                    alert('Erro ao enviar imagem')
+                                    console.error('❌ Erro ao enviar imagem banner:', error)
+                                    showNotification('Erro ao enviar imagem banner', 'error')
                                   }
                                 }
                               }}
@@ -5415,11 +5871,16 @@ export default function AdminPage() {
                     <h3 className="text-lg font-semibold mb-4">Configurações de Sincronização</h3>
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-700">Sincronização Automática</span>
+                        <div>
+                          <span className="text-sm font-medium text-gray-700">Sincronização Automática</span>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {autoSync ? 'Executando /api/sync a cada 1 hora' : 'Sincronização manual apenas'}
+                          </p>
+                        </div>
                         <button 
                           onClick={() => setAutoSync(!autoSync)}
                           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                            autoSync ? 'bg-blue-600' : 'bg-gray-200'
+                            autoSync ? 'bg-green-600' : 'bg-gray-200'
                           }`}
                         >
                           <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -5457,6 +5918,306 @@ export default function AdminPage() {
                       <AlertCircle className="h-4 w-4 mr-2 inline" />
                       Limpar Cache
                     </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Configurações de Entrega */}
+            {activeTab === 'delivery-settings' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                    <Truck className="w-8 h-8 mr-3 text-purple-600" />
+                    Configurações de Entrega
+                  </h2>
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-3 h-3 rounded-full ${deliverySettings.deliveryEnabled ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                    <span className="text-sm font-medium">
+                      Status: {deliverySettings.deliveryEnabled ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Painel de Controle Principal */}
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                    <div className="p-6">
+                      <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                        <Settings className="w-6 h-6 mr-2 text-purple-600" />
+                        Controle Principal
+                      </h3>
+
+                      <div className="space-y-6">
+                        <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6 border border-purple-200">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="text-lg font-bold text-purple-900 mb-2">
+                                Sistema de Entrega em Casa
+                              </h4>
+                              <p className="text-purple-700 mb-3">
+                                {deliverySettings.deliveryEnabled 
+                                  ? '✅ Clientes podem escolher entrega ou retirada' 
+                                  : '⚠️ Apenas retirada na loja disponível'}
+                              </p>
+                              {deliverySettings.lastUpdated && (
+                                <p className="text-sm text-purple-600">
+                                  <Clock className="w-4 h-4 inline mr-1" />
+                                  Última alteração: {new Date(deliverySettings.lastUpdated).toLocaleString('pt-BR')}
+                                  {deliverySettings.updatedBy && ` por ${deliverySettings.updatedBy}`}
+                                </p>
+                              )}
+                            </div>
+                            
+                            <div className="ml-4">
+                              <button
+                                onClick={() => updateDeliverySettings(!deliverySettings.deliveryEnabled)}
+                                disabled={isUpdatingDelivery}
+                                className={`
+                                  px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg
+                                  ${deliverySettings.deliveryEnabled
+                                    ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
+                                    : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
+                                  }
+                                  ${isUpdatingDelivery ? 'opacity-50 cursor-not-allowed transform-none' : ''}
+                                `}
+                              >
+                                {isUpdatingDelivery ? (
+                                  <div className="flex items-center">
+                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                                    Salvando...
+                                  </div>
+                                ) : deliverySettings.deliveryEnabled ? (
+                                  <>
+                                    <AlertCircle className="w-6 h-6 inline mr-2" />
+                                    DESATIVAR
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle className="w-6 h-6 inline mr-2" />
+                                    ATIVAR
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Informações adicionais */}
+                        <div className="space-y-4">
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <h5 className="font-medium text-blue-900 mb-2 flex items-center">
+                              <Truck className="w-4 h-4 mr-2" />
+                              Quando ATIVO:
+                            </h5>
+                            <ul className="text-sm text-blue-800 space-y-1 ml-6">
+                              <li>• Clientes podem escolher entre entrega e retirada</li>
+                              <li>• Cálculo de frete é exibido no carrinho</li>
+                              <li>• Formulário de endereço fica disponível</li>
+                            </ul>
+                          </div>
+
+                          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                            <h5 className="font-medium text-orange-900 mb-2 flex items-center">
+                              <MapPin className="w-4 h-4 mr-2" />
+                              Quando INATIVO:
+                            </h5>
+                            <ul className="text-sm text-orange-800 space-y-1 ml-6">
+                              <li>• Apenas retirada na loja disponível</li>
+                              <li>• Botão de entrega fica com X vermelho</li>
+                              <li>• Carrinho força seleção de retirada</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Painel de Informações e Monitoramento */}
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                    <div className="p-6">
+                      <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                        <BarChart3 className="w-6 h-6 mr-2 text-purple-600" />
+                        Informações do Sistema
+                      </h3>
+
+                      <div className="space-y-4">
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <h5 className="font-medium text-gray-900 mb-3">Status Atual</h5>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div className="flex justify-between">
+                              <span>Entrega:</span>
+                              <span className={`font-medium ${deliverySettings.deliveryEnabled ? 'text-green-600' : 'text-red-600'}`}>
+                                {deliverySettings.deliveryEnabled ? 'Habilitada' : 'Desabilitada'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Retirada:</span>
+                              <span className="font-medium text-green-600">Sempre Ativa</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                          <h5 className="font-medium text-yellow-900 mb-2 flex items-center">
+                            <AlertCircle className="w-4 h-4 mr-2" />
+                            Importante
+                          </h5>
+                          <p className="text-sm text-yellow-800">
+                            Esta configuração afeta todos os clientes em tempo real. 
+                            Clientes que estão no carrinho serão automaticamente redirecionados 
+                            para retirada se a entrega for desativada.
+                          </p>
+                        </div>
+
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                          <h5 className="font-medium text-green-900 mb-2">Como Funciona</h5>
+                          <div className="text-sm text-green-800 space-y-2">
+                            <p><strong>1.</strong> Alteração é salva imediatamente</p>
+                            <p><strong>2.</strong> Carrinho atualiza em tempo real</p>
+                            <p><strong>3.</strong> Notificação confirma mudança</p>
+                            <p><strong>4.</strong> Log é registrado para auditoria</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Logs de Atividade */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                  <div className="p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <Activity className="w-5 h-5 mr-2 text-purple-600" />
+                      Histórico de Alterações
+                    </h3>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-sm text-gray-600 mb-2">
+                        <strong>Status Atual:</strong> Sistema de entrega {deliverySettings.deliveryEnabled ? 'ATIVO' : 'INATIVO'}
+                      </p>
+                      {deliverySettings.lastUpdated && (
+                        <p className="text-sm text-gray-600">
+                          <strong>Última modificação:</strong> {new Date(deliverySettings.lastUpdated).toLocaleString('pt-BR')}
+                          {deliverySettings.updatedBy && ` por ${deliverySettings.updatedBy}`}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-500 mt-2">
+                        * Todas as alterações são registradas automaticamente para auditoria
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Configurações de Estoque */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 mt-6">
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-xl font-semibold text-gray-900 flex items-center">
+                        <Package className="w-6 h-6 mr-2 text-blue-600" />
+                        Configurações de Estoque
+                      </h3>
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-3 h-3 rounded-full ${stockSettings.syncWithVarejoFacil ? 'bg-green-500' : 'bg-orange-500'}`}></div>
+                        <span className="text-sm font-medium">
+                          Status: {stockSettings.syncWithVarejoFacil ? 'Sincronizado' : 'Estoque Infinito'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Painel de Controle de Estoque */}
+                      <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-6 border border-blue-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="text-lg font-bold text-blue-900 mb-2">
+                              Sincronização com Varejo Fácil
+                            </h4>
+                            <p className="text-blue-700 mb-3">
+                              {stockSettings.syncWithVarejoFacil 
+                                ? '✅ Produtos seguem estoque real do Varejo Fácil' 
+                                : '🔄 Produtos com estoque infinito (sempre disponível)'}
+                            </p>
+                            {stockSettings.lastUpdated && (
+                              <p className="text-sm text-blue-600">
+                                <Clock className="w-4 h-4 inline mr-1" />
+                                Última alteração: {new Date(stockSettings.lastUpdated).toLocaleString('pt-BR')}
+                                {stockSettings.updatedBy && ` por ${stockSettings.updatedBy}`}
+                              </p>
+                            )}
+                          </div>
+                          
+                          <div className="ml-4">
+                            <button
+                              onClick={() => updateStockSettings(!stockSettings.syncWithVarejoFacil)}
+                              disabled={isUpdatingStock}
+                              className={`
+                                px-6 py-3 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg
+                                ${stockSettings.syncWithVarejoFacil
+                                  ? 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white'
+                                  : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
+                                }
+                                ${isUpdatingStock ? 'opacity-50 cursor-not-allowed transform-none' : ''}
+                              `}
+                            >
+                              {isUpdatingStock ? (
+                                <div className="flex items-center">
+                                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                                  Salvando...
+                                </div>
+                              ) : stockSettings.syncWithVarejoFacil ? (
+                                <>
+                                  <Package className="w-5 h-5 inline mr-2" />
+                                  INFINITO
+                                </>
+                              ) : (
+                                <>
+                                  <RefreshCw className="w-5 h-5 inline mr-2" />
+                                  SINCRONIZAR
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Painel de Informações */}
+                      <div className="space-y-4">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <h5 className="font-medium text-blue-900 mb-2 flex items-center">
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            Quando SINCRONIZADO:
+                          </h5>
+                          <ul className="text-sm text-blue-800 space-y-1 ml-6">
+                            <li>• Estoque real do Varejo Fácil é respeitado</li>
+                            <li>• Produtos esgotados ficam indisponíveis</li>
+                            <li>• Quantidade limitada por produto</li>
+                          </ul>
+                        </div>
+
+                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                          <h5 className="font-medium text-orange-900 mb-2 flex items-center">
+                            <Package className="w-4 h-4 mr-2" />
+                            Quando INFINITO:
+                          </h5>
+                          <ul className="text-sm text-orange-800 space-y-1 ml-6">
+                            <li>• Todos os produtos sempre disponíveis</li>
+                            <li>• Não há limitação de quantidade</li>
+                            <li>• Ideal para promoções e eventos</li>
+                          </ul>
+                        </div>
+
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                          <h5 className="font-medium text-yellow-900 mb-2 flex items-center">
+                            <AlertCircle className="w-4 h-4 mr-2" />
+                            Importante
+                          </h5>
+                          <p className="text-sm text-yellow-800">
+                            Esta configuração afeta todos os produtos em tempo real. 
+                            Altere com cuidado para não impactar vendas em andamento.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -6017,17 +6778,40 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="inStock"
-                    checked={productForm.inStock}
-                    onChange={(e) => setProductForm({...productForm, inStock: e.target.checked})}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="inStock" className="ml-2 block text-sm text-gray-700">
-                    Produto em estoque
-                  </label>
+                <div className="space-y-3">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="inStock"
+                      checked={productForm.inStock}
+                      onChange={(e) => setProductForm({...productForm, inStock: e.target.checked})}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="inStock" className="ml-2 block text-sm text-gray-700">
+                      Produto em estoque
+                    </label>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="syncWithVarejoFacil"
+                      checked={productForm.syncWithVarejoFacil}
+                      onChange={(e) => setProductForm({...productForm, syncWithVarejoFacil: e.target.checked})}
+                      className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="syncWithVarejoFacil" className="ml-2 block text-sm text-gray-700">
+                      <span className="flex items-center gap-2">
+                        🔄 Sincronizar estoque com Varejo Fácil
+                        <span className="text-xs text-gray-500">
+                          {productForm.syncWithVarejoFacil 
+                            ? "(estoque atualizado automaticamente)" 
+                            : "(estoque infinito e sempre ativo)"
+                          }
+                        </span>
+                      </span>
+                    </label>
+                  </div>
                 </div>
 
                 {productForm.image && (
@@ -6076,6 +6860,41 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      {/* Sistema de Notificações Toast */}
+      <div className="fixed top-4 right-4 z-50 space-y-2">
+        {notifications.map((notification) => (
+          <div
+            key={notification.id}
+            className={`
+              px-6 py-3 rounded-lg shadow-lg border-l-4 max-w-md
+              transform transition-all duration-300 ease-in-out
+              ${notification.type === 'success' 
+                ? 'bg-green-50 border-green-400 text-green-800' 
+                : notification.type === 'error'
+                ? 'bg-red-50 border-red-400 text-red-800'
+                : notification.type === 'warning'
+                ? 'bg-yellow-50 border-yellow-400 text-yellow-800'
+                : 'bg-blue-50 border-blue-400 text-blue-800'
+              }
+            `}
+          >
+            <div className="flex items-center">
+              {notification.type === 'success' && <CheckCircle className="w-5 h-5 mr-2" />}
+              {notification.type === 'error' && <AlertCircle className="w-5 h-5 mr-2" />}
+              {notification.type === 'warning' && <AlertCircle className="w-5 h-5 mr-2" />}
+              {notification.type === 'info' && <Bell className="w-5 h-5 mr-2" />}
+              <span className="font-medium">{notification.message}</span>
+              <button
+                onClick={() => setNotifications(prev => prev.filter(n => n.id !== notification.id))}
+                className="ml-4 text-gray-500 hover:text-gray-700"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

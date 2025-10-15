@@ -167,8 +167,22 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { action, config } = body
+    let body: any = { action: 'start-sync' }
+    
+    try {
+      const requestText = await request.text()
+      console.log('📥 Request body recebido:', requestText)
+      
+      if (requestText && requestText.trim()) {
+        body = JSON.parse(requestText)
+      } else {
+        console.log('⚠️ Body vazio, usando ação padrão')
+      }
+    } catch (parseError: any) {
+      console.log('⚠️ Erro ao fazer parse do JSON, usando ação padrão:', parseError?.message || 'Erro desconhecido')
+    }
+    
+    const { action = 'start-sync', config } = body
 
     switch (action) {
       case 'start-sync':
@@ -176,11 +190,37 @@ export async function POST(request: NextRequest) {
         const currentState = loadState()
         
         console.log('🔍 Verificando estado atual antes de iniciar:')
+        console.log('  - Ação solicitada:', action)
         console.log('  - Arquivo existe:', fs.existsSync(SYNC_STATE_FILE))
         console.log('  - isRunning:', currentState.isRunning)
         console.log('  - startTime:', currentState.startTime)
         console.log('  - Estado completo:', JSON.stringify(currentState, null, 2))
         
+        // Verificar se existe uma query parameter para forçar sincronização
+        const { searchParams } = new URL(request.url)
+        const forceSync = searchParams.get('force') === 'true'
+        
+        if (!forceSync) {
+          // Verificar se products.json existe e tem produtos válidos
+          const productsFilePath = path.join(process.cwd(), 'data', 'products.json')
+          
+          try {
+            const existingData = fs.readFileSync(productsFilePath, 'utf-8')
+            const existingProducts = JSON.parse(existingData)
+            
+            if (Array.isArray(existingProducts) && existingProducts.length > 0) {
+              console.log(`✅ products.json válido com ${existingProducts.length} produtos`)
+              console.log('ℹ️ Prosseguindo com sincronização normal')
+            } else {
+              console.log('⚠️ products.json está vazio, mas prosseguindo com sincronização')
+            }
+          } catch (error) {
+            console.log('ℹ️ products.json não existe, criando novo arquivo')
+          }
+        } else {
+          console.log('🔥 Sincronização forçada solicitada, ignorando validações')
+        }
+
         // VERIFICAÇÃO ADICIONAL: Forçar nova leitura do arquivo
         console.log('🔄 Forçando nova leitura do arquivo...')
         const rereadState = loadState()

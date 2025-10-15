@@ -114,11 +114,11 @@ function LoginContent() {
               })
               
               if (response.ok) {
-                console.log('Usuário Google salvo no JSON')
+
               }
             }
           } catch (error) {
-            console.error('Erro ao salvar usuário Google:', error)
+
           }
           
             // Se o NextAuth retornou uma URL (ex: /register...), seguir ela
@@ -130,7 +130,7 @@ function LoginContent() {
         }
   }
     } catch (error) {
-      console.error('Erro no login social:', error)
+
       setError('Erro ao fazer login social. Tente novamente.')
     } finally {
       setIsLoading(false)
@@ -224,7 +224,7 @@ function LoginContent() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
-                  placeholder={isAdminMode ? 'admin' : 'seu@email.com '}
+                  placeholder={isAdminMode ? 'admin' : 'seu@email.com ou admin'}
                   required
                 />
               </div>
